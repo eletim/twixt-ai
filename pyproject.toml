@@ -18,6 +18,7 @@ twixt-ai-benchmark = "twixt_ai.evaluation.benchmark_cli:main"
 twixt-ai-match = "twixt_ai.evaluation.cli:main"
 twixt-ai-selfplay = "twixt_ai.selfplay.cli:main"
 twixt-ai-dataset = "twixt_ai.training.cli:main"
+twixt-ai-train = "twixt_ai.training.train_cli:main"
 twixt-ai-web = "twixt_ai.backend.server:main"
 
 [tool.pytest.ini_options]

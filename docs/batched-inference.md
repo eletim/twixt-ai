@@ -4,7 +4,8 @@
 by `MCTSAgent` while collecting calls from concurrent search threads into one
 PyTorch forward pass. It flushes when its configured batch size is reached or
 when the maximum wait expires. Calling `flush()` forces queued work through;
-using `batch_size=1` keeps the direct synchronous path for tests and debugging.
+using `batch_size=1` keeps a serialized synchronous path for tests and
+debugging while retaining safe shutdown behavior for concurrent callers.
 
 Concurrent games must use `BatchConfig(worker_mode="thread")` so their agent
 factories can reference one in-process batcher. Process mode remains the

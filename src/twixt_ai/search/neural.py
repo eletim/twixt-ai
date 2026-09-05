@@ -137,8 +137,8 @@ class NeuralInferenceBatcher:
     Callers retain the ordinary synchronous ``PolicyValueFunction`` interface:
     each call blocks until its estimate is available. A background worker
     flushes when ``batch_size`` requests arrive or ``max_wait_seconds`` elapses
-    after the first queued request. ``batch_size=1`` bypasses the worker and is
-    the deterministic synchronous path intended for tests and debugging.
+    after the first queued request. ``batch_size=1`` is the serialized,
+    deterministic synchronous path intended for tests and debugging.
     """
 
     def __init__(
@@ -176,14 +176,12 @@ class NeuralInferenceBatcher:
         self._requests = 0
         self._batches = 0
         self._maximum_batch_size = 0
-        self._worker: Thread | None = None
-        if batch_size > 1:
-            self._worker = Thread(
-                target=self._run,
-                name="twixt-neural-inference",
-                daemon=True,
-            )
-            self._worker.start()
+        self._worker = Thread(
+            target=self._run,
+            name="twixt-neural-inference",
+            daemon=True,
+        )
+        self._worker.start()
 
     @property
     def statistics(self) -> InferenceBatchStatistics:
@@ -201,17 +199,6 @@ class NeuralInferenceBatcher:
     def __call__(
         self, state: GameState, moves: tuple[PegPlacement, ...]
     ) -> PolicyValueEstimate:
-        if self.batch_size == 1:
-            with self._condition:
-                if self._closed:
-                    raise RuntimeError("inference batcher is closed")
-            estimate = self.policy_value(state, moves)
-            with self._condition:
-                self._requests += 1
-                self._batches += 1
-                self._maximum_batch_size = 1
-            return estimate
-
         future: Future[PolicyValueEstimate] = Future()
         with self._condition:
             if self._closed:
@@ -223,8 +210,6 @@ class NeuralInferenceBatcher:
     def flush(self) -> None:
         """Immediately submit queued work and wait until it has completed."""
 
-        if self.batch_size == 1:
-            return
         with self._condition:
             self._flushing = True
             self._condition.notify_all()
@@ -233,17 +218,12 @@ class NeuralInferenceBatcher:
     def close(self) -> None:
         """Flush pending requests and stop the background worker."""
 
-        if self.batch_size == 1:
-            with self._condition:
-                self._closed = True
-            return
         with self._condition:
             if self._closed:
                 return
             self._closed = True
             self._flushing = True
             self._condition.notify_all()
-        assert self._worker is not None
         self._worker.join()
 
     def _run(self) -> None:

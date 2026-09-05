@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from threading import Event, Lock
 
 import pytest
 import torch
@@ -94,3 +95,54 @@ def test_batch_size_one_is_a_synchronous_debugging_path() -> None:
     assert batcher.statistics.requests == 1
     with pytest.raises(RuntimeError, match="closed"):
         batcher(state, moves)
+
+
+def test_batch_size_one_serializes_callers_and_close_waits_for_inference() -> None:
+    class BlockingNetwork(PolicyValueNetwork):
+        def __init__(self) -> None:
+            super().__init__(
+                PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+            )
+            self.started = Event()
+            self.release = Event()
+            self.counter_lock = Lock()
+            self.active = 0
+            self.maximum_active = 0
+
+        def forward(self, inputs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+            with self.counter_lock:
+                self.active += 1
+                self.maximum_active = max(self.maximum_active, self.active)
+            self.started.set()
+            assert self.release.wait(timeout=2)
+            try:
+                return super().forward(inputs)
+            finally:
+                with self.counter_lock:
+                    self.active -= 1
+
+    model = BlockingNetwork()
+    model.train()
+    state = GameState.initial()
+    moves = legal_peg_placements(state)
+    batcher = NeuralInferenceBatcher(NeuralPolicyValue(model), batch_size=1)
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        first = pool.submit(batcher, state, moves)
+        assert model.started.wait(timeout=2)
+        second = pool.submit(batcher, state, moves)
+        with batcher._condition:
+            assert batcher._condition.wait_for(
+                lambda: len(batcher._queue) == 1, timeout=2
+            )
+        closing = pool.submit(batcher.close)
+        with pytest.raises(TimeoutError):
+            closing.result(timeout=0.05)
+        model.release.set()
+        first.result(timeout=2)
+        second.result(timeout=2)
+        closing.result(timeout=2)
+
+    assert model.maximum_active == 1
+    assert model.training
+    assert batcher.statistics.requests == 2

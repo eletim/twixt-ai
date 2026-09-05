@@ -34,6 +34,10 @@ twixt-ai-dataset --input mini-selfplay --output-dir mini-dataset
 twixt-ai-train --dataset mini-dataset --output-dir mini-training --seed 1234
 ```
 
+The first measured 100-game Mini MCTS dataset and its exact reproduction command
+are documented in
+[`docs/mini-dataset-experiment.md`](docs/mini-dataset-experiment.md).
+
 Match, self-play, and benchmark artifacts record their board dimensions. The
 dataset manifest, training summary, and policy/value checkpoints also carry the
 dimensions, so 10×10 and 24×24 artifacts cannot be silently mixed.

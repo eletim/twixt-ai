@@ -114,6 +114,14 @@ def test_legal_placements_are_complete_and_row_major() -> None:
     assert all(check_peg_placement(state, move).is_legal for move in moves)
 
 
+def test_equal_boards_reuse_immutable_placement_values() -> None:
+    first = legal_peg_placements(GameState.initial(BoardDimensions(4, 3)))
+    second = legal_peg_placements(GameState.initial(BoardDimensions(4, 3)))
+
+    assert first == second
+    assert all(left is right for left, right in zip(first, second))
+
+
 def test_corners_are_forbidden_to_both_players() -> None:
     board = BoardDimensions(4, 3)
 

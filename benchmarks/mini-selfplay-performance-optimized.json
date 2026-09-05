@@ -1,0 +1,291 @@
+{
+  "config": {
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "engine": {
+      "iterations": 200,
+      "repeats": 5,
+      "warmups": 1
+    },
+    "fixture_ply": 8,
+    "games_per_budget": 1,
+    "move_repeats": 3,
+    "rollout_limit": 4,
+    "scaling_games": 4,
+    "scaling_simulations": 100,
+    "seed": 2401,
+    "simulation_budgets": [
+      100,
+      400,
+      1600
+    ],
+    "worker_counts": [
+      1,
+      2
+    ]
+  },
+  "environment": {
+    "available_cpus": 24,
+    "implementation": "CPython",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12"
+  },
+  "format": "twixt-ai-selfplay-performance",
+  "identified_bottlenecks": [
+    {
+      "area": "engine",
+      "evidence": {
+        "calls_per_second": 86513.31028907125,
+        "median_ns_per_call": 11558.915
+      },
+      "finding": "move_application is the slowest measured engine operation"
+    },
+    {
+      "area": "mcts",
+      "evidence": {
+        "engine_move_application_seconds": 1.1558915000000001e-05,
+        "highest_latency_budget": 1600,
+        "highest_move_latency_seconds": 0.6831857180222869,
+        "lowest_measured_search_budget": 100,
+        "search_move_latency_seconds": 0.04426109092310071,
+        "search_to_application_latency_ratio": 3829.1734927630064
+      },
+      "finding": "MCTS search dominates measured per-move engine application cost"
+    },
+    {
+      "area": "selfplay_scaling",
+      "evidence": {
+        "games_per_hour": 7095.6055031465485,
+        "parallel_efficiency": 1.0071805800572944,
+        "speedup_vs_sequential": 2.0143611601145888,
+        "workers": 2
+      },
+      "finding": "best measured worker count selected by games/hour"
+    }
+  ],
+  "nn_free_baseline": {
+    "engine": {
+      "benchmarks": {
+        "automatic_link_updates": {
+          "calls_per_second": 315490.75375473435,
+          "iterations_per_repeat": 200,
+          "max_ns_per_call": 3190.5,
+          "median_ns_per_call": 3169.665,
+          "min_ns_per_call": 2259.87
+        },
+        "legal_move_generation": {
+          "calls_per_second": 126213.46356879927,
+          "iterations_per_repeat": 200,
+          "max_ns_per_call": 7974.33,
+          "median_ns_per_call": 7923.085,
+          "min_ns_per_call": 7795.345
+        },
+        "move_application": {
+          "calls_per_second": 86513.31028907125,
+          "iterations_per_repeat": 200,
+          "max_ns_per_call": 11771.315,
+          "median_ns_per_call": 11558.915,
+          "min_ns_per_call": 11093.945
+        },
+        "win_check": {
+          "calls_per_second": 372451.96300807106,
+          "iterations_per_repeat": 200,
+          "max_ns_per_call": 2784.745,
+          "median_ns_per_call": 2684.91,
+          "min_ns_per_call": 2487.04
+        }
+      },
+      "config": {
+        "board": {
+          "height": 10,
+          "width": 10
+        },
+        "iterations": 200,
+        "ply": 8,
+        "repeats": 5,
+        "seed": 2401,
+        "warmups": 1
+      },
+      "cpu_utilization": {
+        "aggregate_percent": 93.64631608067974,
+        "available_cpu_percent": 3.9019298366949893,
+        "average_cores": 0.9364631608067974,
+        "cpu_seconds": 0.03
+      },
+      "environment": {
+        "implementation": "CPython",
+        "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+        "python": "3.10.12"
+      },
+      "fixture": {
+        "links": 1,
+        "move": {
+          "x": 4,
+          "y": 2
+        },
+        "pegs": 8,
+        "side_to_move": "red"
+      },
+      "format": "twixt-ai-engine-benchmark",
+      "positions_per_second": 86513.31028907125,
+      "version": 1,
+      "wall_seconds": 0.03203542996197939
+    },
+    "full_games": [
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 99.86706708282037,
+          "available_cpu_percent": 4.161127795117515,
+          "average_cores": 0.9986706708282037,
+          "cpu_seconds": 0.71
+        },
+        "estimated_wall_clock_hours": {
+          "10000_games": 1.9748474445400968,
+          "1000_games": 0.19748474445400968
+        },
+        "games": 1,
+        "games_per_hour": 5063.682274621878,
+        "move_latency_seconds": 0.039496948890801936,
+        "moves": 18,
+        "nodes_per_second": 2499.4898338897437,
+        "seconds_per_game": 0.7109450800344348,
+        "simulations_per_move": 100,
+        "simulations_per_second": 2531.8411373109393,
+        "wall_seconds": 0.7109450800344348
+      },
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 100.27187193127159,
+          "available_cpu_percent": 4.177994663802983,
+          "average_cores": 1.0027187193127158,
+          "cpu_seconds": 1.9400000000000004
+        },
+        "estimated_wall_clock_hours": {
+          "10000_games": 5.374277736215541,
+          "1000_games": 0.5374277736215541
+        },
+        "games": 1,
+        "games_per_hour": 1860.7151492400913,
+        "move_latency_seconds": 0.13819571321697108,
+        "moves": 14,
+        "nodes_per_second": 2742.4873838522008,
+        "seconds_per_game": 1.934739985037595,
+        "simulations_per_move": 400,
+        "simulations_per_second": 2894.445787706808,
+        "wall_seconds": 1.934739985037595
+      },
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 99.9770960024698,
+          "available_cpu_percent": 4.165712333436242,
+          "average_cores": 0.999770960024698,
+          "cpu_seconds": 7.42
+        },
+        "estimated_wall_clock_hours": {
+          "10000_games": 20.615832960983322,
+          "1000_games": 2.0615832960983322
+        },
+        "games": 1,
+        "games_per_hour": 485.0640776400152,
+        "move_latency_seconds": 0.570899989688769,
+        "moves": 13,
+        "nodes_per_second": 2603.5814367327816,
+        "seconds_per_game": 7.421699865953997,
+        "simulations_per_move": 1600,
+        "simulations_per_second": 2802.5924485867545,
+        "wall_seconds": 7.421699865953997
+      }
+    ],
+    "mcts_moves": [
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 112.96603621196341,
+          "available_cpu_percent": 4.706918175498475,
+          "average_cores": 1.1296603621196342,
+          "cpu_seconds": 0.05
+        },
+        "median_nodes": 101,
+        "move_latency_seconds": 0.04426109092310071,
+        "nodes_per_second": 2281.913931481661,
+        "repeats": 3,
+        "simulations": 100,
+        "simulations_per_second": 2259.320724239268
+      },
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 101.91527091385294,
+          "available_cpu_percent": 4.246469621410539,
+          "average_cores": 1.0191527091385293,
+          "cpu_seconds": 0.16999999999999998
+        },
+        "median_nodes": 401,
+        "move_latency_seconds": 0.1668052279856056,
+        "nodes_per_second": 2404.0013903797076,
+        "repeats": 3,
+        "simulations": 400,
+        "simulations_per_second": 2398.006374443599
+      },
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 99.53369663061619,
+          "available_cpu_percent": 4.147237359609008,
+          "average_cores": 0.9953369663061619,
+          "cpu_seconds": 0.6799999999999999
+        },
+        "median_nodes": 1601,
+        "move_latency_seconds": 0.6831857180222869,
+        "nodes_per_second": 2343.43306331789,
+        "repeats": 3,
+        "simulations": 1600,
+        "simulations_per_second": 2341.969332485087
+      }
+    ],
+    "policy_value_network": false,
+    "rollout_limit": 4,
+    "worker_scaling": [
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 100.04904298948263,
+          "available_cpu_percent": 4.168710124561776,
+          "average_cores": 1.0004904298948263,
+          "cpu_seconds": 4.090000000000002
+        },
+        "effective_workers": 1,
+        "games": 4,
+        "games_per_hour": 3522.5090930282377,
+        "move_latency_seconds": 0.045932529494166374,
+        "moves": 89,
+        "nodes_per_second": 2133.3195694652263,
+        "parallel_efficiency": 1.0,
+        "seconds_per_game": 1.0219987812452018,
+        "simulations_per_second": 2177.1063144410637,
+        "speedup_vs_sequential": 1.0,
+        "wall_seconds": 4.087995124980807,
+        "workers": 1
+      },
+      {
+        "cpu_utilization": {
+          "aggregate_percent": 198.57840401167064,
+          "available_cpu_percent": 8.274100167152943,
+          "average_cores": 1.9857840401167064,
+          "cpu_seconds": 4.029999999999998
+        },
+        "effective_workers": 2,
+        "games": 4,
+        "games_per_hour": 7095.6055031465485,
+        "move_latency_seconds": 0.022802529359508432,
+        "moves": 89,
+        "nodes_per_second": 4297.276082843128,
+        "parallel_efficiency": 1.0071805800572944,
+        "seconds_per_game": 0.5073562782490626,
+        "simulations_per_second": 4385.478401250297,
+        "speedup_vs_sequential": 2.0143611601145888,
+        "wall_seconds": 2.0294251129962504,
+        "workers": 2
+      }
+    ]
+  },
+  "version": 1
+}

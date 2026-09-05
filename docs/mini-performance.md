@@ -41,6 +41,38 @@ measured MCTS move latency, and the worker count with the highest measured
 games/hour all cite the values that selected them. This keeps performance
 conclusions tied to measurements on the recorded machine.
 
+## Issue 53 optimization
+
+The comparable post-optimization run is checked in as
+[`benchmarks/mini-selfplay-performance-optimized.json`](../benchmarks/mini-selfplay-performance-optimized.json).
+Both artifacts use the same workload, seed, Python version, platform, and CPU
+availability. The optimization caches bounded, immutable placement templates
+by board and player; stores an immutable occupancy set on each canonical state;
+uses a private trusted construction path for states derived from an already
+validated transition; and reuses the root request's legal moves in MCTS.
+Public state construction remains fully validated, and canonical ordering,
+serialization, equality, move ordering, and seeded choices are unchanged.
+
+| Measurement | Issue 52 baseline | Optimized | Change |
+| --- | ---: | ---: | ---: |
+| 100-simulation move latency | 0.0735 s | 0.0443 s | 39.8% lower |
+| 400-simulation move latency | 0.2900 s | 0.1668 s | 42.5% lower |
+| 1,600-simulation move latency | 1.1901 s | 0.6832 s | 42.6% lower |
+| 100-simulation full games/hour | 2,772.6 | 5,063.7 | 1.83× |
+| 400-simulation full games/hour | 989.2 | 1,860.7 | 1.88× |
+| 1,600-simulation full games/hour | 260.4 | 485.1 | 1.86× |
+| Two-worker games/hour | 3,999.6 | 7,095.6 | 1.77× |
+
+A deterministic 400-simulation `cProfile` run attributed 0.342 seconds to
+legal-move generation and made 216,948 coordinate constructions before the
+change. Afterwards, legal-move generation took 0.058 seconds and total profile
+calls fell from 4.10 million to 2.10 million. The profile showed that link and
+win recomputation were not leading costs; the optimized run's engine
+microbenchmarks nevertheless reduced automatic-link latency by 56.3% and full
+move-application latency by 42.2%. Heuristic cutoff evaluation is now the
+largest measured MCTS cost and is intentionally left unchanged because it
+defines search behavior.
+
 The standard 24×24 engine benchmark remains separate and unchanged:
 
 ```bash

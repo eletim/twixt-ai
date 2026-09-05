@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 from pathlib import Path
 
 import pytest
 
 from twixt_ai.agents import RandomAgent
-from twixt_ai.evaluation import AgentConfig, BenchmarkConfig, run_benchmark
+from twixt_ai.evaluation import (
+    AgentConfig,
+    BenchmarkConfig,
+    BenchmarkGame,
+    BenchmarkResult,
+    run_benchmark,
+)
 from twixt_ai.evaluation.benchmark_cli import main
-from twixt_ai.game import BoardDimensions
+from twixt_ai.game import BoardDimensions, Player
 
 
 def _config(*, agents: tuple[AgentConfig, ...] | None = None, elo: bool = False) -> BenchmarkConfig:
@@ -106,6 +113,81 @@ def test_config_requires_balanced_games_and_exact_factory_names() -> None:
         )
     with pytest.raises(ValueError, match="exactly match"):
         run_benchmark({"alpha": RandomAgent}, config=_config())
+
+
+def _replace_assignment(
+    game: BenchmarkGame, red: str, black: str, **changes: object
+) -> BenchmarkGame:
+    winner = (
+        red
+        if game.winning_side is Player.RED
+        else black if game.winning_side is Player.BLACK else None
+    )
+    return replace(
+        game,
+        red_agent=red,
+        black_agent=black,
+        winner=winner,
+        **changes,
+    )
+
+
+def test_result_rejects_unknown_agents_before_summarizing() -> None:
+    valid = run_benchmark(
+        {"alpha": RandomAgent, "beta": RandomAgent}, config=_config()
+    )
+    games = list(valid.games)
+    games[0] = _replace_assignment(games[0], "intruder", "beta")
+
+    with pytest.raises(ValueError, match="only configured agents"):
+        BenchmarkResult(valid.config, tuple(games))
+
+
+def test_result_rejects_repeated_pair_in_incomplete_round_robin() -> None:
+    agents = (
+        AgentConfig("alpha", "1"),
+        AgentConfig("beta", "1"),
+        AgentConfig("gamma", "1"),
+    )
+    config = _config(agents=agents)
+    valid = run_benchmark(
+        {agent.name: RandomAgent for agent in agents}, config=config
+    )
+    repeated = tuple(
+        replace(valid.games[index % 2], index=index)
+        for index in range(len(valid.games))
+    )
+
+    with pytest.raises(ValueError, match="every configured pair and round"):
+        BenchmarkResult(config, repeated)
+
+
+def test_result_rejects_missing_round_role_swap_or_paired_seed() -> None:
+    valid = run_benchmark(
+        {"alpha": RandomAgent, "beta": RandomAgent}, config=_config()
+    )
+
+    wrong_round = (replace(valid.games[0], pair_round=1), valid.games[1])
+    with pytest.raises(ValueError, match="every configured pair and round"):
+        BenchmarkResult(valid.config, wrong_round)
+
+    duplicate_role = (
+        valid.games[0],
+        _replace_assignment(
+            valid.games[1],
+            valid.games[0].red_agent,
+            valid.games[0].black_agent,
+        ),
+    )
+    with pytest.raises(ValueError, match="both role assignments"):
+        BenchmarkResult(valid.config, duplicate_role)
+
+    different_seed = (
+        valid.games[0],
+        replace(valid.games[1], seed=valid.games[1].seed + 1),
+    )
+    with pytest.raises(ValueError, match="same seed"):
+        BenchmarkResult(valid.config, different_seed)
 
 
 def test_cli_writes_a_reproducible_machine_readable_artifact(tmp_path: Path) -> None:

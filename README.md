@@ -60,8 +60,9 @@ Games are paired under the same seed with red/black roles swapped. The JSON
 artifact records each entrant's package version and construction settings,
 every game seed, W/L/D and color splits, Wilson confidence intervals, explicit
 first-player results, and (when requested) Elo-style ratings. Search entrants
-use `--search-depth` and `--node-budget`; use unique names to compare multiple
-configurations of the same built-in agent type.
+use `--search-depth` and `--node-budget`; these settings apply to every search
+entrant in a CLI run. Python callers can supply distinct factories and recorded
+configurations for each entrant.
 
 `twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses
 the shared position heuristic with alpha-beta minimax. Its search limits and

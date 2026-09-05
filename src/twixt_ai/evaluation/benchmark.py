@@ -283,18 +283,49 @@ class BenchmarkResult:
         if not isinstance(self.config, BenchmarkConfig):
             raise TypeError("config must be a BenchmarkConfig")
         games = tuple(self.games)
-        expected = (
-            len(self.config.agents)
-            * (len(self.config.agents) - 1)
-            // 2
-            * self.config.games_per_pair
+        names = tuple(agent.name for agent in self.config.agents)
+        pairings = tuple(
+            (left, right)
+            for left_index, left in enumerate(names[:-1])
+            for right in names[left_index + 1 :]
         )
+        expected = len(pairings) * self.config.games_per_pair
         if len(games) != expected:
             raise ValueError("games must contain the complete round-robin schedule")
         if any(not isinstance(game, BenchmarkGame) for game in games):
             raise TypeError("games must contain only BenchmarkGame values")
         if tuple(game.index for game in games) != tuple(range(expected)):
             raise ValueError("game indices must be consecutive and ordered")
+        configured_names = set(names)
+        if any(
+            game.red_agent not in configured_names
+            or game.black_agent not in configured_names
+            for game in games
+        ):
+            raise ValueError("games must contain only configured agents")
+
+        scheduled: dict[tuple[int, int], list[BenchmarkGame]] = {}
+        for game in games:
+            scheduled.setdefault((game.pair_index, game.pair_round), []).append(game)
+        expected_slots = {
+            (pair_index, pair_round)
+            for pair_index in range(len(pairings))
+            for pair_round in range(self.config.games_per_pair // 2)
+        }
+        if set(scheduled) != expected_slots:
+            raise ValueError("games must contain every configured pair and round")
+        for (pair_index, _), paired_games in scheduled.items():
+            left, right = pairings[pair_index]
+            assignments = {
+                (game.red_agent, game.black_agent) for game in paired_games
+            }
+            if len(paired_games) != 2 or assignments != {
+                (left, right),
+                (right, left),
+            }:
+                raise ValueError("each pair and round must contain both role assignments")
+            if len({game.seed for game in paired_games}) != 1:
+                raise ValueError("role-swapped games must use the same seed")
         object.__setattr__(self, "games", games)
 
     def _agent_summaries(self) -> dict[str, object]:

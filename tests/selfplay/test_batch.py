@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from functools import partial
 import json
+import os
 from pathlib import Path
 
-from twixt_ai.agents import AgentRequest, RandomAgent
+from twixt_ai.agents import AgentRequest, AgentResult, RandomAgent
 from twixt_ai.game import BoardDimensions
 from twixt_ai.selfplay import BatchConfig, run_batch
 from twixt_ai.selfplay.cli import main
@@ -15,6 +17,24 @@ class BrokenAgent:
     def choose_move(self, request: AgentRequest) -> object:
         del request
         raise RuntimeError("intentional failure")
+
+
+class CrashOnceAgent:
+    """Terminate one worker once, then behave normally after pool recovery."""
+
+    def __init__(self, marker: str) -> None:
+        self.marker = marker
+
+    def choose_move(self, request: AgentRequest) -> AgentResult:
+        try:
+            descriptor = os.open(
+                self.marker,
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+            )
+        except FileExistsError:
+            return RandomAgent().choose_move(request)
+        os.close(descriptor)
+        os._exit(17)
 
 
 def test_seeded_parallel_batch_persists_games_and_summary(tmp_path: Path) -> None:
@@ -61,6 +81,31 @@ def test_worker_failures_are_isolated_and_reported(tmp_path: Path) -> None:
         artifact = json.loads((tmp_path / report.artifact).read_text())
         assert artifact["format"] == "twixt-ai-selfplay-failure"
         assert artifact["error"]["message"] == "intentional failure"
+
+
+def test_abrupt_worker_exit_still_produces_complete_manifest(tmp_path: Path) -> None:
+    output = tmp_path / "run"
+    config = BatchConfig(
+        games=5,
+        workers=2,
+        seed=11,
+        board=BoardDimensions(4, 4),
+        red_agent="crash-once",
+        black_agent="random",
+    )
+
+    summary = run_batch(
+        partial(CrashOnceAgent, str(tmp_path / "crashed")),
+        RandomAgent,
+        config=config,
+        output_dir=output,
+    )
+
+    assert summary.failed >= 1
+    assert summary.completed >= 1
+    assert summary.failed + summary.completed == config.games
+    assert len(tuple((output / "games").glob("*.json"))) == config.games
+    assert json.loads((output / "summary.json").read_text()) == summary.to_dict()
 
 
 def test_seeded_output_is_independent_of_worker_count(tmp_path: Path) -> None:

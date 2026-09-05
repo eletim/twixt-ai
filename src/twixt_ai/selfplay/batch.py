@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from concurrent.futures import Future, ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -279,25 +280,85 @@ def run_batch(
             except Exception as exc:  # one broken game must not stop the batch
                 capture_failure(index, seed, exc)
     else:
-        with ProcessPoolExecutor(max_workers=min(config.workers, config.games)) as pool:
+        max_workers = min(config.workers, config.games)
+        next_index = 0
+        while next_index < config.games:
+            try:
+                pool = ProcessPoolExecutor(max_workers=max_workers)
+            except Exception as exc:
+                # Executor startup is an infrastructure failure, but the batch
+                # must still leave a complete machine-readable manifest.
+                for index in range(next_index, config.games):
+                    capture_failure(index, seeds[index], exc)
+                break
+
             pending: dict[Future[dict[str, object]], tuple[int, int]] = {}
-            for index, seed in enumerate(seeds):
-                future = pool.submit(
-                    _play_game,
-                    red_factory,
-                    black_factory,
-                    config.board,
-                    seed,
-                    config.red_agent,
-                    config.black_agent,
-                )
-                pending[future] = (index, seed)
-            for future in as_completed(pending):
-                index, seed = pending[future]
+            pool_broken = False
+            try:
+                while next_index < config.games or pending:
+                    while (
+                        not pool_broken
+                        and next_index < config.games
+                        and len(pending) < max_workers
+                    ):
+                        index = next_index
+                        seed = seeds[index]
+                        try:
+                            future = pool.submit(
+                                _play_game,
+                                red_factory,
+                                black_factory,
+                                config.board,
+                                seed,
+                                config.red_agent,
+                                config.black_agent,
+                            )
+                        except BrokenProcessPool as exc:
+                            # This game never entered the pool, so report the
+                            # infrastructure failure and resume after restart.
+                            capture_failure(index, seed, exc)
+                            next_index += 1
+                            pool_broken = True
+                        except Exception as exc:
+                            capture_failure(index, seed, exc)
+                            next_index += 1
+                        else:
+                            pending[future] = (index, seed)
+                            next_index += 1
+
+                    if not pending:
+                        break
+
+                    completed, _ = wait(pending, return_when=FIRST_COMPLETED)
+                    for future in completed:
+                        index, seed = pending.pop(future)
+                        try:
+                            capture(index, seed, future.result())
+                        except BrokenProcessPool as exc:
+                            capture_failure(index, seed, exc)
+                            pool_broken = True
+                        except Exception as exc:
+                            capture_failure(index, seed, exc)
+
+                    if pool_broken:
+                        # A terminated worker poisons every job still assigned
+                        # to that executor. They settle as BrokenProcessPool;
+                        # record each before starting a fresh bounded pool.
+                        for future, (index, seed) in tuple(pending.items()):
+                            try:
+                                capture(index, seed, future.result())
+                            except Exception as exc:
+                                capture_failure(index, seed, exc)
+                            finally:
+                                del pending[future]
+                        break
+            finally:
+                # A broken executor can still be shut down normally. Do not let
+                # a secondary shutdown error suppress the batch manifest.
                 try:
-                    capture(index, seed, future.result())
-                except Exception as exc:  # includes worker and deserialization failures
-                    capture_failure(index, seed, exc)
+                    pool.shutdown(wait=True, cancel_futures=True)
+                except Exception:
+                    pass
 
     summary = BatchSummary(config, tuple(reports[index] for index in range(config.games)))
     _write_json(root / "summary.json", summary.to_dict(), indent=indent)

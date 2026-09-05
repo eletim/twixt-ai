@@ -37,6 +37,9 @@ twixt-ai-train --dataset mini-dataset --output-dir mini-training --seed 1234
 The first measured 100-game Mini MCTS dataset and its exact reproduction command
 are documented in
 [`docs/mini-dataset-experiment.md`](docs/mini-dataset-experiment.md).
+The first learned Mini model, optimization sanity checks, and measured training
+run are documented in
+[`docs/mini-training-experiment.md`](docs/mini-training-experiment.md).
 
 Match, self-play, and benchmark artifacts record their board dimensions. The
 dataset manifest, training summary, and policy/value checkpoints also carry the

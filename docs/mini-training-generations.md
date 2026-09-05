@@ -56,3 +56,21 @@ If a stage fails, the relevant report identifies the failed stage and exception
 while all completed games, datasets, checkpoints, and rejected candidates stay
 available for inspection. Recovery uses a new empty output directory; an
 existing run is never silently modified.
+
+## Inspect a run
+
+Generate a Markdown summary from the stored artifacts after a completed or
+partially completed run:
+
+```bash
+twixt-ai-mini-report mini-generations --output mini-generations/report.md
+```
+
+Omit `--output` to print the report. The command identifies the exact source
+report, complete configuration, checkpoint hashes and lineage; summarizes
+self-play throughput, dataset sizes, loss curves, search budgets, promotion
+evaluations, and generation-over-generation win-rate changes; and evaluates
+every available checkpoint on the versioned `mini-fixed-positions-v1` probe
+set. Checkpoints whose recorded hash does not match are flagged and never
+evaluated. The command only reads source artifacts (apart from the explicitly
+requested Markdown output), so those artifacts remain the source of truth.

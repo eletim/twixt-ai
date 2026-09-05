@@ -28,6 +28,13 @@ from .generations import (
     MiniGenerationConfig,
     run_mini_training_generations,
 )
+from .inspection import (
+    INSPECTION_FORMAT,
+    INSPECTION_VERSION,
+    PROBE_SET,
+    build_mini_inspection_report,
+    render_mini_inspection_report,
+)
 
 __all__ = [
     "DATASET_FORMAT",
@@ -46,7 +53,12 @@ __all__ = [
     "GENERATIONS_FORMAT",
     "GENERATIONS_VERSION",
     "MiniGenerationConfig",
+    "INSPECTION_FORMAT",
+    "INSPECTION_VERSION",
+    "PROBE_SET",
     "build_dataset",
+    "build_mini_inspection_report",
+    "render_mini_inspection_report",
     "run_mini_training_experiment",
     "run_mini_training_generations",
     "train_model",

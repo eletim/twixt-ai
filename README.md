@@ -21,6 +21,9 @@ python -m pip install -e '.[dev]'
 pytest
 ```
 
+Engine-only installations have no PyTorch dependency. Install `.[models]` when
+using the neural encoding or learned-model package without development tools.
+
 Importing `twixt_ai.game`, `twixt_ai.agents`, or `twixt_ai.evaluation` never
 requires the backend or UI.
 

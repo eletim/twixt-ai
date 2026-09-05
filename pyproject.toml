@@ -8,10 +8,10 @@ version = "0.0.1"
 description = "An AI-first Twixt engine and experimentation stack"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["torch>=2"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+models = ["torch>=2"]
+dev = ["pytest>=8", "torch>=2"]
 
 [project.scripts]
 twixt-ai-benchmark = "twixt_ai.evaluation.benchmark_cli:main"

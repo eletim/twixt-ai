@@ -12,8 +12,14 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
+[project.scripts]
+twixt-ai-web = "twixt_ai.backend.server:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"twixt_ai.ui" = ["*.html", "*.js", "*.css"]

@@ -21,3 +21,14 @@ pytest
 
 Importing `twixt_ai.game`, `twixt_ai.agents`, or `twixt_ai.evaluation` never
 requires the backend or UI.
+
+## Browser play
+
+Start the minimal local human-vs-human UI after installing the project:
+
+```bash
+twixt-ai-web
+```
+
+Open <http://127.0.0.1:8000>. The browser only renders game state and submits
+moves; the canonical Python engine owns validation, links, turns, and results.

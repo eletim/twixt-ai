@@ -167,6 +167,14 @@ def test_packaged_ui_summarizes_only_scalar_agent_metadata() -> None:
     assert b"scalarTypes.includes(typeof value)" in body
 
 
+def test_packaged_ui_preserves_custom_board_on_reset() -> None:
+    status, _, body = request(GameApplication(), "/app.js")
+
+    assert status == "200 OK"
+    assert b'presets.push(["custom", view.state.board])' in body
+    assert b'if (presetSelect.value !== "custom") reset.preset' in body
+
+
 def test_session_selects_side_and_runs_registered_agent_through_contract(
     tmp_path: Path,
 ) -> None:
@@ -283,6 +291,23 @@ def test_session_configuration_rejects_unknown_agent(tmp_path: Path) -> None:
         "error": "invalid_request",
         "detail": "unknown agent",
     }
+
+
+def test_session_can_start_named_mini_experiment(tmp_path: Path) -> None:
+    application = GameApplication(ui_root=tmp_path)
+
+    status, _, body = request(
+        application,
+        "/api/session/reset",
+        "POST",
+        {"human_side": "red", "agent": "random", "preset": "mini"},
+    )
+    view = json.loads(body)
+
+    assert status == "200 OK"
+    assert view["preset"] == "mini"
+    assert view["state"]["board"] == {"height": 10, "width": 10}
+    assert view["available_presets"]["standard"] == {"height": 24, "width": 24}
 
 
 @pytest.mark.parametrize("agent_name", ["random", "search", "mcts"])

@@ -86,11 +86,20 @@ def test_coordinate_transform_rejects_out_of_board_coordinate() -> None:
         transform_coordinate(Coordinate(24, 0), BoardSymmetry.IDENTITY)
 
 
-def test_encoder_rejects_nonstandard_board() -> None:
-    with pytest.raises(ValueError, match="24x24"):
-        encode_position(GameState.initial(BoardDimensions(12, 12)))
+def test_encoder_supports_mini_board() -> None:
+    encoded = encode_position(GameState.initial(BoardDimensions(10, 10)))
+
+    assert encoded.shape == (22, 10, 10)
+    assert encoded[18].count_nonzero() == 10 * 10
+    assert encoded[20].count_nonzero() == 16
+    assert encoded[21].count_nonzero() == 16
 
 
-def test_transform_rejects_wrong_tensor_shape() -> None:
-    with pytest.raises(ValueError, match="shape"):
-        transform_encoding(torch.zeros((22, 12, 12)), BoardSymmetry.IDENTITY)
+def test_transform_supports_other_square_board_sizes() -> None:
+    encoded = torch.zeros((22, 10, 10))
+    assert transform_encoding(encoded, BoardSymmetry.IDENTITY).shape == encoded.shape
+
+
+def test_transform_rejects_rectangular_tensor() -> None:
+    with pytest.raises(ValueError, match="square"):
+        transform_encoding(torch.zeros((22, 10, 12)), BoardSymmetry.IDENTITY)

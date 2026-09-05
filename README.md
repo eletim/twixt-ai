@@ -40,6 +40,9 @@ are documented in
 The first learned Mini model, optimization sanity checks, and measured training
 run are documented in
 [`docs/mini-training-experiment.md`](docs/mini-training-experiment.md).
+Its paired strength evaluation against non-neural baselines, including
+policy-only and value-only ablations, is documented in
+[`docs/mini-strength-evaluation.md`](docs/mini-strength-evaluation.md).
 
 Match, self-play, and benchmark artifacts record their board dimensions. The
 dataset manifest, training summary, and policy/value checkpoints also carry the

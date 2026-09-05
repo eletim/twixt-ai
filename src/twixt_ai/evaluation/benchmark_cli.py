@@ -10,7 +10,7 @@ from pathlib import Path
 
 from twixt_ai.agents import RandomAgent
 from twixt_ai.game import BoardDimensions
-from twixt_ai.search import HeuristicSearchAgent
+from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, HeuristicSearchAgent, MCTSAgent
 
 from .benchmark import AgentConfig, AgentFactory, BenchmarkConfig, run_benchmark
 
@@ -24,7 +24,7 @@ def _parser() -> argparse.ArgumentParser:
         action="append",
         required=True,
         metavar="NAME=TYPE",
-        help="entrant name and built-in type (random or search); repeat at least twice",
+        help="entrant name and built-in type (random, search, or mcts); repeat at least twice",
     )
     parser.add_argument("--games-per-pair", type=int, default=2)
     parser.add_argument("--seed", type=int, default=0)
@@ -34,13 +34,24 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--elo", action="store_true", help="include Elo-style ratings")
     parser.add_argument("--search-depth", type=int, default=1)
     parser.add_argument("--node-budget", type=int, default=10_000)
+    parser.add_argument("--simulations", type=int, default=100)
+    parser.add_argument(
+        "--rollout-limit",
+        type=int,
+        default=DEFAULT_ROLLOUT_LIMIT,
+        help="maximum random moves per MCTS rollout",
+    )
     parser.add_argument("--output", type=Path, help="write JSON to a file")
     parser.add_argument("--pretty", action="store_true", help="indent JSON output")
     return parser
 
 
 def _entrants(
-    values: Sequence[str], depth: int, node_budget: int
+    values: Sequence[str],
+    depth: int,
+    node_budget: int,
+    simulations: int,
+    rollout_limit: int,
 ) -> tuple[tuple[AgentConfig, ...], dict[str, AgentFactory]]:
     package_version = version("twixt-ai")
     configs: list[AgentConfig] = []
@@ -49,14 +60,14 @@ def _entrants(
         name, separator, agent_type = value.partition("=")
         if not separator:
             agent_type = name
-        if not name or agent_type not in ("random", "search"):
-            raise ValueError("agents must use NAME=random or NAME=search")
+        if not name or agent_type not in ("random", "search", "mcts"):
+            raise ValueError("agents must use NAME=random, NAME=search, or NAME=mcts")
         if name in factories:
             raise ValueError(f"duplicate agent name: {name}")
         if agent_type == "random":
             factory: AgentFactory = RandomAgent
             settings: dict[str, object] = {"type": "random"}
-        else:
+        elif agent_type == "search":
             factory = partial(
                 HeuristicSearchAgent, depth=depth, node_budget=node_budget
             )
@@ -64,6 +75,15 @@ def _entrants(
                 "type": "search",
                 "depth": depth,
                 "node_budget": node_budget,
+            }
+        else:
+            factory = partial(
+                MCTSAgent, simulations=simulations, rollout_limit=rollout_limit
+            )
+            settings = {
+                "type": "mcts",
+                "simulations": simulations,
+                "rollout_limit": rollout_limit,
             }
         # Validate constructor settings before starting a potentially long run.
         factory()
@@ -77,7 +97,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         agents, factories = _entrants(
-            args.agent, args.search_depth, args.node_budget
+            args.agent,
+            args.search_depth,
+            args.node_budget,
+            args.simulations,
+            args.rollout_limit,
         )
         config = BenchmarkConfig(
             agents=agents,

@@ -1,0 +1,95 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #20242b;
+  background: #eee9df;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+main {
+  width: min(94vw, 820px);
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+h1, .eyebrow, #status, #message, footer { margin: 0; }
+h1 { font: 700 clamp(2rem, 6vw, 3.5rem)/0.9 Georgia, serif; }
+.eyebrow { margin-bottom: 8px; color: #6d665d; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
+
+button {
+  border: 1px solid #4c4842;
+  border-radius: 999px;
+  padding: 10px 17px;
+  color: inherit;
+  background: #faf7f0;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover { background: white; }
+button:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; outline-offset: 3px; }
+
+.game {
+  padding: clamp(14px, 3vw, 26px);
+  border: 1px solid #c8c0b3;
+  border-radius: 18px;
+  background: #faf7f0;
+  box-shadow: 0 14px 34px rgb(46 39 29 / 10%);
+}
+
+#status {
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+#status::before {
+  display: inline-block;
+  width: .7em;
+  height: .7em;
+  margin-right: .5em;
+  border-radius: 50%;
+  background: #777;
+  content: "";
+}
+
+#status[data-player="red"]::before { background: #c53c35; }
+#status[data-player="black"]::before { background: #22262b; }
+
+.board-frame { overflow: auto; }
+#board { display: block; width: 100%; min-width: 560px; background: #d9b978; touch-action: manipulation; }
+.grid-lines line { stroke: #715d3a; stroke-width: 1; opacity: .68; }
+.links line { stroke-width: 5; stroke-linecap: round; }
+.links .red { stroke: #c53c35; }
+.links .black { stroke: #22262b; }
+.intersection { fill: #715d3a; }
+.intersection.playable { cursor: pointer; transition: r 100ms, fill 100ms; }
+.intersection.playable:hover, .intersection.playable:focus { r: 7; fill: #fff8dc; stroke: #715d3a; stroke-width: 2; }
+.peg { stroke: #fff8dc; stroke-width: 2; }
+.peg.red { fill: #c53c35; }
+.peg.black { fill: #22262b; }
+
+#message { min-height: 1.4em; margin-top: 12px; color: #9b2c27; }
+footer { padding: 14px 4px 0; color: #5c574f; font-size: .9rem; }
+.red-key { color: #ad2824; font-weight: 700; }
+.black-key { color: #15191e; font-weight: 700; }
+
+@media (max-width: 600px) {
+  main { width: 100%; padding-top: 20px; }
+  header { padding: 0 16px; }
+  .game { border-radius: 0; border-left: 0; border-right: 0; padding-inline: 10px; }
+  footer { padding-inline: 16px; }
+}

@@ -19,8 +19,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (TypeError, ValueError) as exc:
         parser.error(str(exc))
     print(json.dumps(report, sort_keys=True, separators=(",", ":")))
-    baseline = report["stages"]["baseline"]["selfplay"]["summary"]
-    return 1 if baseline["aggregate"]["failed"] else 0
+    failed = sum(
+        stage["selfplay"]["summary"]["aggregate"]["failed"]
+        for stage in report["stages"].values()
+    )
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":  # pragma: no cover

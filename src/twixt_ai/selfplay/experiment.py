@@ -83,6 +83,22 @@ def _write_json(path: Path, value: object) -> None:
     temporary.replace(path)
 
 
+def _available_cpus() -> int:
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:
+        return os.cpu_count() or 1
+
+
+def _environment() -> dict[str, object]:
+    return {
+        "implementation": platform.python_implementation(),
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "available_cpus": _available_cpus(),
+    }
+
+
 def _run_stage(
     root: Path,
     stage: StageConfig,
@@ -159,9 +175,10 @@ def run_mini_dataset_experiment(
     root = Path(output_dir)
     if root.exists() and any(root.iterdir()):
         raise ValueError("output directory must be empty or not exist")
-    root.mkdir(parents=True, exist_ok=True)
     if os.environ.get("PYTHONHASHSEED") != "0":
         raise ValueError("PYTHONHASHSEED must be 0")
+    environment = _environment()
+    root.mkdir(parents=True, exist_ok=True)
 
     stages = {
         stage.name: _run_stage(root, stage, config)
@@ -178,12 +195,7 @@ def run_mini_dataset_experiment(
             ),
         },
         "config": config.to_dict(),
-        "environment": {
-            "implementation": platform.python_implementation(),
-            "python": platform.python_version(),
-            "platform": platform.platform(),
-            "available_cpus": len(os.sched_getaffinity(0)),
-        },
+        "environment": environment,
         "stages": stages,
     }
     _write_json(root / "report.json", report)

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from twixt_ai.selfplay import experiment
 from twixt_ai.selfplay.experiment import (
     MiniDatasetExperimentConfig,
     StageConfig,
@@ -42,6 +43,24 @@ def test_experiment_records_runtime_config_and_valid_datasets(
             (tmp_path / name / "dataset" / "manifest.json").read_text()
         ) == manifest
     assert json.loads((tmp_path / "report.json").read_text()) == report
+
+
+def test_experiment_uses_cpu_count_without_sched_getaffinity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PYTHONHASHSEED", "0")
+    monkeypatch.delattr(experiment.os, "sched_getaffinity")
+    monkeypatch.setattr(experiment.os, "cpu_count", lambda: 7)
+    config = MiniDatasetExperimentConfig(
+        simulations=1,
+        workers=1,
+        smoke=StageConfig("smoke", 1, 1, "smoke"),
+        baseline=StageConfig("baseline", 1, 2, "baseline"),
+    )
+
+    report = run_mini_dataset_experiment(tmp_path, config=config)
+
+    assert report["environment"]["available_cpus"] == 7
 
 
 def test_experiment_requires_reproducible_hash_seed(

@@ -85,9 +85,48 @@ def winning_path(state: GameState, player: Player) -> tuple[Coordinate, ...] | N
 
 
 def has_winning_path(state: GameState, player: Player) -> bool:
-    """Return whether *player* connects their two target borders."""
+    """Return whether *player* connects their two target borders.
 
-    return winning_path(state, player) is not None
+    Unlike :func:`winning_path`, this predicate does not build or sort a path
+    witness.  Move application calls it for every position, so keeping the
+    boolean-only path lean avoids search-wide allocation overhead.
+    """
+
+    if not isinstance(state, GameState):
+        raise TypeError("state must be a GameState")
+    if not isinstance(player, Player):
+        raise TypeError("player must be a Player")
+
+    owned_coordinates = {
+        peg.coordinate for peg in state.pegs if peg.owner is player
+    }
+    starts = {
+        coordinate
+        for coordinate in owned_coordinates
+        if _is_start_border(state, player, coordinate)
+    }
+    if not starts:
+        return False
+
+    adjacency: dict[Coordinate, list[Coordinate]] = {
+        coordinate: [] for coordinate in owned_coordinates
+    }
+    for link in state.links:
+        if link.owner is player:
+            adjacency[link.start].append(link.end)
+            adjacency[link.end].append(link.start)
+
+    pending = list(starts)
+    visited = starts
+    while pending:
+        coordinate = pending.pop()
+        if _is_target_border(state, player, coordinate):
+            return True
+        for neighbor in adjacency[coordinate]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                pending.append(neighbor)
+    return False
 
 
 __all__ = ["has_winning_path", "winning_path"]

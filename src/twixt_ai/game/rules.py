@@ -105,14 +105,41 @@ def legal_peg_placements(state: GameState) -> tuple[PegPlacement, ...]:
 
     occupied = {peg.coordinate for peg in state.pegs}
     player = state.side_to_move
-    placements: list[PegPlacement] = []
-    for y in range(state.board.height):
-        for x in range(state.board.width):
-            coordinate = Coordinate(x, y)
-            placement = PegPlacement(player, coordinate)
-            if coordinate not in occupied and not _is_forbidden_border(state, placement):
-                placements.append(placement)
-    return tuple(placements)
+    if player is Player.RED:
+        x_values = range(1, state.board.width - 1)
+        y_values = range(state.board.height)
+    else:
+        x_values = range(state.board.width)
+        y_values = range(1, state.board.height - 1)
+    return tuple(
+        PegPlacement(player, coordinate)
+        for y in y_values
+        for x in x_values
+        if (coordinate := Coordinate(x, y)) not in occupied
+    )
+
+
+def _has_legal_peg_placement(state: GameState) -> bool:
+    """Return whether the side to move has a placement, without creating moves.
+
+    This is the transition layer's draw check.  Full move enumeration is a
+    search-facing operation and is needlessly expensive when only emptiness is
+    relevant.
+    """
+
+    if state.is_terminal:
+        return False
+    if state.side_to_move is Player.RED:
+        capacity = max(state.board.width - 2, 0) * state.board.height
+        occupied = sum(
+            0 < peg.coordinate.x < state.board.width - 1 for peg in state.pegs
+        )
+    else:
+        capacity = state.board.width * max(state.board.height - 2, 0)
+        occupied = sum(
+            0 < peg.coordinate.y < state.board.height - 1 for peg in state.pegs
+        )
+    return occupied < capacity
 
 
 def knight_move_neighbors(state: GameState, peg: Peg) -> tuple[Peg, ...]:

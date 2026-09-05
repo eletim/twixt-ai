@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .rules import (
+    _has_legal_peg_placement,
     IllegalPlacementReason,
     PegPlacement,
     automatic_links_for_placement,
@@ -69,7 +70,7 @@ def apply_move(state: GameState, move: PegPlacement) -> GameState:
             if move.player is Player.RED
             else GameResult.BLACK_WINS
         )
-    elif not legal_peg_placements(position):
+    elif not _has_legal_peg_placement(position):
         result = GameResult.DRAW
     else:
         result = GameResult.IN_PROGRESS

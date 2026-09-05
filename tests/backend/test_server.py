@@ -285,6 +285,23 @@ def test_session_configuration_rejects_unknown_agent(tmp_path: Path) -> None:
     }
 
 
+def test_session_can_start_named_mini_experiment(tmp_path: Path) -> None:
+    application = GameApplication(ui_root=tmp_path)
+
+    status, _, body = request(
+        application,
+        "/api/session/reset",
+        "POST",
+        {"human_side": "red", "agent": "random", "preset": "mini"},
+    )
+    view = json.loads(body)
+
+    assert status == "200 OK"
+    assert view["preset"] == "mini"
+    assert view["state"]["board"] == {"height": 10, "width": 10}
+    assert view["available_presets"]["standard"] == {"height": 24, "width": 24}
+
+
 @pytest.mark.parametrize("agent_name", ["random", "search", "mcts"])
 def test_human_can_complete_match_against_default_agents_via_session_api(
     tmp_path: Path,

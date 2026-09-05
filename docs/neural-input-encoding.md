@@ -1,7 +1,8 @@
 # Neural input encoding v1
 
 Learned agents consume a channel-first PyTorch `float32` tensor with shape
-`[22, 24, 24]`. Rows are board `y` coordinates and columns are board `x`
+`[22, height, width]` (or `[22, 24, 24]` for the standard preset). Rows are
+board `y` coordinates and columns are board `x`
 coordinates. Values are binary. The encoding depends only on the canonical
 Python `GameState`, never backend or browser values.
 
@@ -31,8 +32,9 @@ winner, link ownership, and goal planes. `transform_state` maps canonical game
 values, while `transform_encoding` performs the equivalent operation directly
 on encoded tensors and supports leading batch dimensions.
 
-Only standard 24-by-24 positions can be encoded. This intentional validation
-prevents a checkpoint from silently receiving incompatible spatial dimensions.
+Standard 24-by-24 and Mini 10-by-10 positions use identical feature semantics.
+The policy/value model configuration and checkpoints record the spatial
+dimensions and reject positions from a different board size.
 No auxiliary heuristic features are included in v1: occupancy, connectivity,
 turn, and immutable goal geometry are sufficient primitive inputs, and derived
 features would increase compatibility surface without adding information.

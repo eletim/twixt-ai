@@ -5,6 +5,7 @@ const messageElement = document.querySelector("#message");
 const resetButton = document.querySelector("#reset");
 const sideSelect = document.querySelector("#human-side");
 const agentSelect = document.querySelector("#agent");
+const presetSelect = document.querySelector("#board-preset");
 const inspectionToggle = document.querySelector("#inspection-toggle");
 const inspectionElement = document.querySelector("#inspection");
 
@@ -67,11 +68,23 @@ function populateSetup(view) {
       return option;
     }));
   }
+  const presets = Object.entries(view.available_presets ?? {});
+  const presetNames = [...presetSelect.options].map((option) => option.value);
+  if (presetNames.join("\0") !== presets.map(([name]) => name).join("\0")) {
+    presetSelect.replaceChildren(...presets.map(([name, board]) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = `${title(name)} (${board.width}×${board.height})`;
+      return option;
+    }));
+  }
   sideSelect.value = view.human_side;
   agentSelect.value = view.agent;
+  if (view.preset !== "custom") presetSelect.value = view.preset;
   resetButton.disabled = requestPending;
   sideSelect.disabled = requestPending;
   agentSelect.disabled = requestPending;
+  presetSelect.disabled = requestPending;
   inspectionToggle.disabled = requestPending;
   boardElement.setAttribute("aria-busy", agentThinking ? "true" : "false");
 }
@@ -276,6 +289,7 @@ resetButton.addEventListener("click", async () => {
   if (requestPending || !session) return;
   const humanSide = sideSelect.value;
   const agent = agentSelect.value;
+  const preset = presetSelect.value;
   requestPending = true;
   messageElement.textContent = "";
   render(session);
@@ -283,7 +297,7 @@ resetButton.addEventListener("click", async () => {
     session = await request("/api/session/reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ human_side: humanSide, agent }),
+      body: JSON.stringify({ human_side: humanSide, agent, preset }),
     });
   } catch (error) {
     messageElement.textContent = `Could not start game: ${error.message}.`;

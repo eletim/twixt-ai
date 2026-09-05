@@ -37,8 +37,19 @@ class NeuralPolicyValue:
             raise TypeError("moves must contain only PegPlacement values")
         parameter = next(self.model.parameters())
         device = parameter.device
+        config = self.model.config
+        if (
+            state.board.width != config.board_width
+            or state.board.height != config.board_height
+        ):
+            raise ValueError("state board dimensions do not match the policy/value model")
         inputs = encode_position(state, device=device).unsqueeze(0)
-        mask = legal_move_mask(moves, device=device)
+        mask = legal_move_mask(
+            moves,
+            board_width=config.board_width,
+            board_height=config.board_height,
+            device=device,
+        )
         training_modes = tuple(
             (module, module.training) for module in self.model.modules()
         )
@@ -55,7 +66,11 @@ class NeuralPolicyValue:
             for module, was_training in training_modes:
                 module.training = was_training
         priors = {
-            move: float(probabilities[move_to_action_index(move)].item())
+            move: float(probabilities[move_to_action_index(
+                move,
+                board_width=config.board_width,
+                board_height=config.board_height,
+            )].item())
             for move in moves
         }
         return PolicyValueEstimate(priors, float(values[0].item()))

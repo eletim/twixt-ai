@@ -9,14 +9,14 @@ from pathlib import Path
 import pytest
 import torch
 
-from twixt_ai.game import GameState
+from twixt_ai.game import BoardDimensions, GameState
 from twixt_ai.models import PolicyValueConfig, load_policy_value_checkpoint
 from twixt_ai.training import TrainingConfig, train_model
 from twixt_ai.training import trainer as trainer_module
 from twixt_ai.training.train_cli import main
 
 
-def _dataset(root: Path) -> Path:
+def _dataset(root: Path, board: BoardDimensions = BoardDimensions()) -> Path:
     root.mkdir()
     (root / "train").mkdir()
     (root / "validation").mkdir()
@@ -26,7 +26,7 @@ def _dataset(root: Path) -> Path:
             "format": "twixt-ai-training-example",
             "version": 1,
             "id": identifier,
-            "position": GameState.initial().to_dict(),
+            "position": GameState.initial(board).to_dict(),
             "action": {"x": x, "y": 1},
             "outcome": outcome,
             "source": {},
@@ -52,6 +52,7 @@ def _dataset(root: Path) -> Path:
     manifest = {
         "format": "twixt-ai-training-dataset",
         "version": 1,
+        "board": board.to_dict(),
         "splits": {
             "train": {
                 "examples": 2,
@@ -100,6 +101,22 @@ def test_trains_fixture_and_identifies_loadable_checkpoints(tmp_path: Path) -> N
     assert json.loads((output / "summary.json").read_text()) == summary.to_dict()
 
 
+def test_training_infers_mini_model_shape_from_dataset(tmp_path: Path) -> None:
+    output = tmp_path / "run"
+
+    summary = train_model(
+        _dataset(tmp_path / "dataset", BoardDimensions(10, 10)),
+        output,
+        config=_config(1),
+    )
+    loaded = load_policy_value_checkpoint(output / "latest.pt")
+
+    assert summary.to_dict()["board"] == {"height": 10, "width": 10}
+    assert loaded.model.config.board_width == 10
+    assert loaded.model.config.board_height == 10
+    assert loaded.metadata["board"] == {"height": 10, "width": 10}
+
+
 def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
     dataset = _dataset(tmp_path / "dataset")
     model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
@@ -120,6 +137,34 @@ def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
         resumed_model.state_dict().values(), direct_model.state_dict().values()
     ):
         assert torch.equal(resumed_weight, direct_weight)
+
+
+def test_resume_accepts_legacy_model_config_without_board_dimensions(
+    tmp_path: Path,
+) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    train_model(dataset, output, config=_config(1), model_config=model_config)
+    latest_path = output / "latest.pt"
+    payload = torch.load(latest_path, weights_only=True)
+    payload["config"] = {
+        key: value
+        for key, value in payload["config"].items()
+        if key not in {"board_width", "board_height"}
+    }
+    torch.save(payload, latest_path)
+
+    summary = train_model(
+        dataset,
+        output,
+        config=_config(2),
+        model_config=model_config,
+        resume=True,
+    )
+
+    assert summary.completed_epochs == 2
+    assert load_policy_value_checkpoint(latest_path).model.config == model_config
 
 
 def test_interruption_before_latest_does_not_commit_new_best(

@@ -16,6 +16,28 @@ The versioned, reproducible training shard schema is defined in
 The model training, metrics, and resume workflow is documented in
 [docs/model-training.md](docs/model-training.md).
 
+## Experiment presets
+
+All browser and headless workflows share named board presets. `standard` is
+the compatible 24×24 default and `mini` is the 10×10 Mini Twixt experiment;
+both use the canonical v0.0.1 automatic-link rules with no pie/swap rule.
+Select Mini Twixt in the browser's Board control, or use `--preset mini` with
+the match, self-play, agent benchmark, and engine benchmark commands. Explicit
+`--width` and `--height` values override individual preset dimensions.
+
+For example, a complete reproducible Mini pipeline starts with:
+
+```bash
+twixt-ai-selfplay --preset mini --games 100 --workers 4 --seed 1234 \
+  --red mcts --black mcts --output-dir mini-selfplay
+twixt-ai-dataset --input mini-selfplay --output-dir mini-dataset
+twixt-ai-train --dataset mini-dataset --output-dir mini-training --seed 1234
+```
+
+Match, self-play, and benchmark artifacts record their board dimensions. The
+dataset manifest, training summary, and policy/value checkpoints also carry the
+dimensions, so 10×10 and 24×24 artifacts cannot be silently mixed.
+
 ## Development
 
 Python 3.10 or newer is required. From a checkout:
@@ -39,7 +61,7 @@ Run a reproducible random-agent match and emit a machine-readable JSON artifact:
 twixt-ai-match --red random --black random --seed 1234 --output match.json
 ```
 
-Use `--width` and `--height` for nonstandard boards, or omit `--output` to
+Use `--preset mini` for 10×10, `--width` and `--height` for custom boards, or omit `--output` to
 write the artifact to standard output. Python callers can use
 `twixt_ai.evaluation.run_match` with any agents that implement the common
 agent protocol.

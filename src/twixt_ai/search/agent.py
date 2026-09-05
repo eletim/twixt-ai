@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable
 import math
 
 from twixt_ai.agents import (
+    TERMINAL_SCORE,
     AgentContractError,
     AgentRequest,
     AgentResult,
@@ -15,7 +16,7 @@ from twixt_ai.game import GameState, PegPlacement, Player, apply_move, legal_peg
 
 
 EvaluationFunction = Callable[[GameState, Player], float]
-"""Return a position score from the supplied player's perspective."""
+"""Return a non-terminal position score from the supplied perspective."""
 
 
 MoveOrderer = Callable[
@@ -34,10 +35,11 @@ def _coordinate_order(
 class HeuristicSearchAgent:
     """Choose moves with depth- and node-bounded alpha-beta minimax.
 
-    Leaf positions are scored with the common heuristic evaluator, including
-    its terminal win/loss scores. ``move_orderer`` is invoked at every node and
-    can put tactically promising moves first to improve alpha-beta pruning. It
-    must return each supplied legal move exactly once.
+    Non-terminal leaf positions are scored with the configured evaluator.
+    Terminal wins and losses are handled by search itself, so custom evaluators
+    do not need terminal-state behavior. ``move_orderer`` is invoked at every
+    node and can put tactically promising moves first to improve alpha-beta
+    pruning. It must return each supplied legal move exactly once.
 
     Nodes count applied child positions. Consequently the budget is a hard
     bound on state transitions as well as a deterministic search limit.
@@ -78,6 +80,13 @@ class HeuristicSearchAgent:
         return ordered
 
     def _evaluate(self, state: GameState, root: Player) -> float:
+        if state.is_terminal:
+            if state.winner is root:
+                return TERMINAL_SCORE
+            if state.winner is root.opponent:
+                return -TERMINAL_SCORE
+            return 0.0
+
         score = self.evaluator(state, root)
         if isinstance(score, bool) or not isinstance(score, (int, float)):
             raise TypeError("evaluator must return a number")

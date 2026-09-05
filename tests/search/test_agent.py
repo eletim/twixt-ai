@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from agents.contract import AgentContract
-from twixt_ai.agents import AgentRequest
+from twixt_ai.agents import TERMINAL_SCORE, AgentRequest
 from twixt_ai.game import (
     BoardDimensions,
     Coordinate,
@@ -44,6 +44,31 @@ def test_search_takes_an_immediate_win() -> None:
     result = SearchAgent().choose_move(AgentRequest(state))
 
     assert result.move.coordinate == Coordinate(2, 3)
+
+
+def test_terminal_scores_do_not_depend_on_a_custom_evaluator() -> None:
+    state = GameState(
+        board=BoardDimensions(5, 4),
+        pegs=(
+            Peg(Player.RED, Coordinate(1, 0)),
+            Peg(Player.RED, Coordinate(3, 1)),
+        ),
+        links=(Link(Player.RED, Coordinate(1, 0), Coordinate(3, 1)),),
+    )
+    evaluated: list[GameState] = []
+
+    def nonterminal_evaluator(position: GameState, player: Player) -> float:
+        assert not position.is_terminal
+        evaluated.append(position)
+        return 0.0
+
+    result = SearchAgent(evaluator=nonterminal_evaluator).choose_move(
+        AgentRequest(state)
+    )
+
+    assert result.move.coordinate == Coordinate(2, 3)
+    assert result.metadata["score"] == TERMINAL_SCORE
+    assert evaluated
 
 
 def test_descriptive_and_compatibility_names_refer_to_the_same_agent() -> None:

@@ -18,6 +18,12 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate headless Twixt self-play games")
     parser.add_argument("--games", type=int, required=True, help="number of games")
     parser.add_argument("--workers", type=int, default=1, help="parallel worker processes")
+    parser.add_argument(
+        "--worker-mode",
+        choices=("process", "thread"),
+        default="process",
+        help="worker isolation (thread mode permits a shared inference batcher)",
+    )
     parser.add_argument("--seed", type=int, default=None, help="reproducible batch seed")
     parser.add_argument("--red", choices=("random", "search", "mcts"), default="random")
     parser.add_argument("--black", choices=("random", "search", "mcts"), default="random")
@@ -63,6 +69,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             board=resolve_experiment_board(args.preset, width=args.width, height=args.height),
             red_agent=args.red,
             black_agent=args.black,
+            worker_mode=args.worker_mode,
         )
         red_factory = _agent_factory(
             args.red,

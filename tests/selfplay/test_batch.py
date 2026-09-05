@@ -9,6 +9,9 @@ from pathlib import Path
 
 from twixt_ai.agents import AgentRequest, AgentResult, RandomAgent
 from twixt_ai.game import BoardDimensions
+from twixt_ai.models import PolicyValueConfig, PolicyValueNetwork
+from twixt_ai.search import MCTSAgent
+from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
 from twixt_ai.selfplay import BatchConfig, run_batch
 from twixt_ai.selfplay.cli import main
 
@@ -136,6 +139,65 @@ def test_seeded_output_is_independent_of_worker_count(tmp_path: Path) -> None:
         assert (tmp_path / "sequential" / left.artifact).read_text() == (
             tmp_path / "parallel" / right.artifact
         ).read_text()
+
+
+def test_thread_workers_support_shared_in_process_state(tmp_path: Path) -> None:
+    calls: list[int] = []
+
+    def factory() -> RandomAgent:
+        calls.append(1)
+        return RandomAgent()
+
+    config = BatchConfig(
+        games=3,
+        workers=2,
+        seed=54,
+        board=BoardDimensions(4, 4),
+        worker_mode="thread",
+    )
+
+    summary = run_batch(factory, factory, config=config, output_dir=tmp_path)
+
+    assert summary.completed == 3
+    assert len(calls) == 6
+    assert summary.to_dict()["config"]["worker_mode"] == "thread"
+
+
+def test_concurrent_selfplay_games_share_neural_batches(tmp_path: Path) -> None:
+    model = PolicyValueNetwork(
+        PolicyValueConfig(
+            channels=2,
+            residual_blocks=1,
+            value_hidden=4,
+            board_width=4,
+            board_height=4,
+        )
+    )
+    config = BatchConfig(
+        games=2,
+        workers=2,
+        seed=54,
+        board=BoardDimensions(4, 4),
+        red_agent="batched-mcts",
+        black_agent="batched-mcts",
+        worker_mode="thread",
+    )
+
+    with NeuralInferenceBatcher(
+        NeuralPolicyValue(model), batch_size=2, max_wait_seconds=0.05
+    ) as batcher:
+        factory = partial(MCTSAgent, simulations=1, policy_value=batcher)
+        summary = run_batch(
+            factory,
+            factory,
+            config=config,
+            output_dir=tmp_path,
+        )
+        statistics = batcher.statistics
+
+    assert summary.completed == 2
+    assert statistics.requests > 2
+    assert statistics.maximum_batch_size == 2
 
 
 def test_cli_writes_machine_readable_summary(tmp_path: Path, capsys: object) -> None:

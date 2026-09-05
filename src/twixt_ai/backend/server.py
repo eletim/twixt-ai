@@ -21,7 +21,7 @@ from twixt_ai.game import (
     create_game,
     reset_game,
 )
-from twixt_ai.search import SearchAgent
+from twixt_ai.search import MCTSAgent, SearchAgent
 
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
@@ -65,7 +65,7 @@ class GameSession:
     ) -> None:
         self._state = state or create_game()
         self._agents = (
-            {"random": RandomAgent(), "search": SearchAgent()}
+            {"random": RandomAgent(), "search": SearchAgent(), "mcts": MCTSAgent()}
             if agents is None
             else dict(agents)
         )
@@ -83,6 +83,7 @@ class GameSession:
         self._agent_name = selected_agent
         self._human_side = human_side
         self._revision = 0
+        self._thinking: dict[str, object] = {}
         self._lock = Lock()
 
     def _view_unlocked(
@@ -94,7 +95,7 @@ class GameSession:
             "human_side": self._human_side.value,
             "agent": self._agent_name,
             "available_agents": list(self._agents),
-            "thinking": dict(thinking or {}),
+            "thinking": dict(self._thinking if thinking is None else thinking),
         }
 
     def view(self) -> dict[str, object]:
@@ -118,12 +119,14 @@ class GameSession:
             move = PegPlacement(self._state.side_to_move, Coordinate(x, y))
             self._state = apply_move(self._state, move)
             self._revision += 1
+            self._thinking = {}
             return self._state
 
     def reset(self) -> GameState:
         with self._lock:
             self._state = reset_game(self._state)
             self._revision += 1
+            self._thinking = {}
             return self._state
 
     @staticmethod
@@ -151,6 +154,7 @@ class GameSession:
             self._agent_name = agent_name
             self._state = reset_game(self._state)
             self._revision += 1
+            self._thinking = {}
             return self._view_unlocked()
 
     def place_human(self, x: object, y: object, revision: object) -> dict[str, object]:
@@ -167,6 +171,7 @@ class GameSession:
             move = PegPlacement(self._human_side, Coordinate(x, y))
             self._state = apply_move(self._state, move)
             self._revision += 1
+            self._thinking = {}
             return self._view_unlocked()
 
     def play_agent(self, revision: object) -> dict[str, object]:
@@ -184,7 +189,7 @@ class GameSession:
                 raise AgentContractError(
                     "agent metadata must be JSON serializable"
                 ) from exc
-            thinking = {
+            self._thinking = {
                 "move": {
                     "player": result.move.player.value,
                     "coordinate": result.move.coordinate.to_dict(),
@@ -193,7 +198,7 @@ class GameSession:
             }
             self._state = apply_move(self._state, result.move)
             self._revision += 1
-            return self._view_unlocked(thinking)
+            return self._view_unlocked()
 
 
 class GameApplication:

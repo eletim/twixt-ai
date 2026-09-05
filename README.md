@@ -105,4 +105,7 @@ Open <http://127.0.0.1:8000>, choose a side and an available agent, then start a
 new game. The browser only renders state and submits human/agent turn requests;
 the canonical Python engine owns validation, links, turns, results, and agent
 selection. Session revisions prevent delayed browser clicks from changing a
-newer position.
+newer position. Enable **AI inspection** to overlay candidate scores or
+probabilities and the selected move, plus the agent-provided value estimate and
+search statistics. The overlay is off by default and does not evaluate moves in
+the browser.

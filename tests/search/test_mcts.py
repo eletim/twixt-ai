@@ -27,6 +27,9 @@ def test_seeded_search_is_reproducible_and_reports_root_statistics() -> None:
     assert first.metadata["simulations"] == 12
     assert first.metadata["nodes"] <= 13
     assert sum(item["visits"] for item in first.metadata["root_moves"]) == 12
+    inspection = first.metadata["inspection"]
+    assert sum(item["probability"] for item in inspection["candidates"]) == pytest.approx(1)
+    assert inspection["statistics"]["simulations"] == 12
     json.dumps(dict(first.metadata))
 
 

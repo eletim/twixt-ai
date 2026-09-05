@@ -401,6 +401,25 @@ class MCTSAgent:
                 }
                 for item in statistics.moves
             ],
+            "inspection": {
+                "value": best.mean_value,
+                "candidates": [
+                    {
+                        "x": item.move.coordinate.x,
+                        "y": item.move.coordinate.y,
+                        "probability": item.visits / statistics.simulations,
+                        "value": item.value,
+                        "visits": item.visits,
+                    }
+                    for item in statistics.moves
+                ],
+                "statistics": {
+                    "simulations": statistics.simulations,
+                    "nodes": statistics.nodes,
+                    "maximum_depth": statistics.maximum_depth,
+                    "rollout_moves": statistics.rollout_moves,
+                },
+            },
         }
         return AgentResult(best.move, metadata)
 

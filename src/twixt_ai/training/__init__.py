@@ -22,6 +22,12 @@ from .mini_experiment import (
     MiniTrainingExperimentConfig,
     run_mini_training_experiment,
 )
+from .generations import (
+    GENERATIONS_FORMAT,
+    GENERATIONS_VERSION,
+    MiniGenerationConfig,
+    run_mini_training_generations,
+)
 
 __all__ = [
     "DATASET_FORMAT",
@@ -37,7 +43,11 @@ __all__ = [
     "TrainingConfig",
     "TrainingSummary",
     "MiniTrainingExperimentConfig",
+    "GENERATIONS_FORMAT",
+    "GENERATIONS_VERSION",
+    "MiniGenerationConfig",
     "build_dataset",
     "run_mini_training_experiment",
+    "run_mini_training_generations",
     "train_model",
 ]

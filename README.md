@@ -84,8 +84,28 @@ agent = MCTSAgent(simulations=400, rollout_limit=4)
 
 Use `--agent candidate=mcts --simulations 400 --rollout-limit 4` in the
 benchmark CLI; self-play accepts the same budget flags. A `policy_value`
-callback can supply move priors and leaf values later without replacing the
-MCTS orchestration layer. Python callers may explicitly set
+callback can supply move priors and leaf values without replacing the MCTS
+orchestration layer. The initial learned path uses a small residual PyTorch
+network and an inference adapter:
+
+```python
+from twixt_ai.models import load_policy_value_checkpoint
+from twixt_ai.search import MCTSAgent
+from twixt_ai.search.neural import NeuralPolicyValue
+
+checkpoint = load_policy_value_checkpoint("model.pt")
+agent = MCTSAgent(
+    simulations=400,
+    policy_value=NeuralPolicyValue(checkpoint.model),
+)
+```
+
+The network emits raw logits for training; the adapter encodes canonical
+positions, masks illegal moves, normalizes legal priors, and supplies a value
+in `[-1, 1]` from the side-to-move perspective. Checkpoints record encoding,
+architecture, and configuration versions and reject incompatible loads. See
+[`docs/policy-value-network.md`](docs/policy-value-network.md) for the action
+mapping and checkpoint contract. Python callers may explicitly set
 `rollout_limit=None` for terminal playouts.
 
 `twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses

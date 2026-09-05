@@ -61,18 +61,30 @@ def _load_source(path: str | Path) -> tuple[Path, dict[str, Any]]:
     return source, decoded
 
 
-def _resolve_checkpoint(written_path: object, source: Path) -> Path | None:
+def _checkpoint_candidates(written_path: object, source: Path) -> tuple[Path, ...]:
     if not isinstance(written_path, str) or not written_path:
-        return None
+        return ()
     path = Path(written_path)
     if path.is_absolute():
-        return path if path.is_file() else None
-    candidates = [Path.cwd() / path]
-    candidates.extend(parent / path for parent in (source.parent, *source.parents))
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return None
+        return (path,)
+    candidates = (Path.cwd() / path, *(parent / path for parent in source.parents))
+    # ``source`` and the current directory can share ancestors. Preserve search
+    # order while avoiding repeated reads and hashes of the same candidate.
+    return tuple(dict.fromkeys(candidate.resolve() for candidate in candidates))
+
+
+def _resolve_checkpoint(
+    written_path: object, source: Path, expected_sha256: object
+) -> tuple[Path | None, list[dict[str, str]]]:
+    mismatches: list[dict[str, str]] = []
+    for candidate in _checkpoint_candidates(written_path, source):
+        if not candidate.is_file():
+            continue
+        actual = _sha256(candidate)
+        if isinstance(expected_sha256, str) and actual == expected_sha256:
+            return candidate, mismatches
+        mismatches.append({"path": str(candidate), "sha256": actual})
+    return None, mismatches
 
 
 def _probe_states() -> tuple[tuple[str, GameState], ...]:
@@ -206,7 +218,16 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             "examples": manifest.get("examples") if isinstance(manifest, Mapping) else None,
         },
         "losses": _loss_summary(generation.get("training")),
-        "evaluation": dict(promotion) if isinstance(promotion, Mapping) else None,
+        "evaluation": (
+            {"comparison": "candidate vs parent champion", **dict(promotion)}
+            if isinstance(promotion, Mapping) else None
+        ),
+        "champion_change": (
+            "updated to candidate"
+            if isinstance(promotion, Mapping) and promotion.get("promoted") is True
+            else "unchanged" if isinstance(promotion, Mapping)
+            else None
+        ),
     }
 
 
@@ -219,34 +240,26 @@ def build_mini_inspection_report(
         raise ValueError("top_moves must be a positive integer")
     source, raw = _load_source(generation_report)
     generations = [_generation_summary(item) for item in raw["generations"]]
-    previous_rate: float | None = None
-    for generation in generations:
-        evaluation = generation["evaluation"]
-        rate = evaluation.get("win_rate") if isinstance(evaluation, Mapping) else None
-        generation["strength_change"] = (
-            None if not isinstance(rate, (int, float)) or previous_rate is None
-            else rate - previous_rate
-        )
-        if isinstance(rate, (int, float)):
-            previous_rate = float(rate)
 
     checkpoints = _checkpoint_records(raw)
     for checkpoint in checkpoints:
-        resolved = _resolve_checkpoint(checkpoint["path"], source)
+        resolved, mismatches = _resolve_checkpoint(
+            checkpoint["path"], source, checkpoint["sha256"]
+        )
         checkpoint["resolved_path"] = str(resolved) if resolved else None
         checkpoint["available"] = resolved is not None
         if resolved is None:
-            checkpoint["verification"] = "missing"
+            checkpoint["verification"] = (
+                "sha256 mismatch" if mismatches else "matching checkpoint missing"
+            )
+            if mismatches:
+                checkpoint["mismatched_candidates"] = mismatches
             checkpoint["probes"] = []
             continue
-        actual = _sha256(resolved)
-        checkpoint["verification"] = (
-            "verified" if actual == checkpoint["sha256"] else "sha256 mismatch"
-        )
-        checkpoint["actual_sha256"] = actual
-        if checkpoint["verification"] != "verified":
-            checkpoint["probes"] = []
-            continue
+        checkpoint["verification"] = "verified"
+        checkpoint["actual_sha256"] = checkpoint["sha256"]
+        if mismatches:
+            checkpoint["ignored_mismatched_candidates"] = mismatches
         try:
             checkpoint["probes"] = _probe_checkpoint(resolved, top_moves)
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
@@ -323,8 +336,8 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
         "", "## Generation overview", "",
         "| Gen | Status | Self-play games | Games/hour | Dataset examples | "
         "Train loss (first→last) | Validation loss (first→last) | "
-        "Candidate win rate | Δ vs prior | Decision | Search budgets |",
-        "| ---: | --- | ---: | ---: | ---: | --- | --- | ---: | ---: | --- | --- |",
+        "Candidate vs parent | Champion change | Decision | Search budgets |",
+        "| ---: | --- | ---: | ---: | ---: | --- | --- | ---: | --- | --- | --- |",
     ])
     for generation in report["generations"]:
         losses = generation["losses"]
@@ -336,7 +349,6 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             )
         evaluation = generation["evaluation"] or {}
         rate = evaluation.get("win_rate")
-        delta = generation["strength_change"]
         budgets = generation["search_budgets"]
         budget_text = (
             f"self-play {budgets['selfplay_simulations']} sims; evaluation "
@@ -348,7 +360,7 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             f"{_number(generation['selfplay']['games_per_hour'], 1)} | "
             f"{_number(generation['dataset']['examples'])} | {train} | {validation} | "
             f"{_number(None if rate is None else 100 * rate, 1)}% | "
-            f"{_number(None if delta is None else 100 * delta, 1)} pp | "
+            f"{generation['champion_change'] or '—'} | "
             f"{generation['decision'] or '—'} | {budget_text} |"
         )
 

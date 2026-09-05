@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -122,6 +123,9 @@ def test_builds_summary_and_fixed_checkpoint_probes(tmp_path: Path) -> None:
     assert generation["losses"]["first"]["train_loss"] == 5.0
     assert generation["losses"]["last"]["validation_loss"] == 4.3
     assert generation["evaluation"]["win_rate"] == 0.75
+    assert generation["evaluation"]["comparison"] == "candidate vs parent champion"
+    assert generation["champion_change"] == "updated to candidate"
+    assert "strength_change" not in generation
 
 
 def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
@@ -152,7 +156,81 @@ def test_hash_mismatch_is_flagged_without_running_probes(tmp_path: Path) -> None
 
     initial = report["checkpoints"][0]
     assert initial["verification"] == "sha256 mismatch"
+    assert initial["mismatched_candidates"][0]["path"] == str(tmp_path / "initial.pt")
     assert initial["probes"] == []
+
+
+def test_resolves_by_hash_after_stale_working_directory_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    correct = run / "shared" / "initial.pt"
+    correct.parent.mkdir()
+    shutil.copyfile(tmp_path / "initial.pt", correct)
+    source["initial_champion"]["path"] = "shared/initial.pt"
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    working = tmp_path / "working"
+    stale = working / "shared" / "initial.pt"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"stale checkpoint with the same recorded path")
+    monkeypatch.chdir(working)
+
+    report = build_mini_inspection_report(run)
+
+    initial = report["checkpoints"][0]
+    assert initial["verification"] == "verified"
+    assert initial["resolved_path"] == str(correct)
+    assert initial["ignored_mismatched_candidates"] == [{
+        "path": str(stale),
+        "sha256": hashlib.sha256(stale.read_bytes()).hexdigest(),
+    }]
+    assert len(initial["probes"]) == 3
+
+
+def test_distinguishes_missing_checkpoint_from_hash_mismatch(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["initial_champion"]["path"] = "not-present/initial.pt"
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    initial = report["checkpoints"][0]
+    assert initial["verification"] == "matching checkpoint missing"
+    assert "mismatched_candidates" not in initial
+
+
+def test_does_not_compare_win_rates_against_different_parents(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    second = json.loads(json.dumps(source["generations"][0]))
+    second["generation"] = 2
+    second["decision"] = "rejected"
+    second["evaluation"]["promotion"].update({
+        "candidate_wins": 3,
+        "games": 5,
+        "win_rate": 0.6,
+        "promoted": False,
+    })
+    source["generations"].append(second)
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    first, second = report["generations"]
+    assert first["evaluation"]["win_rate"] == 0.75
+    assert second["evaluation"]["win_rate"] == 0.6
+    assert "strength_change" not in second
+    assert second["evaluation"]["comparison"] == "candidate vs parent champion"
+    assert second["champion_change"] == "unchanged"
+    rendered = render_mini_inspection_report(report)
+    assert "Δ vs prior" not in rendered
+    assert "Candidate vs parent" in rendered
 
 
 @pytest.mark.parametrize("top_moves", [0, True])

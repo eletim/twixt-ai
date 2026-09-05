@@ -68,8 +68,9 @@ twixt-ai-mini-report mini-generations --output mini-generations/report.md
 
 Omit `--output` to print the report. The command identifies the exact source
 report, complete configuration, checkpoint hashes and lineage; summarizes
-self-play throughput, dataset sizes, loss curves, search budgets, promotion
-evaluations, and generation-over-generation win-rate changes; and evaluates
+self-play throughput, dataset sizes, loss curves, search budgets,
+candidate-vs-parent promotion evaluations, and generation-over-generation
+champion changes; and evaluates
 every available checkpoint on the versioned `mini-fixed-positions-v1` probe
 set. Checkpoints whose recorded hash does not match are flagged and never
 evaluated. The command only reads source artifacts (apart from the explicitly

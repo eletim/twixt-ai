@@ -5,6 +5,8 @@ const messageElement = document.querySelector("#message");
 const resetButton = document.querySelector("#reset");
 const sideSelect = document.querySelector("#human-side");
 const agentSelect = document.querySelector("#agent");
+const inspectionToggle = document.querySelector("#inspection-toggle");
+const inspectionElement = document.querySelector("#inspection");
 
 let session = null;
 let requestPending = false;
@@ -22,6 +24,20 @@ function point(coordinate, spacing, margin) {
 
 function title(value) {
   return value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
+}
+
+function formatNumber(value) {
+  if (!Number.isFinite(value)) return "—";
+  if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return value.toLocaleString(undefined, { maximumFractionDigits: 3 });
+}
+
+function candidateLabel(candidate) {
+  if (Number.isFinite(candidate.probability)) {
+    return `${Math.round(candidate.probability * 100)}%`;
+  }
+  if (Number.isFinite(candidate.score)) return formatNumber(candidate.score);
+  return "";
 }
 
 function describeStatus(game) {
@@ -48,6 +64,7 @@ function populateSetup(view) {
   resetButton.disabled = requestPending;
   sideSelect.disabled = requestPending;
   agentSelect.disabled = requestPending;
+  inspectionToggle.disabled = requestPending;
   boardElement.setAttribute("aria-busy", agentThinking ? "true" : "false");
 }
 
@@ -90,6 +107,36 @@ function render(view) {
   }
   boardElement.append(links);
 
+  const inspection = view.thinking?.metadata?.inspection;
+  const showInspection = inspectionToggle.checked && inspection;
+  let candidateOverlays = null;
+  if (showInspection) {
+    const candidates = svgElement("g", { class: "candidate-overlays", "aria-hidden": "true" });
+    const scores = inspection.candidates
+      .map((candidate) => candidate.score)
+      .filter(Number.isFinite);
+    const minimum = scores.length ? Math.min(...scores) : 0;
+    const maximum = scores.length ? Math.max(...scores) : 0;
+    for (const candidate of inspection.candidates) {
+      const position = point(candidate, spacing, margin);
+      const strength = Number.isFinite(candidate.probability)
+        ? candidate.probability
+        : (maximum === minimum ? 1 : (candidate.score - minimum) / (maximum - minimum));
+      const marker = svgElement("g", { class: "candidate-overlay" });
+      marker.append(svgElement("circle", {
+        cx: position.x,
+        cy: position.y,
+        r: 10,
+        style: `--strength: ${Math.max(0.15, strength)}`,
+      }));
+      const label = svgElement("text", { x: position.x, y: position.y + 3 });
+      label.textContent = candidateLabel(candidate);
+      marker.append(label);
+      candidates.append(marker);
+    }
+    candidateOverlays = candidates;
+  }
+
   const pegsByCoordinate = new Map(
     game.pegs.map((peg) => [`${peg.coordinate.x},${peg.coordinate.y}`, peg.owner]),
   );
@@ -128,6 +175,32 @@ function render(view) {
     }
   }
   boardElement.append(points);
+  if (candidateOverlays) boardElement.append(candidateOverlays);
+
+  if (showInspection && view.thinking.move) {
+    const position = point(view.thinking.move.coordinate, spacing, margin);
+    boardElement.append(svgElement("circle", {
+      class: "selected-move-overlay",
+      cx: position.x,
+      cy: position.y,
+      r: 12,
+      "aria-hidden": "true",
+    }));
+  }
+
+  inspectionElement.hidden = !showInspection;
+  inspectionElement.replaceChildren();
+  if (showInspection) {
+    const heading = document.createElement("strong");
+    heading.textContent = "Last AI decision";
+    const value = document.createElement("span");
+    value.textContent = `Value: ${formatNumber(inspection.value)}`;
+    const statistics = document.createElement("span");
+    statistics.textContent = Object.entries(inspection.statistics ?? {})
+      .map(([key, item]) => `${title(key)}: ${formatNumber(item)}`)
+      .join(" · ");
+    inspectionElement.append(heading, value, statistics);
+  }
 }
 
 async function request(path, options) {
@@ -157,6 +230,7 @@ async function playAgentIfNeeded() {
     });
     const move = next.thinking.move.coordinate;
     const metadata = Object.entries(next.thinking.metadata)
+      .filter(([key]) => key !== "inspection")
       .map(([key, value]) => `${key.replaceAll("_", " ")}: ${value}`)
       .join(", ");
     messageElement.textContent = `${title(next.agent)} played column ${move.x + 1}, row ${move.y + 1}${metadata ? ` (${metadata})` : ""}.`;
@@ -213,6 +287,10 @@ resetButton.addEventListener("click", async () => {
     render(session);
   }
   await playAgentIfNeeded();
+});
+
+inspectionToggle.addEventListener("change", () => {
+  if (session) render(session);
 });
 
 try {

@@ -27,6 +27,15 @@ def test_search_reports_bounded_thinking_metadata() -> None:
 
     assert result.metadata["depth"] == 2
     assert result.metadata["nodes"] == 7
+    inspection = result.metadata["inspection"]
+    assert inspection["value"] == result.metadata["score"]
+    assert inspection["statistics"] == {
+        "depth": 2,
+        "nodes": 7,
+        "node_budget": 7,
+    }
+    assert inspection["candidates"]
+    assert set(inspection["candidates"][0]) == {"x", "y", "score"}
 
 
 def test_search_takes_an_immediate_win() -> None:

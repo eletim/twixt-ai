@@ -138,6 +138,7 @@ def test_packaged_ui_disables_setup_until_session_loads() -> None:
     assert b'<button id="reset" type="button" disabled>' in body
     assert b'<select id="human-side" disabled>' in body
     assert b'<select id="agent" aria-label="AI opponent" disabled>' in body
+    assert b'<input id="inspection-toggle" type="checkbox" disabled>' in body
 
 
 def test_session_selects_side_and_runs_registered_agent_through_contract(
@@ -170,6 +171,7 @@ def test_session_selects_side_and_runs_registered_agent_through_contract(
     assert move_view["state"]["side_to_move"] == "black"
     assert move_view["thinking"]["metadata"] == {"depth": 2}
     assert move_view["thinking"]["move"]["player"] == "red"
+    assert session.view()["thinking"] == move_view["thinking"]
     assert len(agent.requests) == 1
     assert agent.requests[0].state.side_to_move is Player.RED
 
@@ -229,7 +231,7 @@ def test_session_configuration_rejects_unknown_agent(tmp_path: Path) -> None:
     }
 
 
-@pytest.mark.parametrize("agent_name", ["random", "search"])
+@pytest.mark.parametrize("agent_name", ["random", "search", "mcts"])
 def test_human_can_complete_match_against_default_agents_via_session_api(
     tmp_path: Path,
     agent_name: str,

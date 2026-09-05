@@ -42,7 +42,7 @@ button, select {
 
 button:hover { background: white; }
 button:disabled, select:disabled { cursor: wait; opacity: .55; }
-button:focus-visible, select:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; outline-offset: 3px; }
+button:focus-visible, select:focus-visible, input:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; outline-offset: 3px; }
 
 .game {
   padding: clamp(14px, 3vw, 26px);
@@ -60,6 +60,8 @@ button:focus-visible, select:focus-visible, .intersection:focus-visible { outlin
 .setup { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .setup label { display: grid; gap: 5px; color: #5c574f; font-size: .8rem; font-weight: 700; }
 .setup select { min-width: 150px; padding: 7px 30px 7px 11px; }
+.overlay-toggle { align-content: end; grid-template-columns: auto 1fr; align-items: center; }
+.overlay-toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: #307db8; }
 
 #status::before {
   display: inline-block;
@@ -87,6 +89,31 @@ button:focus-visible, select:focus-visible, .intersection:focus-visible { outlin
 .peg { stroke: #fff8dc; stroke-width: 2; }
 .peg.red { fill: #c53c35; }
 .peg.black { fill: #22262b; }
+.candidate-overlay circle {
+  fill: #fff8dc;
+  fill-opacity: calc(.28 + var(--strength) * .58);
+  stroke: #307db8;
+  stroke-width: 1.5;
+}
+.candidate-overlay text {
+  fill: #173d59;
+  font-size: 6px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+.selected-move-overlay { fill: none; stroke: #f3c623; stroke-width: 3; }
+.inspection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: #173d59;
+  background: #e7f1f7;
+  font-size: .82rem;
+}
+.inspection[hidden] { display: none; }
 
 #message { min-height: 1.4em; margin-top: 12px; color: #9b2c27; }
 footer { padding: 14px 4px 0; color: #5c574f; font-size: .9rem; }

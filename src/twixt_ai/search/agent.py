@@ -143,6 +143,7 @@ class HeuristicSearchAgent:
         ordered_moves = self._ordered(request.state, request.legal_moves)
         best_move = ordered_moves[0]
         best_score = -math.inf
+        candidate_scores: list[dict[str, int | float]] = []
         alpha = -math.inf
         for move in ordered_moves:
             if self._nodes >= self.node_budget:
@@ -155,13 +156,33 @@ class HeuristicSearchAgent:
                 alpha,
                 math.inf,
             )
+            candidate_scores.append(
+                {
+                    "x": move.coordinate.x,
+                    "y": move.coordinate.y,
+                    "score": score,
+                }
+            )
             if score > best_score:
                 best_move = move
                 best_score = score
             alpha = max(alpha, best_score)
         return AgentResult(
             best_move,
-            {"depth": self.depth, "nodes": self._nodes, "score": best_score},
+            {
+                "depth": self.depth,
+                "nodes": self._nodes,
+                "score": best_score,
+                "inspection": {
+                    "value": best_score,
+                    "candidates": candidate_scores,
+                    "statistics": {
+                        "depth": self.depth,
+                        "nodes": self._nodes,
+                        "node_budget": self.node_budget,
+                    },
+                },
+            },
         )
 
 

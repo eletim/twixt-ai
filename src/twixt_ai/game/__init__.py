@@ -11,6 +11,7 @@ from .rules import (
     links_cross,
 )
 from .state import BoardDimensions, Coordinate, GameResult, GameState, Link, Peg, Player, Position
+from .win import has_winning_path, winning_path
 
 __all__ = [
     "BoardDimensions",
@@ -26,7 +27,9 @@ __all__ = [
     "Position",
     "automatic_links_for_placement",
     "check_peg_placement",
+    "has_winning_path",
     "knight_move_neighbors",
     "legal_peg_placements",
     "links_cross",
+    "winning_path",
 ]

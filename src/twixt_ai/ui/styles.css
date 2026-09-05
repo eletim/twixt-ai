@@ -30,7 +30,7 @@ h1, .eyebrow, #status, #message, footer { margin: 0; }
 h1 { font: 700 clamp(2rem, 6vw, 3.5rem)/0.9 Georgia, serif; }
 .eyebrow { margin-bottom: 8px; color: #6d665d; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
 
-button {
+button, select {
   border: 1px solid #4c4842;
   border-radius: 999px;
   padding: 10px 17px;
@@ -41,7 +41,8 @@ button {
 }
 
 button:hover { background: white; }
-button:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; outline-offset: 3px; }
+button:disabled, select:disabled { cursor: wait; opacity: .55; }
+button:focus-visible, select:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; outline-offset: 3px; }
 
 .game {
   padding: clamp(14px, 3vw, 26px);
@@ -52,9 +53,13 @@ button:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; 
 }
 
 #status {
-  margin-bottom: 14px;
+  margin: 14px 0;
   font-weight: 700;
 }
+
+.setup { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.setup label { display: grid; gap: 5px; color: #5c574f; font-size: .8rem; font-weight: 700; }
+.setup select { min-width: 150px; padding: 7px 30px 7px 11px; }
 
 #status::before {
   display: inline-block;
@@ -78,6 +83,7 @@ button:focus-visible, .intersection:focus-visible { outline: 3px solid #307db8; 
 .intersection { fill: #715d3a; }
 .intersection.playable { cursor: pointer; transition: r 100ms, fill 100ms; }
 .intersection.playable:hover, .intersection.playable:focus { r: 7; fill: #fff8dc; stroke: #715d3a; stroke-width: 2; }
+.intersection.blocked { opacity: .55; }
 .peg { stroke: #fff8dc; stroke-width: 2; }
 .peg.red { fill: #c53c35; }
 .peg.black { fill: #22262b; }

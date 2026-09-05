@@ -6,8 +6,28 @@ from io import BytesIO
 import json
 from pathlib import Path
 
+import pytest
+
+from twixt_ai.agents import AgentRequest, AgentResult
 from twixt_ai.backend import GameApplication, GameSession
-from twixt_ai.game import BoardDimensions, Coordinate, GameState, Peg, Player
+from twixt_ai.game import (
+    BoardDimensions,
+    Coordinate,
+    GameResult,
+    GameState,
+    Peg,
+    Player,
+    legal_peg_placements,
+)
+
+
+class RecordingAgent:
+    def __init__(self) -> None:
+        self.requests: list[AgentRequest] = []
+
+    def choose_move(self, agent_request: AgentRequest) -> AgentResult:
+        self.requests.append(agent_request)
+        return AgentResult(agent_request.legal_moves[0], {"depth": 2})
 
 
 def request(
@@ -109,3 +129,142 @@ def test_application_serves_replaceable_ui_files(tmp_path: Path) -> None:
     assert status == "200 OK"
     assert headers["Content-Type"] == "text/html; charset=utf-8"
     assert body == b"<h1>Twixt</h1>"
+
+
+def test_packaged_ui_disables_setup_until_session_loads() -> None:
+    status, _, body = request(GameApplication(), "/")
+
+    assert status == "200 OK"
+    assert b'<button id="reset" type="button" disabled>' in body
+    assert b'<select id="human-side" disabled>' in body
+    assert b'<select id="agent" aria-label="AI opponent" disabled>' in body
+
+
+def test_session_selects_side_and_runs_registered_agent_through_contract(
+    tmp_path: Path,
+) -> None:
+    agent = RecordingAgent()
+    session = GameSession(
+        GameState.initial(BoardDimensions(6, 6)), agents={"search": agent}
+    )
+    application = GameApplication(session, tmp_path)
+
+    reset_status, _, reset_body = request(
+        application,
+        "/api/session/reset",
+        "POST",
+        {"human_side": "black", "agent": "search"},
+    )
+    reset_view = json.loads(reset_body)
+    move_status, _, move_body = request(
+        application,
+        "/api/session/agent-moves",
+        "POST",
+        {"revision": reset_view["revision"]},
+    )
+    move_view = json.loads(move_body)
+
+    assert reset_status == move_status == "200 OK"
+    assert reset_view["available_agents"] == ["search"]
+    assert move_view["human_side"] == "black"
+    assert move_view["state"]["side_to_move"] == "black"
+    assert move_view["thinking"]["metadata"] == {"depth": 2}
+    assert move_view["thinking"]["move"]["player"] == "red"
+    assert len(agent.requests) == 1
+    assert agent.requests[0].state.side_to_move is Player.RED
+
+
+def test_session_rejects_human_input_during_agent_turn(tmp_path: Path) -> None:
+    session = GameSession(
+        GameState.initial(BoardDimensions(6, 6)), human_side=Player.BLACK
+    )
+    application = GameApplication(session, tmp_path)
+
+    status, _, body = request(
+        application,
+        "/api/session/human-moves",
+        "POST",
+        {"x": 1, "y": 0, "revision": 0},
+    )
+
+    assert status == "409 Conflict"
+    assert json.loads(body)["error"] == "out_of_turn"
+    assert session.snapshot().pegs == ()
+
+
+def test_session_revision_prevents_stale_click_from_mutating_state(
+    tmp_path: Path,
+) -> None:
+    session = GameSession(GameState.initial(BoardDimensions(6, 6)))
+    application = GameApplication(session, tmp_path)
+    payload = {"x": 1, "y": 0, "revision": 0}
+
+    first_status, _, _ = request(
+        application, "/api/session/human-moves", "POST", payload
+    )
+    stale_status, _, stale_body = request(
+        application, "/api/session/human-moves", "POST", payload
+    )
+
+    assert first_status == "200 OK"
+    assert stale_status == "409 Conflict"
+    assert json.loads(stale_body)["error"] == "stale_state"
+    assert len(session.snapshot().pegs) == 1
+
+
+def test_session_configuration_rejects_unknown_agent(tmp_path: Path) -> None:
+    application = GameApplication(ui_root=tmp_path)
+
+    status, _, body = request(
+        application,
+        "/api/session/reset",
+        "POST",
+        {"human_side": "red", "agent": "missing"},
+    )
+
+    assert status == "400 Bad Request"
+    assert json.loads(body) == {
+        "error": "invalid_request",
+        "detail": "unknown agent",
+    }
+
+
+@pytest.mark.parametrize("agent_name", ["random", "search"])
+def test_human_can_complete_match_against_default_agents_via_session_api(
+    tmp_path: Path,
+    agent_name: str,
+) -> None:
+    session = GameSession(GameState.initial(BoardDimensions(4, 4)))
+    application = GameApplication(session, tmp_path)
+    reset_status, _, reset_body = request(
+        application,
+        "/api/session/reset",
+        "POST",
+        {"human_side": "red", "agent": agent_name},
+    )
+
+    assert reset_status == "200 OK"
+    assert agent_name in json.loads(reset_body)["available_agents"]
+
+    while session.snapshot().result is GameResult.IN_PROGRESS:
+        view = session.view()
+        if session.snapshot().side_to_move is Player.RED:
+            move = legal_peg_placements(session.snapshot())[0]
+            payload = {
+                "x": move.coordinate.x,
+                "y": move.coordinate.y,
+                "revision": view["revision"],
+            }
+            status, _, _ = request(
+                application, "/api/session/human-moves", "POST", payload
+            )
+        else:
+            status, _, _ = request(
+                application,
+                "/api/session/agent-moves",
+                "POST",
+                {"revision": view["revision"]},
+            )
+        assert status == "200 OK"
+
+    assert session.snapshot().result.is_terminal

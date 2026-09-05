@@ -1,1 +1,5 @@
-"""Headless heuristic search and Monte Carlo tree search."""
+"""Headless search agents and reusable search utilities."""
+
+from .agent import SearchAgent
+
+__all__ = ["SearchAgent"]

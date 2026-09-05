@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import torch
 
-from twixt_ai.game import Coordinate, GameState, PegPlacement, Player, legal_peg_placements
+from twixt_ai.game import (
+    BoardDimensions,
+    Coordinate,
+    GameState,
+    PegPlacement,
+    Player,
+    legal_peg_placements,
+)
 from twixt_ai.models import (
     ACTION_COUNT,
     PolicyValueConfig,
@@ -34,6 +41,27 @@ def test_forward_returns_training_logits_and_side_to_move_value() -> None:
     assert torch.all(values <= 1)
     (logits.sum() + values.sum()).backward()
     assert any(parameter.grad is not None for parameter in model.parameters())
+
+
+def test_mini_model_uses_matching_input_and_action_dimensions() -> None:
+    config = PolicyValueConfig(
+        channels=2,
+        residual_blocks=1,
+        value_hidden=4,
+        board_width=10,
+        board_height=10,
+    )
+    model = PolicyValueNetwork(config)
+
+    logits, values = model(encode_position(
+        GameState.initial(BoardDimensions(10, 10))
+    ).unsqueeze(0))
+
+    assert logits.shape == (1, 100)
+    assert values.shape == (1,)
+    assert action_index_to_coordinate(
+        99, board_width=10, board_height=10
+    ) == Coordinate(9, 9)
 
 
 def test_action_mapping_is_row_major_and_invertible() -> None:

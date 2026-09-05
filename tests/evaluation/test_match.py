@@ -118,3 +118,10 @@ def test_cli_emits_batch_friendly_json(capsys: object) -> None:
     assert artifact["config"]["seed"] == 3
     assert artifact["config"]["agents"] == {"red": "random", "black": "random"}
     assert artifact["result"]["status"] != "in_progress"
+
+
+def test_cli_runs_named_mini_experiment(capsys: object) -> None:
+    assert main(["--preset", "mini", "--seed", "3"]) == 0
+    artifact = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+
+    assert artifact["config"]["board"] == {"height": 10, "width": 10}

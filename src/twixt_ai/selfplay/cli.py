@@ -8,7 +8,7 @@ from functools import partial
 from pathlib import Path
 
 from twixt_ai.agents import RandomAgent
-from twixt_ai.game import BoardDimensions
+from twixt_ai.game import EXPERIMENT_PRESETS, resolve_experiment_board
 from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, HeuristicSearchAgent, MCTSAgent
 
 from .batch import AgentFactory, BatchConfig, run_batch
@@ -21,8 +21,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=None, help="reproducible batch seed")
     parser.add_argument("--red", choices=("random", "search", "mcts"), default="random")
     parser.add_argument("--black", choices=("random", "search", "mcts"), default="random")
-    parser.add_argument("--width", type=int, default=24, help="board width")
-    parser.add_argument("--height", type=int, default=24, help="board height")
+    parser.add_argument("--preset", "--board-preset", choices=EXPERIMENT_PRESETS, default="standard")
+    parser.add_argument("--width", type=int, help="override preset board width")
+    parser.add_argument("--height", type=int, help="override preset board height")
     parser.add_argument("--search-depth", type=int, default=1)
     parser.add_argument("--node-budget", type=int, default=10_000)
     parser.add_argument("--simulations", type=int, default=100)
@@ -59,7 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             games=args.games,
             workers=args.workers,
             seed=args.seed,
-            board=BoardDimensions(args.width, args.height),
+            board=resolve_experiment_board(args.preset, width=args.width, height=args.height),
             red_agent=args.red,
             black_agent=args.black,
         )

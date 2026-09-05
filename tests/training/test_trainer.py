@@ -9,14 +9,14 @@ from pathlib import Path
 import pytest
 import torch
 
-from twixt_ai.game import GameState
+from twixt_ai.game import BoardDimensions, GameState
 from twixt_ai.models import PolicyValueConfig, load_policy_value_checkpoint
 from twixt_ai.training import TrainingConfig, train_model
 from twixt_ai.training import trainer as trainer_module
 from twixt_ai.training.train_cli import main
 
 
-def _dataset(root: Path) -> Path:
+def _dataset(root: Path, board: BoardDimensions = BoardDimensions()) -> Path:
     root.mkdir()
     (root / "train").mkdir()
     (root / "validation").mkdir()
@@ -26,7 +26,7 @@ def _dataset(root: Path) -> Path:
             "format": "twixt-ai-training-example",
             "version": 1,
             "id": identifier,
-            "position": GameState.initial().to_dict(),
+            "position": GameState.initial(board).to_dict(),
             "action": {"x": x, "y": 1},
             "outcome": outcome,
             "source": {},
@@ -52,6 +52,7 @@ def _dataset(root: Path) -> Path:
     manifest = {
         "format": "twixt-ai-training-dataset",
         "version": 1,
+        "board": board.to_dict(),
         "splits": {
             "train": {
                 "examples": 2,
@@ -98,6 +99,22 @@ def test_trains_fixture_and_identifies_loadable_checkpoints(tmp_path: Path) -> N
     assert metadata["training_config"]["seed"] == 19  # type: ignore[index]
     assert len((output / "metrics.jsonl").read_text().splitlines()) == 2
     assert json.loads((output / "summary.json").read_text()) == summary.to_dict()
+
+
+def test_training_infers_mini_model_shape_from_dataset(tmp_path: Path) -> None:
+    output = tmp_path / "run"
+
+    summary = train_model(
+        _dataset(tmp_path / "dataset", BoardDimensions(10, 10)),
+        output,
+        config=_config(1),
+    )
+    loaded = load_policy_value_checkpoint(output / "latest.pt")
+
+    assert summary.to_dict()["board"] == {"height": 10, "width": 10}
+    assert loaded.model.config.board_width == 10
+    assert loaded.model.config.board_height == 10
+    assert loaded.metadata["board"] == {"height": 10, "width": 10}
 
 
 def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:

@@ -88,6 +88,7 @@ def test_build_dataset_retains_targets_and_provenance(tmp_path: Path) -> None:
     assert first["source"]["decision"]["metadata"]["agent"] == "test-search"
     assert json.loads((output / "manifest.json").read_text()) == summary.to_dict()
     assert summary.config.metadata == {"run": 4}
+    assert summary.board == BoardDimensions(4, 4)
 
 
 def test_split_is_by_game_and_reproducible_across_input_order(tmp_path: Path) -> None:

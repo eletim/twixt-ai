@@ -48,6 +48,19 @@ def test_head_to_head_swaps_roles_using_the_same_seed() -> None:
     assert first.pair_round == second.pair_round == 0
 
 
+def test_benchmark_accepts_immediate_draws_with_no_moves() -> None:
+    config = replace(_config(), board=BoardDimensions(2, 2))
+
+    result = run_benchmark(
+        {"alpha": RandomAgent, "beta": RandomAgent}, config=config
+    )
+
+    assert len(result.games) == 2
+    assert all(game.winner is None for game in result.games)
+    assert all(game.winning_side is None for game in result.games)
+    assert all(game.move_count == 0 for game in result.games)
+
+
 def test_round_robin_is_complete_and_seeded_results_are_reproducible() -> None:
     agents = (
         AgentConfig("alpha", "1", {}),

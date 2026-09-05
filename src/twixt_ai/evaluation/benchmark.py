@@ -188,7 +188,12 @@ class BenchmarkGame:
         )
         if self.winner != expected_winner:
             raise ValueError("winner must agree with winning_side")
-        _positive_integer(self.move_count, "move_count")
+        if (
+            isinstance(self.move_count, bool)
+            or not isinstance(self.move_count, int)
+            or self.move_count < 0
+        ):
+            raise ValueError("move_count must be a non-negative integer")
 
     def to_dict(self) -> dict[str, object]:
         return {

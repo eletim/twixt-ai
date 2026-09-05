@@ -43,6 +43,9 @@ run are documented in
 Its paired strength evaluation against non-neural baselines, including
 policy-only and value-only ablations, is documented in
 [`docs/mini-strength-evaluation.md`](docs/mini-strength-evaluation.md).
+The repeatable self-play, windowed training, paired evaluation, and explicit
+checkpoint-promotion loop is documented in
+[`docs/mini-training-generations.md`](docs/mini-training-generations.md).
 
 Match, self-play, and benchmark artifacts record their board dimensions. The
 dataset manifest, training summary, and policy/value checkpoints also carry the

@@ -25,6 +25,7 @@ from twixt_ai.models import (
     PolicyValueNetwork,
     coordinate_to_action_index,
     encode_position,
+    load_policy_value_checkpoint,
 )
 
 from .data import DATASET_FORMAT, DATASET_VERSION, EXAMPLE_FORMAT, EXAMPLE_VERSION
@@ -396,10 +397,13 @@ def train_model(
     config: TrainingConfig | None = None,
     model_config: PolicyValueConfig | None = None,
     resume: bool = False,
+    initial_checkpoint: str | Path | None = None,
 ) -> TrainingSummary:
     """Train from a versioned dataset and write ``latest.pt`` and ``best.pt``.
 
-    Resuming restores model, optimizer, scheduler, epoch, and metric history.
+    ``initial_checkpoint`` warm-starts a new run from compatible model weights
+    while creating fresh optimizer state and metric history. Resuming restores
+    model, optimizer, scheduler, epoch, and metric history.
     The dataset digest and all configuration except the requested total epoch
     count must match the interrupted run.
     """
@@ -409,6 +413,8 @@ def train_model(
         raise TypeError("config must be a TrainingConfig or None")
     if model_config is not None and not isinstance(model_config, PolicyValueConfig):
         raise TypeError("model_config must be a PolicyValueConfig or None")
+    if resume and initial_checkpoint is not None:
+        raise ValueError("initial_checkpoint cannot be used when resuming")
     root = Path(dataset_dir)
     _, dataset_sha256, board, train, validation = _load_dataset(root)
     architecture_config = model_config or PolicyValueConfig(
@@ -448,6 +454,14 @@ def train_model(
     best_epoch = 0
     best_loss = math.inf
     history: list[EpochMetrics] = []
+
+    if initial_checkpoint is not None:
+        initialized = load_policy_value_checkpoint(
+            initial_checkpoint, map_location=device
+        )
+        if initialized.model.config != architecture_config:
+            raise ValueError("initial checkpoint model configuration does not match")
+        model.load_state_dict(initialized.model.state_dict())
 
     if resume:
         if not latest_path.is_file():

@@ -10,7 +10,12 @@ import pytest
 import torch
 
 from twixt_ai.game import BoardDimensions, GameState
-from twixt_ai.models import PolicyValueConfig, load_policy_value_checkpoint
+from twixt_ai.models import (
+    PolicyValueConfig,
+    PolicyValueNetwork,
+    load_policy_value_checkpoint,
+    save_policy_value_checkpoint,
+)
 from twixt_ai.training import TrainingConfig, train_model
 from twixt_ai.training import trainer as trainer_module
 from twixt_ai.training.train_cli import main
@@ -115,6 +120,33 @@ def test_training_infers_mini_model_shape_from_dataset(tmp_path: Path) -> None:
     assert loaded.model.config.board_width == 10
     assert loaded.model.config.board_height == 10
     assert loaded.metadata["board"] == {"height": 10, "width": 10}
+
+
+def test_training_can_warm_start_from_checkpoint(tmp_path: Path) -> None:
+    board = BoardDimensions(10, 10)
+    model_config = PolicyValueConfig(
+        channels=2, residual_blocks=1, value_hidden=4,
+        board_width=10, board_height=10,
+    )
+    initial = tmp_path / "initial.pt"
+    torch.manual_seed(123)
+    save_policy_value_checkpoint(initial, PolicyValueNetwork(model_config))
+
+    summary = train_model(
+        _dataset(tmp_path / "dataset", board),
+        tmp_path / "run",
+        config=TrainingConfig(epochs=1, batch_size=2, learning_rate=1e-6),
+        model_config=model_config,
+        initial_checkpoint=initial,
+    )
+
+    assert summary.completed_epochs == 1
+    with pytest.raises(ValueError, match="cannot be used when resuming"):
+        train_model(
+            tmp_path / "dataset", tmp_path / "run",
+            config=TrainingConfig(epochs=2), model_config=model_config,
+            resume=True, initial_checkpoint=initial,
+        )
 
 
 def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:

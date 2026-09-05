@@ -93,6 +93,17 @@ use `--search-depth` and `--node-budget`; these settings apply to every search
 entrant in a CLI run. Python callers can supply distinct factories and recorded
 configurations for each entrant.
 
+Profile the canonical engine with a deterministic mid-game workload:
+
+```bash
+PYTHONHASHSEED=0 twixt-ai-engine-benchmark --output engine-benchmark.json
+```
+
+The artifact reports legal-move, link-update, win-check, and full-transition
+rates, including positions per second. See
+[`docs/engine-performance.md`](docs/engine-performance.md) for methodology,
+baseline results, and identified hotspots.
+
 MCTS is the primary non-neural search baseline. It uses a reproducible
 simulation-count budget, seeded random rollouts with a finite default horizon,
 heuristic evaluation at non-terminal cutoffs, and progressive widening so PUCT

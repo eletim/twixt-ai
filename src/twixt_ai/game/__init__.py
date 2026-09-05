@@ -11,6 +11,12 @@ from .rules import (
     links_cross,
 )
 from .record import GAME_RECORD_FORMAT, GAME_RECORD_VERSION, GameRecord
+from .performance import (
+    ENGINE_BENCHMARK_FORMAT,
+    ENGINE_BENCHMARK_VERSION,
+    EngineBenchmarkConfig,
+    run_engine_benchmarks,
+)
 from .state import (
     STATE_FORMAT,
     STATE_FORMAT_VERSION,
@@ -29,6 +35,9 @@ from .win import has_winning_path, winning_path
 __all__ = [
     "BoardDimensions",
     "Coordinate",
+    "ENGINE_BENCHMARK_FORMAT",
+    "ENGINE_BENCHMARK_VERSION",
+    "EngineBenchmarkConfig",
     "GameResult",
     "GameRecord",
     "GameState",
@@ -53,5 +62,6 @@ __all__ = [
     "legal_peg_placements",
     "links_cross",
     "reset_game",
+    "run_engine_benchmarks",
     "winning_path",
 ]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 import hashlib
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 import math
 import os
 from pathlib import Path
@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 import torch
 
+from twixt_ai import __version__
 from twixt_ai.agents import RandomAgent
 from twixt_ai.game import BoardDimensions, GameState, PegPlacement
 from twixt_ai.models import load_policy_value_checkpoint
@@ -121,6 +122,21 @@ def _available_cpus() -> int:
         return os.cpu_count() or 1
 
 
+def _package_version() -> str:
+    """Return the version of the imported source checkout.
+
+    Distribution metadata may be absent for ``PYTHONPATH=src`` execution or
+    belong to a different installed checkout. In either case, the imported
+    package's version describes the code that is actually being evaluated.
+    """
+
+    try:
+        installed_version = version("twixt-ai")
+    except PackageNotFoundError:
+        return __version__
+    return installed_version if installed_version == __version__ else __version__
+
+
 def _json_value(value: object) -> object:
     """Copy checkpoint metadata into JSON-native containers."""
 
@@ -150,7 +166,7 @@ def run_mini_strength_evaluation(
     if model_board != config.board:
         raise ValueError("checkpoint board dimensions must match the evaluation board")
 
-    package_version = version("twixt-ai")
+    package_version = _package_version()
     neural = NeuralPolicyValue(loaded.model)
     checkpoint_sha256 = _sha256(checkpoint)
     learned_settings = {

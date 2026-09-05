@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+import twixt_ai.evaluation.mini_strength as mini_strength
+from twixt_ai import __version__
 from twixt_ai.evaluation.mini_strength import (
     AblatedPolicyValue,
     BASELINES,
@@ -14,8 +16,7 @@ from twixt_ai.evaluation.mini_strength import (
     MiniStrengthConfig,
     run_mini_strength_evaluation,
 )
-from twixt_ai.game import BoardDimensions
-from twixt_ai.game import create_game, legal_peg_placements
+from twixt_ai.game import BoardDimensions, create_game, legal_peg_placements
 from twixt_ai.models import (
     PolicyValueConfig,
     PolicyValueNetwork,
@@ -36,7 +37,9 @@ def _checkpoint(path: Path, board: BoardDimensions) -> Path:
     return path
 
 
-def test_strength_evaluation_runs_complete_reproducible_schedule(tmp_path: Path) -> None:
+def test_strength_evaluation_runs_without_distribution_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     board = BoardDimensions(4, 4)
     checkpoint = _checkpoint(tmp_path / "model.pt", board)
     config = MiniStrengthConfig(
@@ -48,8 +51,14 @@ def test_strength_evaluation_runs_complete_reproducible_schedule(tmp_path: Path)
         search_node_budget=20,
     )
 
+    def missing_distribution(_: str) -> str:
+        raise mini_strength.PackageNotFoundError
+
+    monkeypatch.setattr(mini_strength, "version", missing_distribution)
+
     report = run_mini_strength_evaluation(checkpoint, config=config)
 
+    assert mini_strength._package_version() == __version__
     assert report["format"] == "twixt-ai-mini-strength-evaluation"
     assert report["checkpoint"]["metadata"] == {"epoch": 2, "seed": 57}
     assert report["methodology"]["equal_mcts_simulation_budgets"] is True
@@ -72,6 +81,14 @@ def test_strength_evaluation_runs_complete_reproducible_schedule(tmp_path: Path)
         assert matchup["runtime"]["seconds_per_move"] >= 0
         assert len(matchup["games"]) == 2
         assert matchup["games"][0]["agents"] != matchup["games"][1]["agents"]
+
+
+def test_source_version_wins_over_other_installed_checkout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mini_strength, "version", lambda _: "999.0")
+
+    assert mini_strength._package_version() == __version__
 
 
 def test_policy_and_value_ablations_disable_only_the_requested_output() -> None:

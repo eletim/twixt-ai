@@ -7,6 +7,7 @@ import pytest
 from twixt_ai.game import (
     BoardDimensions,
     Coordinate,
+    GameResult,
     GameState,
     IllegalPlacementReason,
     Link,
@@ -76,6 +77,14 @@ def test_illegal_placements_return_clear_reasons(
     assert not result.is_legal
     assert not result
     assert result.reason is reason
+
+
+def test_terminal_state_has_no_legal_placements() -> None:
+    state = GameState(result=GameResult.RED_WINS)
+    move = placement(Player.RED, 2, 2)
+
+    assert check_peg_placement(state, move).reason is IllegalPlacementReason.GAME_OVER
+    assert legal_peg_placements(state) == ()
 
 
 def test_player_borders_are_orientation_specific() -> None:

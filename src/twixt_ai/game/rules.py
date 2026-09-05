@@ -37,6 +37,7 @@ class PegPlacement:
 class IllegalPlacementReason(str, Enum):
     """Stable reason codes for rejected peg placements."""
 
+    GAME_OVER = "game_over"
     OUT_OF_BOUNDS = "out_of_bounds"
     WRONG_TURN = "wrong_turn"
     OCCUPIED = "occupied"
@@ -75,11 +76,14 @@ def check_peg_placement(state: GameState, placement: PegPlacement) -> PlacementL
     """Return whether *placement* is legal, with a reason when it is not.
 
     Checks have a deterministic precedence so callers always receive one stable
-    reason: bounds, turn ownership, occupancy, then player-specific borders.
+    reason: terminal state, bounds, turn ownership, occupancy, then
+    player-specific borders.
     """
 
     _require_state_and_placement(state, placement)
     coordinate = placement.coordinate
+    if state.is_terminal:
+        return PlacementLegality(IllegalPlacementReason.GAME_OVER)
     if not state.board.contains(coordinate):
         return PlacementLegality(IllegalPlacementReason.OUT_OF_BOUNDS)
     if placement.player is not state.side_to_move:
@@ -96,6 +100,8 @@ def legal_peg_placements(state: GameState) -> tuple[PegPlacement, ...]:
 
     if not isinstance(state, GameState):
         raise TypeError("state must be a GameState")
+    if state.is_terminal:
+        return ()
 
     occupied = {peg.coordinate for peg in state.pegs}
     player = state.side_to_move

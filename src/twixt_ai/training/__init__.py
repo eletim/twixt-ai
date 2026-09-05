@@ -10,6 +10,14 @@ from .data import (
     Shard,
     build_dataset,
 )
+from .trainer import (
+    TRAINING_FORMAT,
+    TRAINING_VERSION,
+    EpochMetrics,
+    TrainingConfig,
+    TrainingSummary,
+    train_model,
+)
 
 __all__ = [
     "DATASET_FORMAT",
@@ -19,5 +27,11 @@ __all__ = [
     "DatasetConfig",
     "DatasetSummary",
     "Shard",
+    "TRAINING_FORMAT",
+    "TRAINING_VERSION",
+    "EpochMetrics",
+    "TrainingConfig",
+    "TrainingSummary",
     "build_dataset",
+    "train_model",
 ]

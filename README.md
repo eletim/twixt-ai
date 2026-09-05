@@ -13,6 +13,8 @@ The checkpoint-stable CNN feature planes and augmentation transforms are defined
 in [docs/neural-input-encoding.md](docs/neural-input-encoding.md).
 The versioned, reproducible training shard schema is defined in
 [docs/training-data-format.md](docs/training-data-format.md).
+The model training, metrics, and resume workflow is documented in
+[docs/model-training.md](docs/model-training.md).
 
 ## Development
 
@@ -66,6 +68,14 @@ twixt-ai-dataset --input selfplay-run --output-dir dataset \
 Splits are assigned at game granularity, and examples retain match
 configuration, decision seeds, and agent metadata. MCTS visit counts are
 normalized into policy targets when present.
+
+Train the policy/value network with reproducible shuffling, recorded optimizer
+and scheduler settings, and resumable best/latest checkpoints:
+
+```bash
+twixt-ai-train --dataset dataset --output-dir training-run \
+  --epochs 20 --batch-size 64 --learning-rate 0.001 --seed 1234
+```
 
 Compare two agents head-to-head, or repeat `--agent` three or more times for a
 round robin:

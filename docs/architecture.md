@@ -37,10 +37,14 @@ particular, `game` never imports an agent, framework, backend, or UI module;
 AI/evaluation modules never import browser code; and no Python module imports
 from `ui/`.
 
-The `agents` package owns the narrow agent interface (choose a move from a
-state). Search implementations can satisfy that interface without placing
-search concerns in the engine. Neural-network code stays in `models`, keeping
-PyTorch optional for engine-only consumers.
+The `agents` package owns the narrow agent interface. Orchestration constructs
+an immutable `AgentRequest` containing the canonical state, its legal moves,
+and an optional deterministic seed. Every agent returns an `AgentResult` with
+one proposed move and optional read-only thinking metadata. The shared
+`select_agent_move` function invokes an agent and validates its result before a
+caller passes the move to the engine. Search implementations can satisfy this
+protocol without placing search concerns in the engine. Neural-network code
+stays in `models`, keeping PyTorch optional for engine-only consumers.
 
 ## State and execution boundaries
 

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from twixt_ai.agents import RandomAgent
 from twixt_ai.game import BoardDimensions
-from twixt_ai.search import HeuristicSearchAgent, MCTSAgent
+from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, HeuristicSearchAgent, MCTSAgent
 
 from .benchmark import AgentConfig, AgentFactory, BenchmarkConfig, run_benchmark
 
@@ -35,13 +35,23 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--search-depth", type=int, default=1)
     parser.add_argument("--node-budget", type=int, default=10_000)
     parser.add_argument("--simulations", type=int, default=100)
+    parser.add_argument(
+        "--rollout-limit",
+        type=int,
+        default=DEFAULT_ROLLOUT_LIMIT,
+        help="maximum random moves per MCTS rollout",
+    )
     parser.add_argument("--output", type=Path, help="write JSON to a file")
     parser.add_argument("--pretty", action="store_true", help="indent JSON output")
     return parser
 
 
 def _entrants(
-    values: Sequence[str], depth: int, node_budget: int, simulations: int
+    values: Sequence[str],
+    depth: int,
+    node_budget: int,
+    simulations: int,
+    rollout_limit: int,
 ) -> tuple[tuple[AgentConfig, ...], dict[str, AgentFactory]]:
     package_version = version("twixt-ai")
     configs: list[AgentConfig] = []
@@ -67,8 +77,14 @@ def _entrants(
                 "node_budget": node_budget,
             }
         else:
-            factory = partial(MCTSAgent, simulations=simulations)
-            settings = {"type": "mcts", "simulations": simulations}
+            factory = partial(
+                MCTSAgent, simulations=simulations, rollout_limit=rollout_limit
+            )
+            settings = {
+                "type": "mcts",
+                "simulations": simulations,
+                "rollout_limit": rollout_limit,
+            }
         # Validate constructor settings before starting a potentially long run.
         factory()
         configs.append(AgentConfig(name, package_version, settings))
@@ -81,7 +97,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         agents, factories = _entrants(
-            args.agent, args.search_depth, args.node_budget, args.simulations
+            args.agent,
+            args.search_depth,
+            args.node_budget,
+            args.simulations,
+            args.rollout_limit,
         )
         config = BenchmarkConfig(
             agents=agents,

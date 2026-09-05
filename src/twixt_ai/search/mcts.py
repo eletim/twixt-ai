@@ -7,7 +7,12 @@ from dataclasses import dataclass
 import math
 from random import Random
 
-from twixt_ai.agents import AgentContractError, AgentRequest, AgentResult
+from twixt_ai.agents import (
+    AgentContractError,
+    AgentRequest,
+    AgentResult,
+    evaluate_position,
+)
 from twixt_ai.game import GameState, PegPlacement, Player, apply_move, legal_peg_placements
 
 
@@ -30,6 +35,22 @@ PolicyValueFunction = Callable[
 """Extension point for learned policy priors and value estimates."""
 
 
+DEFAULT_ROLLOUT_LIMIT = 4
+"""Default playout horizon, chosen to keep standard-board decisions practical."""
+
+_HEURISTIC_VALUE_SCALE = 100.0
+
+
+RolloutEvaluationFunction = Callable[[GameState, Player], float]
+"""Return a finite cutoff value in ``[-1, 1]`` from a player's perspective."""
+
+
+def heuristic_rollout_value(state: GameState, player: Player) -> float:
+    """Map the shared position heuristic to a bounded MCTS cutoff value."""
+
+    return math.tanh(evaluate_position(state, player) / _HEURISTIC_VALUE_SCALE)
+
+
 @dataclass(frozen=True, slots=True)
 class MCTSMoveStatistics:
     """Search measurements for one legal move at the root."""
@@ -45,6 +66,7 @@ class MCTSSearchStatistics:
     """Inspectable summary of a completed MCTS decision."""
 
     simulations: int
+    rollout_limit: int | None
     nodes: int
     rollout_moves: int
     maximum_depth: int
@@ -101,8 +123,10 @@ class MCTSAgent:
 
     Each simulation performs selection, one-node expansion, simulation (or a
     supplied value estimate), and backpropagation. The simulation count is the
-    primary reproducible budget. ``rollout_limit`` can cap rollout length; a
-    capped non-terminal rollout has neutral value.
+    primary reproducible budget. Rollouts default to a short fixed horizon so
+    decisions remain practical on a standard board. A non-terminal cutoff is
+    scored by ``rollout_evaluator``; explicitly pass ``rollout_limit=None`` to
+    run playouts to completion.
 
     A ``policy_value`` callback supplies normalized search priors and/or leaf
     values without changing the tree orchestration used by this baseline.
@@ -113,7 +137,8 @@ class MCTSAgent:
         *,
         simulations: int = 100,
         exploration: float = math.sqrt(2.0),
-        rollout_limit: int | None = None,
+        rollout_limit: int | None = DEFAULT_ROLLOUT_LIMIT,
+        rollout_evaluator: RolloutEvaluationFunction = heuristic_rollout_value,
         policy_value: PolicyValueFunction | None = None,
     ) -> None:
         if (
@@ -137,9 +162,12 @@ class MCTSAgent:
             raise ValueError("rollout_limit must be a positive integer or None")
         if policy_value is not None and not callable(policy_value):
             raise TypeError("policy_value must be callable or None")
+        if not callable(rollout_evaluator):
+            raise TypeError("rollout_evaluator must be callable")
         self.simulations = simulations
         self.exploration = float(exploration)
         self.rollout_limit = rollout_limit
+        self.rollout_evaluator = rollout_evaluator
         self.policy_value = policy_value
         self.last_statistics: MCTSSearchStatistics | None = None
         self._rollout_moves = 0
@@ -246,7 +274,17 @@ class MCTSAgent:
         self._rollout_moves += steps
         if state.is_terminal:
             return self._terminal_value(state, self._root_player)
-        return 0.0
+        value = self.rollout_evaluator(state, self._root_player)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not -1 <= value <= 1
+        ):
+            raise ValueError(
+                "rollout_evaluator must return a finite number in [-1, 1]"
+            )
+        return float(value)
 
     def _leaf_value(self, node: _Node, random: Random) -> float:
         if node.state.is_terminal:
@@ -317,6 +355,7 @@ class MCTSAgent:
         )
         statistics = MCTSSearchStatistics(
             simulations=self.simulations,
+            rollout_limit=self.rollout_limit,
             nodes=1 + sum(1 for _ in self._walk(root)),
             rollout_moves=self._rollout_moves,
             maximum_depth=self._maximum_depth,
@@ -326,6 +365,7 @@ class MCTSAgent:
         assert best.move is not None
         metadata = {
             "simulations": statistics.simulations,
+            "rollout_limit": statistics.rollout_limit,
             "nodes": statistics.nodes,
             "rollout_moves": statistics.rollout_moves,
             "maximum_depth": statistics.maximum_depth,
@@ -352,9 +392,12 @@ class MCTSAgent:
 
 
 __all__ = [
+    "DEFAULT_ROLLOUT_LIMIT",
     "MCTSAgent",
     "MCTSMoveStatistics",
     "MCTSSearchStatistics",
     "PolicyValueEstimate",
     "PolicyValueFunction",
+    "RolloutEvaluationFunction",
+    "heuristic_rollout_value",
 ]

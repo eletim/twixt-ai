@@ -7,7 +7,9 @@ import pytest
 from agents.contract import AgentContract
 from twixt_ai.agents import AgentRequest
 from twixt_ai.game import BoardDimensions, Coordinate, GameState, PegPlacement, Player
-from twixt_ai.search import MCTSAgent, PolicyValueEstimate
+from twixt_ai.evaluation.benchmark_cli import _entrants
+from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, MCTSAgent, PolicyValueEstimate
+from twixt_ai.selfplay.cli import _agent_factory
 
 
 class TestMCTSAgentContract(AgentContract):
@@ -38,6 +40,29 @@ def test_simulation_budget_is_hard_even_with_a_large_tree() -> None:
     assert result.metadata["nodes"] == 8
     assert agent.last_statistics is not None
     assert agent.last_statistics.maximum_depth == 1
+
+
+def test_default_rollout_is_bounded_and_uses_cutoff_evaluation() -> None:
+    evaluated: list[tuple[GameState, Player]] = []
+
+    def cutoff_value(state: GameState, player: Player) -> float:
+        evaluated.append((state, player))
+        return 0.75
+
+    agent = MCTSAgent(simulations=1, rollout_evaluator=cutoff_value)
+    result = agent.choose_move(AgentRequest(GameState.initial(), seed=12))
+
+    assert result.metadata["rollout_limit"] == DEFAULT_ROLLOUT_LIMIT
+    assert result.metadata["rollout_moves"] == DEFAULT_ROLLOUT_LIMIT
+    selected = next(
+        item
+        for item in result.metadata["root_moves"]
+        if (item["x"], item["y"])
+        == (result.move.coordinate.x, result.move.coordinate.y)
+    )
+    assert selected["value"] == 0.75
+    assert len(evaluated) == 1
+    assert evaluated[0][1] is Player.RED
 
 
 def test_policy_and_value_hook_guides_the_same_tree() -> None:
@@ -89,3 +114,15 @@ def test_policy_hook_rejects_illegal_priors() -> None:
         MCTSAgent(simulations=1, policy_value=guidance).choose_move(
             AgentRequest(GameState.initial(BoardDimensions(4, 4)))
         )
+
+
+def test_rollout_limit_is_recorded_by_benchmark_and_selfplay_clis() -> None:
+    configs, factories = _entrants(("baseline=random", "candidate=mcts"), 1, 10, 3, 7)
+
+    assert configs[1].configuration == {
+        "type": "mcts",
+        "simulations": 3,
+        "rollout_limit": 7,
+    }
+    assert factories["candidate"]().rollout_limit == 7
+    assert _agent_factory("mcts", 1, 10, 3, 9)().rollout_limit == 9

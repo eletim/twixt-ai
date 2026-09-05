@@ -66,18 +66,21 @@ entrant in a CLI run. Python callers can supply distinct factories and recorded
 configurations for each entrant.
 
 MCTS is the primary non-neural search baseline. It uses a reproducible
-simulation-count budget, seeded random rollouts, and reports root visit/value
+simulation-count budget, seeded random rollouts with a finite default horizon,
+and heuristic evaluation at non-terminal cutoffs. It reports root visit/value
 statistics suitable for evaluation and later training targets:
 
 ```python
 from twixt_ai.search import MCTSAgent
 
-agent = MCTSAgent(simulations=400)
+agent = MCTSAgent(simulations=400, rollout_limit=4)
 ```
 
-Use `--agent candidate=mcts --simulations 400` in the benchmark CLI. A
-`policy_value` callback can supply move priors and leaf values later without
-replacing the MCTS orchestration layer.
+Use `--agent candidate=mcts --simulations 400 --rollout-limit 4` in the
+benchmark CLI; self-play accepts the same budget flags. A `policy_value`
+callback can supply move priors and leaf values later without replacing the
+MCTS orchestration layer. Python callers may explicitly set
+`rollout_limit=None` for terminal playouts.
 
 `twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses
 the shared position heuristic with alpha-beta minimax. Its search limits and

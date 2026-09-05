@@ -37,11 +37,14 @@ agent protocol.
 
 ## Browser play
 
-Start the minimal local human-vs-human UI after installing the project:
+Start the minimal local human-vs-agent UI after installing the project:
 
 ```bash
 twixt-ai-web
 ```
 
-Open <http://127.0.0.1:8000>. The browser only renders game state and submits
-moves; the canonical Python engine owns validation, links, turns, and results.
+Open <http://127.0.0.1:8000>, choose a side and an available agent, then start a
+new game. The browser only renders state and submits human/agent turn requests;
+the canonical Python engine owns validation, links, turns, results, and agent
+selection. Session revisions prevent delayed browser clicks from changing a
+newer position.

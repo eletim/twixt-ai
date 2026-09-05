@@ -9,14 +9,20 @@ from .state import Coordinate, GameState, Player
 
 def _is_start_border(state: GameState, player: Player, coordinate: Coordinate) -> bool:
     if player is Player.RED:
-        return coordinate.y == 0
-    return coordinate.x == 0
+        return coordinate.y == 0 and 0 < coordinate.x < state.board.width - 1
+    return coordinate.x == 0 and 0 < coordinate.y < state.board.height - 1
 
 
 def _is_target_border(state: GameState, player: Player, coordinate: Coordinate) -> bool:
     if player is Player.RED:
-        return coordinate.y == state.board.height - 1
-    return coordinate.x == state.board.width - 1
+        return (
+            coordinate.y == state.board.height - 1
+            and 0 < coordinate.x < state.board.width - 1
+        )
+    return (
+        coordinate.x == state.board.width - 1
+        and 0 < coordinate.y < state.board.height - 1
+    )
 
 
 def winning_path(state: GameState, player: Player) -> tuple[Coordinate, ...] | None:

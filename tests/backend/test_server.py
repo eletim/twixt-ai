@@ -151,6 +151,14 @@ def test_packaged_inspection_overlays_do_not_block_board_input() -> None:
     )
 
 
+def test_packaged_ui_summarizes_only_scalar_agent_metadata() -> None:
+    status, _, body = request(GameApplication(), "/app.js")
+
+    assert status == "200 OK"
+    assert b'scalarTypes = ["string", "number", "boolean"]' in body
+    assert b"scalarTypes.includes(typeof value)" in body
+
+
 def test_session_selects_side_and_runs_registered_agent_through_contract(
     tmp_path: Path,
 ) -> None:

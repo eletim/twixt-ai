@@ -40,6 +40,14 @@ function candidateLabel(candidate) {
   return "";
 }
 
+function summarizeMetadata(metadata) {
+  const scalarTypes = ["string", "number", "boolean"];
+  return Object.entries(metadata)
+    .filter(([, value]) => scalarTypes.includes(typeof value))
+    .map(([key, value]) => `${key.replaceAll("_", " ")}: ${value}`)
+    .join(", ");
+}
+
 function describeStatus(game) {
   const results = { red_wins: "Red wins!", black_wins: "Black wins!", draw: "Draw" };
   if (results[game.result]) return results[game.result];
@@ -229,10 +237,7 @@ async function playAgentIfNeeded() {
       body: JSON.stringify({ revision: session.revision }),
     });
     const move = next.thinking.move.coordinate;
-    const metadata = Object.entries(next.thinking.metadata)
-      .filter(([key]) => key !== "inspection")
-      .map(([key, value]) => `${key.replaceAll("_", " ")}: ${value}`)
-      .join(", ");
+    const metadata = summarizeMetadata(next.thinking.metadata);
     messageElement.textContent = `${title(next.agent)} played column ${move.x + 1}, row ${move.y + 1}${metadata ? ` (${metadata})` : ""}.`;
     session = next;
   } catch (error) {

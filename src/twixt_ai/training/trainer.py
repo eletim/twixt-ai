@@ -353,6 +353,12 @@ def _write_text(path: Path, content: str) -> None:
     temporary.replace(path)
 
 
+def _metrics_jsonl(history: list[EpochMetrics]) -> str:
+    return "".join(
+        json.dumps(item.to_dict(), sort_keys=True) + "\n" for item in history
+    )
+
+
 def train_model(
     dataset_dir: str | Path,
     output_dir: str | Path,
@@ -437,6 +443,10 @@ def train_model(
         if not isinstance(raw_history, list):
             raise ValueError("resume checkpoint has invalid metric history")
         history = [EpochMetrics(**item) for item in raw_history]
+        # The checkpoint is the resume source of truth. This also repairs a
+        # metrics file left stale by a process interrupted after an older
+        # version of the trainer saved latest.pt.
+        _write_text(metrics_path, _metrics_jsonl(history))
 
     generator = torch.Generator().manual_seed(training_config.seed)
     # Advancing once per completed epoch recreates the exact next shuffle on resume.
@@ -480,13 +490,12 @@ def train_model(
             model, optimizer, scheduler, training_config, dataset_sha256,
             epoch, best_epoch, best_loss, history,
         )
-        _save(latest_path, payload)
+        # latest.pt is the epoch commit point. Its referenced best checkpoint
+        # and metric history must be durable before it advances.
         if improved:
             _save(best_path, payload)
-        _write_text(
-            metrics_path,
-            "".join(json.dumps(item.to_dict(), sort_keys=True) + "\n" for item in history),
-        )
+        _write_text(metrics_path, _metrics_jsonl(history))
+        _save(latest_path, payload)
 
     if not history:
         raise ValueError("training target is already complete; increase config.epochs")

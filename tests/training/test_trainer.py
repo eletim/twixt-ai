@@ -6,11 +6,13 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
 import torch
 
 from twixt_ai.game import GameState
 from twixt_ai.models import PolicyValueConfig, load_policy_value_checkpoint
 from twixt_ai.training import TrainingConfig, train_model
+from twixt_ai.training import trainer as trainer_module
 from twixt_ai.training.train_cli import main
 
 
@@ -118,6 +120,65 @@ def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
         resumed_model.state_dict().values(), direct_model.state_dict().values()
     ):
         assert torch.equal(resumed_weight, direct_weight)
+
+
+def test_interruption_before_latest_does_not_commit_new_best(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    train_model(dataset, output, config=_config(1), model_config=model_config)
+    original_save = trainer_module._save
+
+    def fixed_loss(*args: object, **kwargs: object) -> tuple[float, float, float]:
+        return (0.0, 0.0, 0.0)
+
+    def interrupt_latest(path: Path, payload: object) -> None:
+        if path.name == "latest.pt":
+            raise RuntimeError("simulated interruption")
+        original_save(path, payload)
+
+    monkeypatch.setattr(trainer_module, "_epoch", fixed_loss)
+    monkeypatch.setattr(trainer_module, "_save", interrupt_latest)
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        train_model(
+            dataset, output, config=_config(2),
+            model_config=model_config, resume=True,
+        )
+
+    # best.pt may be ahead, but latest.pt still identifies the last fully
+    # committed epoch and therefore causes epoch two to be replayed.
+    assert load_policy_value_checkpoint(output / "latest.pt").metadata["epoch"] == 1
+    assert load_policy_value_checkpoint(output / "best.pt").metadata["epoch"] == 2
+
+    monkeypatch.setattr(trainer_module, "_save", original_save)
+    summary = train_model(
+        dataset, output, config=_config(2), model_config=model_config, resume=True
+    )
+    assert summary.completed_epochs == summary.best_epoch == 2
+    assert load_policy_value_checkpoint(output / "latest.pt").metadata["best_epoch"] == 2
+    assert load_policy_value_checkpoint(output / "best.pt").metadata["epoch"] == 2
+
+
+def test_resume_repairs_metrics_from_final_checkpoint(tmp_path: Path) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    original = train_model(
+        dataset, output, config=_config(1), model_config=model_config
+    )
+    (output / "metrics.jsonl").write_text("stale\n")
+
+    resumed = train_model(
+        dataset, output, config=_config(1), model_config=model_config, resume=True
+    )
+
+    assert resumed.history == original.history
+    metrics = [
+        json.loads(line) for line in (output / "metrics.jsonl").read_text().splitlines()
+    ]
+    assert metrics == [item.to_dict() for item in original.history]
 
 
 def test_cli_emits_summary(tmp_path: Path, capsys: object) -> None:

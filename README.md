@@ -9,6 +9,8 @@ The project is at the architecture-skeleton stage. See
 dependency rules, the planned AI progression, and the initial directory layout.
 The persisted position and replay schemas are documented in
 [docs/game-record-format.md](docs/game-record-format.md).
+The checkpoint-stable CNN feature planes and augmentation transforms are defined
+in [docs/neural-input-encoding.md](docs/neural-input-encoding.md).
 
 ## Development
 
@@ -18,6 +20,9 @@ Python 3.10 or newer is required. From a checkout:
 python -m pip install -e '.[dev]'
 pytest
 ```
+
+Engine-only installations have no PyTorch dependency. Install `.[models]` when
+using the neural encoding or learned-model package without development tools.
 
 Importing `twixt_ai.game`, `twixt_ai.agents`, or `twixt_ai.evaluation` never
 requires the backend or UI.

@@ -7,6 +7,8 @@ web application is only a play and inspection client.
 The project is at the architecture-skeleton stage. See
 [docs/architecture.md](docs/architecture.md) for responsibility boundaries,
 dependency rules, the planned AI progression, and the initial directory layout.
+The persisted position and replay schemas are documented in
+[docs/game-record-format.md](docs/game-record-format.md).
 
 ## Development
 

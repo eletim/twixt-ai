@@ -13,6 +13,10 @@ import json
 from typing import Any, Iterable, Mapping
 
 
+STATE_FORMAT = "twixt-ai-state"
+STATE_FORMAT_VERSION = 1
+
+
 def _require_int(value: object, name: str) -> int:
     """Return *value* as an int, rejecting bools and non-integers."""
 
@@ -262,9 +266,11 @@ class GameState:
         return GameState(self.board, self.pegs, self.links, self.side_to_move, self.result)
 
     def to_dict(self) -> dict[str, object]:
-        """Return a deterministic dictionary made only of JSON values."""
+        """Return the versioned persisted form, made only of JSON values."""
 
         return {
+            "format": STATE_FORMAT,
+            "version": STATE_FORMAT_VERSION,
             "board": self.board.to_dict(),
             "pegs": [peg.to_dict() for peg in self.pegs],
             "links": [link.to_dict() for link in self.links],
@@ -283,9 +289,22 @@ class GameState:
 
         if not isinstance(value, Mapping):
             raise TypeError("state must be an object")
-        expected = {"board", "pegs", "links", "side_to_move", "result"}
+        expected = {
+            "format",
+            "version",
+            "board",
+            "pegs",
+            "links",
+            "side_to_move",
+            "result",
+        }
         if set(value) != expected:
             raise ValueError(f"state must contain exactly {', '.join(sorted(expected))}")
+        if value["format"] != STATE_FORMAT:
+            raise ValueError(f"unsupported state format: {value['format']!r}")
+        version = _require_int(value["version"], "version")
+        if version != STATE_FORMAT_VERSION:
+            raise ValueError(f"unsupported state format version: {version}")
 
         board_value = value["board"]
         if not isinstance(board_value, Mapping) or set(board_value) != {"width", "height"}:
@@ -358,4 +377,6 @@ __all__ = [
     "Peg",
     "Player",
     "Position",
+    "STATE_FORMAT",
+    "STATE_FORMAT_VERSION",
 ]

@@ -54,6 +54,8 @@ def test_copy_and_serialization_are_deterministic() -> None:
     assert state.to_json() == reordered.to_json()
     assert GameState.from_dict(state.to_dict()) == state
     assert GameState.from_json(state.to_json()) == state
+    assert json.loads(state.to_json())["format"] == "twixt-ai-state"
+    assert json.loads(state.to_json())["version"] == 1
     assert json.loads(state.to_json())["board"] == {"height": 7, "width": 8}
 
 
@@ -113,4 +115,12 @@ def test_deserialization_rejects_unknown_fields_and_invalid_ownership() -> None:
     serialized = populated_state().to_dict()
     serialized["pegs"][0]["owner"] = "green"  # type: ignore[index]
     with pytest.raises(ValueError, match="green"):
+        GameState.from_dict(serialized)
+
+
+def test_deserialization_rejects_unsupported_format_version() -> None:
+    serialized = populated_state().to_dict()
+    serialized["version"] = 2
+
+    with pytest.raises(ValueError, match="unsupported state format version: 2"):
         GameState.from_dict(serialized)

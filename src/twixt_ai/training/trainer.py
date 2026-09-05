@@ -465,7 +465,10 @@ def train_model(
             raise ValueError("resumed epochs cannot be less than the original target")
         if state.get("dataset_sha256") != dataset_sha256:
             raise ValueError("resume dataset does not match latest.pt")
-        if payload.get("config") != architecture_config.to_dict():
+        saved_model_config = PolicyValueConfig.from_dict(
+            payload.get("config")  # type: ignore[arg-type]
+        )
+        if saved_model_config != architecture_config:
             raise ValueError("resume model configuration does not match latest.pt")
         model.load_state_dict(payload["state_dict"])  # type: ignore[arg-type]
         optimizer.load_state_dict(state["optimizer"])  # type: ignore[arg-type]

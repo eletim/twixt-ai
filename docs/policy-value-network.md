@@ -4,7 +4,7 @@
 of canonical encoding-v1 positions shaped `[N, 22, height, width]`. A small shared
 convolutional residual trunk feeds two heads:
 
-- the policy head returns 576 unnormalized logits for training;
+- the policy head returns `width * height` unnormalized logits for training;
 - the value head returns one `tanh`-bounded value per position in `[-1, 1]`,
   from the encoded position's side-to-move perspective.
 

@@ -139,6 +139,34 @@ def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
         assert torch.equal(resumed_weight, direct_weight)
 
 
+def test_resume_accepts_legacy_model_config_without_board_dimensions(
+    tmp_path: Path,
+) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    train_model(dataset, output, config=_config(1), model_config=model_config)
+    latest_path = output / "latest.pt"
+    payload = torch.load(latest_path, weights_only=True)
+    payload["config"] = {
+        key: value
+        for key, value in payload["config"].items()
+        if key not in {"board_width", "board_height"}
+    }
+    torch.save(payload, latest_path)
+
+    summary = train_model(
+        dataset,
+        output,
+        config=_config(2),
+        model_config=model_config,
+        resume=True,
+    )
+
+    assert summary.completed_epochs == 2
+    assert load_policy_value_checkpoint(latest_path).model.config == model_config
+
+
 def test_interruption_before_latest_does_not_commit_new_best(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

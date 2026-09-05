@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, Callable
 
 import pytest
 
@@ -18,6 +19,7 @@ from twixt_ai.training.cli import main
 class FirstWithPolicy:
     def choose_move(self, request: AgentRequest) -> AgentResult:
         moves = request.legal_moves
+        visits = (4,) if len(moves) == 1 else (3, 1)
         return AgentResult(
             moves[0],
             {
@@ -25,10 +27,11 @@ class FirstWithPolicy:
                     {
                         "x": move.coordinate.x,
                         "y": move.coordinate.y,
-                        "visits": 3 if index == 0 else 1,
+                        "visits": visits[index],
                     }
                     for index, move in enumerate(moves[:2])
                 ],
+                "simulations": 4,
                 "agent": "test-search",
             },
         )
@@ -158,4 +161,77 @@ def test_rejects_tampered_match_history(tmp_path: Path) -> None:
     source.write_text(json.dumps(match))
 
     with pytest.raises(ValueError, match="does not match record"):
+        build_dataset(source, tmp_path / "dataset")
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (lambda match: match["config"].update(seed={}), "invalid match config"),
+        (
+            lambda match: match["config"].update(agents=[]),
+            "match config agents",
+        ),
+        (
+            lambda match: match["decisions"][0].update(seed="not-an-integer"),
+            "decision 0 seed",
+        ),
+        (
+            lambda match: match["decisions"][0].update(seed=True),
+            "decision 0 seed",
+        ),
+        (
+            lambda match: match["decisions"][0].pop("seed"),
+            "decision 0 seed",
+        ),
+    ],
+)
+def test_rejects_invalid_match_provenance(
+    tmp_path: Path,
+    mutation: Callable[[dict[str, Any]], object],
+    message: str,
+) -> None:
+    match = run_match(
+        RandomAgent(),
+        RandomAgent(),
+        config=MatchConfig(BoardDimensions(4, 4), 1),
+    ).to_dict()
+    mutation(match)
+    source = tmp_path / "bad-provenance.json"
+    source.write_text(json.dumps(match))
+
+    with pytest.raises(ValueError, match=message):
+        build_dataset(source, tmp_path / "dataset")
+
+
+def test_rejects_inconsistent_mcts_visit_total(tmp_path: Path) -> None:
+    match = run_match(
+        FirstWithPolicy(),
+        FirstWithPolicy(),
+        config=MatchConfig(BoardDimensions(4, 4), 2),
+    ).to_dict()
+    metadata = match["decisions"][0]["metadata"]  # type: ignore[index]
+    metadata["simulations"] = 5  # type: ignore[index]
+    source = tmp_path / "bad-statistics.json"
+    source.write_text(json.dumps(match))
+
+    with pytest.raises(ValueError, match="visits must sum"):
+        build_dataset(source, tmp_path / "dataset")
+
+
+@pytest.mark.parametrize("simulations", [None, True, 0, "4"])
+def test_rejects_invalid_mcts_simulation_count(
+    tmp_path: Path, simulations: object
+) -> None:
+    match = run_match(
+        FirstWithPolicy(),
+        FirstWithPolicy(),
+        config=MatchConfig(BoardDimensions(4, 4), 2),
+    ).to_dict()
+    metadata = match["decisions"][0]["metadata"]  # type: ignore[index]
+    metadata["simulations"] = simulations  # type: ignore[index]
+    source = tmp_path / "bad-simulations.json"
+    source.write_text(json.dumps(match))
+
+    with pytest.raises(ValueError, match="positive integer simulations"):
         build_dataset(source, tmp_path / "dataset")

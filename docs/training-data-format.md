@@ -33,8 +33,11 @@ contains:
 - `policy`, when MCTS `root_moves` metadata has positive visit counts: a sparse
   coordinate/probability array normalized from those counts.
 
-Unknown match versions, invalid replay histories, misaligned decisions, and
-malformed search statistics are rejected instead of being silently converted.
+Unknown match versions, invalid match configurations or decision seeds, invalid
+replay histories, misaligned decisions, and malformed search statistics are
+rejected instead of being silently converted. In particular, an MCTS policy
+target requires a positive integer `simulations` value equal to the sum of all
+root visit counts.
 
 Build a dataset from a self-play run with:
 

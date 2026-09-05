@@ -10,8 +10,9 @@ import math
 from pathlib import Path
 from typing import Any
 
-from twixt_ai.evaluation import MATCH_FORMAT, MATCH_FORMAT_VERSION
+from twixt_ai.evaluation import MATCH_FORMAT, MATCH_FORMAT_VERSION, MatchConfig
 from twixt_ai.game import (
+    BoardDimensions,
     Coordinate,
     GameRecord,
     GameState,
@@ -206,6 +207,29 @@ def _validated_match(
     result = value.get("result")
     if not isinstance(config, dict):
         raise ValueError(f"match config in {path} must be an object")
+    if set(config) != {"board", "seed", "agents"}:
+        raise ValueError(
+            f"match config in {path} must contain exactly agents, board, and seed"
+        )
+    board = config["board"]
+    agents = config["agents"]
+    if not isinstance(board, dict) or set(board) != {"width", "height"}:
+        raise ValueError(
+            f"match config board in {path} must contain exactly height and width"
+        )
+    if not isinstance(agents, dict) or set(agents) != {"red", "black"}:
+        raise ValueError(
+            f"match config agents in {path} must contain exactly black and red"
+        )
+    try:
+        match_config = MatchConfig(
+            board=BoardDimensions(width=board["width"], height=board["height"]),
+            seed=config["seed"],
+            red_agent=agents["red"],
+            black_agent=agents["black"],
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid match config in {path}: {exc}") from exc
     if not isinstance(decisions, list) or any(not isinstance(item, dict) for item in decisions):
         raise ValueError(f"match decisions in {path} must be an array of objects")
     if not isinstance(record_value, dict):
@@ -213,7 +237,7 @@ def _validated_match(
     record = GameRecord.from_dict(record_value)
     if not record.final_state.is_terminal:
         raise ValueError(f"match record in {path} is not terminal")
-    if config.get("board") != record.initial_state.board.to_dict():
+    if match_config.board != record.initial_state.board:
         raise ValueError(f"match config board in {path} does not match record")
     expected_result = {
         "status": record.final_state.result.value,
@@ -236,6 +260,17 @@ def _validated_match(
             raise ValueError(f"match decision {index} in {path} does not match record")
         if not isinstance(decision.get("metadata"), dict):
             raise ValueError(f"match decision {index} metadata in {path} must be an object")
+        if "seed" not in decision:
+            raise ValueError(
+                f"match decision {index} seed in {path} must be an integer or null"
+            )
+        decision_seed = decision["seed"]
+        if decision_seed is not None and (
+            isinstance(decision_seed, bool) or not isinstance(decision_seed, int)
+        ):
+            raise ValueError(
+                f"match decision {index} seed in {path} must be an integer or null"
+            )
     return record, decisions  # type: ignore[return-value]
 
 
@@ -247,6 +282,15 @@ def _policy_target(
         return None
     if not isinstance(root_moves, list):
         raise ValueError("root_moves metadata must be an array")
+    simulations = metadata.get("simulations")
+    if (
+        isinstance(simulations, bool)
+        or not isinstance(simulations, int)
+        or simulations < 1
+    ):
+        raise ValueError(
+            "root_moves metadata requires a positive integer simulations count"
+        )
     visits: list[tuple[int, int, int]] = []
     legal = set(legal_peg_placements(state))
     seen: set[Coordinate] = set()
@@ -273,8 +317,8 @@ def _policy_target(
         seen.add(coordinate)
         visits.append((x, y, count))
     total = sum(item[2] for item in visits)
-    if total == 0:
-        return None
+    if total != simulations:
+        raise ValueError("root move visits must sum to metadata.simulations")
     return [
         {"coordinate": {"x": x, "y": y}, "probability": count / total}
         for x, y, count in visits

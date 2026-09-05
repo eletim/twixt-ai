@@ -67,7 +67,8 @@ configurations for each entrant.
 
 MCTS is the primary non-neural search baseline. It uses a reproducible
 simulation-count budget, seeded random rollouts with a finite default horizon,
-and heuristic evaluation at non-terminal cutoffs. It reports root visit/value
+heuristic evaluation at non-terminal cutoffs, and progressive widening so PUCT
+revisits actions on the wide standard board. It reports root visit/value
 statistics suitable for evaluation and later training targets:
 
 ```python

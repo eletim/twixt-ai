@@ -39,6 +39,8 @@ DEFAULT_ROLLOUT_LIMIT = 4
 """Default playout horizon, chosen to keep standard-board decisions practical."""
 
 _HEURISTIC_VALUE_SCALE = 100.0
+_PROGRESSIVE_WIDENING_CONSTANT = 1.5
+_PROGRESSIVE_WIDENING_EXPONENT = 0.5
 
 
 RolloutEvaluationFunction = Callable[[GameState, Player], float]
@@ -130,6 +132,9 @@ class MCTSAgent:
 
     A ``policy_value`` callback supplies normalized search priors and/or leaf
     values without changing the tree orchestration used by this baseline.
+    Progressive widening admits new actions as a node's visit count grows, so
+    PUCT can revisit children even when the legal action space is much larger
+    than the simulation budget.
     """
 
     def __init__(
@@ -261,6 +266,20 @@ class MCTSAgent:
 
         return max(node.children, key=score)
 
+    @staticmethod
+    def _can_expand(node: _Node) -> bool:
+        """Return whether progressive widening admits another action."""
+
+        if not node.unexpanded:
+            return False
+        if not node.children:
+            return True
+        child_limit = math.ceil(
+            _PROGRESSIVE_WIDENING_CONSTANT
+            * node.visits**_PROGRESSIVE_WIDENING_EXPONENT
+        )
+        return len(node.children) < child_limit
+
     def _rollout(self, state: GameState, random: Random) -> float:
         steps = 0
         while not state.is_terminal and (
@@ -315,11 +334,14 @@ class MCTSAgent:
         for _ in range(self.simulations):
             node = root
             path = [root]
-            while not node.state.is_terminal and not node.unexpanded:
+            while not node.state.is_terminal:
+                if self._can_expand(node):
+                    node = self._expand(node, random)
+                    path.append(node)
+                    break
+                if not node.children:
+                    break
                 node = self._select(node)
-                path.append(node)
-            if not node.state.is_terminal and node.unexpanded:
-                node = self._expand(node, random)
                 path.append(node)
             self._maximum_depth = max(self._maximum_depth, len(path) - 1)
             value = self._leaf_value(node, random)

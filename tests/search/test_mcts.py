@@ -39,7 +39,16 @@ def test_simulation_budget_is_hard_even_with_a_large_tree() -> None:
     assert result.metadata["simulations"] == 7
     assert result.metadata["nodes"] == 8
     assert agent.last_statistics is not None
-    assert agent.last_statistics.maximum_depth == 1
+    assert agent.last_statistics.maximum_depth >= 2
+
+
+def test_default_standard_board_search_revisits_children() -> None:
+    result = MCTSAgent().choose_move(AgentRequest(GameState.initial(), seed=4))
+    visited = [item for item in result.metadata["root_moves"] if item["visits"]]
+
+    assert len(visited) < result.metadata["simulations"]
+    assert max(item["visits"] for item in visited) > 1
+    assert result.metadata["maximum_depth"] >= 2
 
 
 def test_default_rollout_is_bounded_and_uses_cutoff_evaluation() -> None:

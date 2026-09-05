@@ -111,3 +111,18 @@ def test_create_and_reset_return_fresh_games() -> None:
     assert reset_game(state) == GameState.initial(board)
     assert reset_game() == create_game() == GameState.initial()
     assert reset_game(state) is not state
+
+
+def test_create_and_reset_draw_when_red_has_no_opening_move() -> None:
+    board = BoardDimensions(2, 3)
+    existing = GameState(
+        board=board,
+        pegs=(Peg(Player.BLACK, Coordinate(0, 1)),),
+        side_to_move=Player.BLACK,
+    )
+
+    created = create_game(board)
+    reset = reset_game(existing)
+
+    assert created == reset == GameState(board=board, result=GameResult.DRAW)
+    assert created.is_terminal

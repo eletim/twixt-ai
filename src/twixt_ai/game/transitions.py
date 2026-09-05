@@ -26,7 +26,10 @@ def create_game(board: BoardDimensions | None = None) -> GameState:
 
     if board is not None and not isinstance(board, BoardDimensions):
         raise TypeError("board must be BoardDimensions or None")
-    return GameState.initial(board)
+    state = GameState.initial(board)
+    if legal_peg_placements(state):
+        return state
+    return GameState(board=state.board, result=GameResult.DRAW)
 
 
 def reset_game(state: GameState | None = None) -> GameState:

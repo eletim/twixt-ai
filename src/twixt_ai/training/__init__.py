@@ -18,6 +18,10 @@ from .trainer import (
     TrainingSummary,
     train_model,
 )
+from .mini_experiment import (
+    MiniTrainingExperimentConfig,
+    run_mini_training_experiment,
+)
 
 __all__ = [
     "DATASET_FORMAT",
@@ -32,6 +36,8 @@ __all__ = [
     "EpochMetrics",
     "TrainingConfig",
     "TrainingSummary",
+    "MiniTrainingExperimentConfig",
     "build_dataset",
+    "run_mini_training_experiment",
     "train_model",
 ]

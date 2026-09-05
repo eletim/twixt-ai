@@ -91,9 +91,9 @@ class MiniGenerationConfig:
             isinstance(self.validation_fraction, bool)
             or not isinstance(self.validation_fraction, (int, float))
             or not math.isfinite(self.validation_fraction)
-            or not 0 <= self.validation_fraction <= 1
+            or not 0 <= self.validation_fraction < 1
         ):
-            raise ValueError("validation_fraction must be in [0, 1]")
+            raise ValueError("validation_fraction must be in [0, 1)")
         if (
             isinstance(self.promotion_win_rate, bool)
             or not isinstance(self.promotion_win_rate, (int, float))
@@ -348,6 +348,8 @@ def run_mini_training_generations(
                 "manifest": dataset.to_dict(),
             }
             _write_json(generation_root / "report.json", generation)
+            if not dataset.train_examples:
+                raise ValueError("training split must contain at least one example")
 
             stage = "training"
             stage_started = perf_counter()

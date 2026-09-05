@@ -35,6 +35,16 @@ write the artifact to standard output. Python callers can use
 `twixt_ai.evaluation.run_match` with any agents that implement the common
 agent protocol.
 
+`twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses
+the shared position heuristic with alpha-beta minimax. Its search limits and
+move ordering are configurable:
+
+```python
+from twixt_ai.search import HeuristicSearchAgent
+
+agent = HeuristicSearchAgent(depth=2, node_budget=20_000)
+```
+
 ## Browser play
 
 Start the minimal local human-vs-agent UI after installing the project:

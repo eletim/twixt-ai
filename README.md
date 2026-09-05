@@ -43,7 +43,8 @@ twixt-ai-selfplay --games 100 --workers 4 --seed 1234 \
   --red random --black random --output-dir selfplay-run
 ```
 
-The `random` and bounded heuristic `search` agents are available from the CLI.
+The `random`, bounded heuristic `search`, and Monte Carlo `mcts` agents are
+available from the CLI.
 Failures are isolated to their game and recorded both beside successful game
 artifacts and in the summary. Python callers can supply any agent factories to
 `twixt_ai.selfplay.run_batch`.
@@ -63,6 +64,20 @@ first-player results, and (when requested) Elo-style ratings. Search entrants
 use `--search-depth` and `--node-budget`; these settings apply to every search
 entrant in a CLI run. Python callers can supply distinct factories and recorded
 configurations for each entrant.
+
+MCTS is the primary non-neural search baseline. It uses a reproducible
+simulation-count budget, seeded random rollouts, and reports root visit/value
+statistics suitable for evaluation and later training targets:
+
+```python
+from twixt_ai.search import MCTSAgent
+
+agent = MCTSAgent(simulations=400)
+```
+
+Use `--agent candidate=mcts --simulations 400` in the benchmark CLI. A
+`policy_value` callback can supply move priors and leaf values later without
+replacing the MCTS orchestration layer.
 
 `twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses
 the shared position heuristic with alpha-beta minimax. Its search limits and

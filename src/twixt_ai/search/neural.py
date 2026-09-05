@@ -39,7 +39,9 @@ class NeuralPolicyValue:
         device = parameter.device
         inputs = encode_position(state, device=device).unsqueeze(0)
         mask = legal_move_mask(moves, device=device)
-        was_training = self.model.training
+        training_modes = tuple(
+            (module, module.training) for module in self.model.modules()
+        )
         self.model.eval()
         try:
             with torch.inference_mode():
@@ -47,7 +49,11 @@ class NeuralPolicyValue:
                 masked = mask_policy_logits(logits, mask)
                 probabilities = torch.softmax(masked, dim=-1)[0]
         finally:
-            self.model.train(was_training)
+            # Calling ``model.train(...)`` here would recursively overwrite
+            # mixed configurations such as intentionally frozen BatchNorm
+            # layers. Restore each module's exact pre-inference mode instead.
+            for module, was_training in training_modes:
+                module.training = was_training
         priors = {
             move: float(probabilities[move_to_action_index(move)].item())
             for move in moves

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Twixt</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Human vs AI</p>
+          <h1>Twixt</h1>
+        </div>
+        <button id="reset" type="button" disabled>New game</button>
+      </header>
+      <section class="game" aria-labelledby="status">
+        <div id="setup" class="setup">
+          <label>Your side
+            <select id="human-side" disabled>
+              <option value="red">Red (first)</option>
+              <option value="black">Black (second)</option>
+            </select>
+          </label>
+          <label>Opponent
+            <select id="agent" aria-label="AI opponent" disabled></select>
+          </label>
+          <label class="overlay-toggle">
+            <input id="inspection-toggle" type="checkbox" disabled>
+            AI inspection
+          </label>
+        </div>
+        <p id="status" role="status" aria-live="polite">Loading game…</p>
+        <div class="board-frame">
+          <svg id="board" role="grid" aria-label="Twixt board"></svg>
+        </div>
+        <aside id="inspection" class="inspection" aria-live="polite" hidden></aside>
+        <p id="message" role="alert" aria-live="assertive"></p>
+      </section>
+      <footer><span class="red-key">Red</span> connects top to bottom. <span class="black-key">Black</span> connects left to right.</footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

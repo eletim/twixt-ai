@@ -30,6 +30,14 @@ class RecordingAgent:
         return AgentResult(agent_request.legal_moves[0], {"depth": 2})
 
 
+class NonFiniteMetadataAgent:
+    def __init__(self, value: float) -> None:
+        self.value = value
+
+    def choose_move(self, agent_request: AgentRequest) -> AgentResult:
+        return AgentResult(agent_request.legal_moves[0], {"score": self.value})
+
+
 def request(
     application: GameApplication,
     path: str,
@@ -192,6 +200,34 @@ def test_session_selects_side_and_runs_registered_agent_through_contract(
     assert session.view()["thinking"] == move_view["thinking"]
     assert len(agent.requests) == 1
     assert agent.requests[0].state.side_to_move is Player.RED
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_session_rejects_non_finite_agent_metadata_without_advancing(
+    tmp_path: Path, value: float
+) -> None:
+    session = GameSession(
+        GameState.initial(BoardDimensions(6, 6)),
+        agents={"invalid": NonFiniteMetadataAgent(value)},
+        human_side=Player.BLACK,
+    )
+    application = GameApplication(session, tmp_path)
+    initial_view = session.view()
+
+    status, _, body = request(
+        application,
+        "/api/session/agent-moves",
+        "POST",
+        {"revision": initial_view["revision"]},
+    )
+
+    assert status == "500 Internal Server Error"
+    assert json.loads(body) == {
+        "error": "agent_error",
+        "detail": "agent metadata must be JSON serializable",
+        "session": initial_view,
+    }
+    assert session.view() == initial_view
 
 
 def test_session_rejects_human_input_during_agent_turn(tmp_path: Path) -> None:

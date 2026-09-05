@@ -184,7 +184,7 @@ class GameSession:
             result = select_agent_move(self._agents[self._agent_name], self._state)
             metadata = dict(result.metadata)
             try:
-                json.dumps(metadata)
+                json.dumps(metadata, allow_nan=False)
             except (TypeError, ValueError) as exc:
                 raise AgentContractError(
                     "agent metadata must be JSON serializable"

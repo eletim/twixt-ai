@@ -141,6 +141,16 @@ def test_packaged_ui_disables_setup_until_session_loads() -> None:
     assert b'<input id="inspection-toggle" type="checkbox" disabled>' in body
 
 
+def test_packaged_inspection_overlays_do_not_block_board_input() -> None:
+    status, _, body = request(GameApplication(), "/styles.css")
+
+    assert status == "200 OK"
+    assert (
+        b".candidate-overlays, .selected-move-overlay { pointer-events: none; }"
+        in body
+    )
+
+
 def test_session_selects_side_and_runs_registered_agent_through_contract(
     tmp_path: Path,
 ) -> None:

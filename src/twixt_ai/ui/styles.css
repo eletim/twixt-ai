@@ -89,6 +89,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .intersection:f
 .peg { stroke: #fff8dc; stroke-width: 2; }
 .peg.red { fill: #c53c35; }
 .peg.black { fill: #22262b; }
+.candidate-overlays, .selected-move-overlay { pointer-events: none; }
 .candidate-overlay circle {
   fill: #fff8dc;
   fill-opacity: calc(.28 + var(--strength) * .58);

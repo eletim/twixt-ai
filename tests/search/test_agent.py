@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from agents.contract import AgentContract
-from twixt_ai.agents import TERMINAL_SCORE, AgentRequest
+from twixt_ai.agents import TERMINAL_SCORE, AgentRequest, evaluate_position
 from twixt_ai.game import (
     BoardDimensions,
     Coordinate,
@@ -12,6 +12,8 @@ from twixt_ai.game import (
     Peg,
     PegPlacement,
     Player,
+    apply_move,
+    legal_peg_placements,
 )
 from twixt_ai.search import HeuristicSearchAgent, SearchAgent
 
@@ -36,6 +38,23 @@ def test_search_reports_bounded_thinking_metadata() -> None:
     }
     assert inspection["candidates"]
     assert set(inspection["candidates"][0]) == {"x", "y", "score"}
+
+
+def test_inspection_reports_full_window_candidate_scores() -> None:
+    state = GameState.initial(BoardDimensions(4, 4))
+    result = SearchAgent(depth=2).choose_move(AgentRequest(state))
+    inspected = {
+        (item["x"], item["y"]): item["score"]
+        for item in result.metadata["inspection"]["candidates"]
+    }
+    candidate = PegPlacement(Player.RED, Coordinate(2, 2))
+    child = apply_move(state, candidate)
+    expected = min(
+        evaluate_position(apply_move(child, response), Player.RED)
+        for response in legal_peg_placements(child)
+    )
+
+    assert inspected[(2, 2)] == expected
 
 
 def test_search_takes_an_immediate_win() -> None:

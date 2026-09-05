@@ -1,0 +1,51 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "experiment": "twixt-ai-mini-dataset-experiment",
+      "experiment_version": 1,
+      "mcts": {
+        "policy_value_network": false,
+        "rollout_limit": 4,
+        "simulations": 100
+      },
+      "stage": "baseline"
+    },
+    "shard_size": 10000,
+    "split_seed": "issue-56-baseline",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 2085,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 100,
+  "splits": {
+    "train": {
+      "examples": 1961,
+      "shards": [
+        {
+          "examples": 1961,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "3623eee01c0451c579f54c2320c56c7f98fd2e276666cd06c45f46af02841fee"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 124,
+      "shards": [
+        {
+          "examples": 124,
+          "path": "validation/shard-00000.jsonl",
+          "sha256": "4d5689905e57ee6b81f208e6ac22e0a41609204cfe24f9f6ca22d3256d4feec2"
+        }
+      ]
+    }
+  },
+  "version": 1
+}

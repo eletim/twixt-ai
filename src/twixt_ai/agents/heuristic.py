@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import math
 from types import MappingProxyType
-from typing import Literal, Mapping, overload
+from typing import Iterable, Literal, Mapping, overload
 
 from twixt_ai.game import Coordinate, GameState, Link, Player, links_cross
 
@@ -132,7 +132,41 @@ def _progress(
     return best
 
 
-def _opportunities(state: GameState, player: Player) -> tuple[float, float]:
+LinkBuckets = Mapping[tuple[int, int], tuple[Link, ...]]
+
+
+def _index_links(links: Iterable[Link]) -> LinkBuckets:
+    """Group links into the one or two unit cells their interiors can cross."""
+
+    buckets: dict[tuple[int, int], list[Link]] = {}
+    for link in links:
+        minimum_x = min(link.start.x, link.end.x)
+        maximum_x = max(link.start.x, link.end.x)
+        minimum_y = min(link.start.y, link.end.y)
+        maximum_y = max(link.start.y, link.end.y)
+        for x in range(minimum_x, maximum_x):
+            for y in range(minimum_y, maximum_y):
+                buckets.setdefault((x, y), []).append(link)
+    return {key: tuple(values) for key, values in buckets.items()}
+
+
+def _nearby_links(candidate: Link, link_buckets: LinkBuckets) -> set[Link]:
+    """Return only links whose bounding boxes can overlap ``candidate``."""
+
+    nearby: set[Link] = set()
+    minimum_x = min(candidate.start.x, candidate.end.x)
+    maximum_x = max(candidate.start.x, candidate.end.x)
+    minimum_y = min(candidate.start.y, candidate.end.y)
+    maximum_y = max(candidate.start.y, candidate.end.y)
+    for x in range(minimum_x, maximum_x):
+        for y in range(minimum_y, maximum_y):
+            nearby.update(link_buckets.get((x, y), ()))
+    return nearby
+
+
+def _opportunities(
+    state: GameState, player: Player, link_buckets: LinkBuckets
+) -> tuple[float, float]:
     occupied = {peg.coordinate for peg in state.pegs}
     open_links = 0
     opponent_blocked = 0
@@ -149,15 +183,36 @@ def _opportunities(state: GameState, player: Player) -> tuple[float, float]:
             if endpoint in occupied or not _is_playable(state, player, endpoint):
                 continue
             candidate = Link(player, peg.coordinate, endpoint)
-            crossing = tuple(
-                link for link in state.links if links_cross(candidate, link)
-            )
-            if not crossing:
+            has_crossing = False
+            blocked_by_opponent = False
+            for link in _nearby_links(candidate, link_buckets):
+                if not links_cross(candidate, link):
+                    continue
+                has_crossing = True
+                if link.owner is player.opponent:
+                    blocked_by_opponent = True
+                    break
+            if not has_crossing:
                 open_links += 1
-            elif any(link.owner is player.opponent for link in crossing):
+            elif blocked_by_opponent:
                 opponent_blocked += 1
 
     return open_links / 8.0, opponent_blocked / 8.0
+
+
+def _position_features(
+    state: GameState, player: Player, link_buckets: LinkBuckets
+) -> PositionFeatures:
+    components = _components(state, player)
+    links = sum(link.owner is player for link in state.links)
+    joined_pegs = sum(max(0, len(component) - 1) for component in components)
+    threats, blocked = _opportunities(state, player, link_buckets)
+    return PositionFeatures(
+        progress=_progress(state, player, components),
+        connectivity=float(links + joined_pegs),
+        threats=threats,
+        blocked=blocked,
+    )
 
 
 def position_features(state: GameState, player: Player) -> PositionFeatures:
@@ -167,17 +222,7 @@ def position_features(state: GameState, player: Player) -> PositionFeatures:
         raise TypeError("state must be a GameState")
     if not isinstance(player, Player):
         raise TypeError("player must be a Player")
-
-    components = _components(state, player)
-    links = sum(link.owner is player for link in state.links)
-    joined_pegs = sum(max(0, len(component) - 1) for component in components)
-    threats, blocked = _opportunities(state, player)
-    return PositionFeatures(
-        progress=_progress(state, player, components),
-        connectivity=float(links + joined_pegs),
-        threats=threats,
-        blocked=blocked,
-    )
+    return _position_features(state, player, _index_links(state.links))
 
 
 @overload
@@ -224,8 +269,9 @@ def evaluate_position(
     if not isinstance(weights, HeuristicWeights):
         raise TypeError("weights must be HeuristicWeights")
 
-    own = position_features(state, player)
-    opponent = position_features(state, player.opponent)
+    link_buckets = _index_links(state.links)
+    own = _position_features(state, player, link_buckets)
+    opponent = _position_features(state, player.opponent, link_buckets)
     if state.is_terminal:
         winner = state.winner
         terminal = 0.0

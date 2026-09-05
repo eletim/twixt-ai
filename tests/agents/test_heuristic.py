@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from random import Random
 
 import pytest
 
+import twixt_ai.agents.heuristic as heuristic
 from twixt_ai.agents import (
     TERMINAL_SCORE,
     EvaluationBreakdown,
@@ -21,6 +23,8 @@ from twixt_ai.game import (
     Link,
     Peg,
     Player,
+    apply_move,
+    legal_peg_placements,
 )
 
 
@@ -142,3 +146,34 @@ def test_evaluation_rejects_invalid_players(value: object) -> None:
 def test_weights_reject_non_finite_values() -> None:
     with pytest.raises(ValueError, match="finite"):
         replace(HeuristicWeights(), progress=float("inf"))
+
+
+def test_full_standard_board_frontier_limits_link_intersection_work(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guard search-frontier cost without using a machine-sensitive timer."""
+
+    random = Random(0)
+    state = GameState.initial()
+    for _ in range(100):
+        state = apply_move(state, random.choice(legal_peg_placements(state)))
+
+    assert len(state.pegs) == 100
+    assert len(state.links) == 30
+    children = tuple(apply_move(state, move) for move in legal_peg_placements(state))
+    assert len(children) == 432
+
+    intersection_checks = 0
+    original_links_cross = heuristic.links_cross
+
+    def counted_links_cross(first: Link, second: Link) -> bool:
+        nonlocal intersection_checks
+        intersection_checks += 1
+        return original_links_cross(first, second)
+
+    monkeypatch.setattr(heuristic, "links_cross", counted_links_cross)
+    scores = tuple(evaluate_position(child, Player.RED) for child in children)
+
+    assert len(scores) == len(children)
+    # The previous full scan performed more than six million checks here.
+    assert intersection_checks < 500_000

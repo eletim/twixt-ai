@@ -9,6 +9,8 @@ The project is at the architecture-skeleton stage. See
 dependency rules, the planned AI progression, and the initial directory layout.
 The persisted position and replay schemas are documented in
 [docs/game-record-format.md](docs/game-record-format.md).
+The checkpoint-stable CNN feature planes and augmentation transforms are defined
+in [docs/neural-input-encoding.md](docs/neural-input-encoding.md).
 
 ## Development
 

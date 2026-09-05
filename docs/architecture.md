@@ -26,7 +26,7 @@ each stronger agent measurable against a simpler, deterministic baseline.
 | `twixt_ai.agents` | The agent protocol plus random and heuristic agents | `game` |
 | `twixt_ai.search` | Search trees, policies, MCTS, and reusable search utilities | `game`, `agents` protocols |
 | `twixt_ai.models` | PyTorch policy/value networks, tensor encoding, and checkpoints | `game`; PyTorch |
-| `twixt_ai.selfplay` | Headless game generation and trajectory records | `game`, `agents`, `search`, `models` |
+| `twixt_ai.selfplay` | Headless game generation and trajectory records | `game`, `agents`, `search`, `models`, `evaluation` match artifacts |
 | `twixt_ai.training` | Dataset preparation, optimization, checkpoint production, and training commands | `game`, `models`, `selfplay` |
 | `twixt_ai.evaluation` | Headless matches, tournaments, metrics, and promotion decisions | `game`, `agents`, `search`, `models` |
 | `twixt_ai.backend` | HTTP boundary, request validation, session orchestration, and conversion to/from canonical Python values | all Python modules as needed |

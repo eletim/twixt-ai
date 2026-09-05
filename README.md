@@ -35,6 +35,19 @@ write the artifact to standard output. Python callers can use
 `twixt_ai.evaluation.run_match` with any agents that implement the common
 agent protocol.
 
+Generate a reproducible batch of games in parallel with one match artifact per
+game and an aggregate `summary.json` manifest:
+
+```bash
+twixt-ai-selfplay --games 100 --workers 4 --seed 1234 \
+  --red random --black random --output-dir selfplay-run
+```
+
+The `random` and bounded heuristic `search` agents are available from the CLI.
+Failures are isolated to their game and recorded both beside successful game
+artifacts and in the summary. Python callers can supply any agent factories to
+`twixt_ai.selfplay.run_batch`.
+
 `twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses
 the shared position heuristic with alpha-beta minimax. Its search limits and
 move ordering are configurable:

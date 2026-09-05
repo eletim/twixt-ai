@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+from importlib import resources
+from importlib.abc import Traversable
 import json
 from pathlib import Path
 from threading import Lock
@@ -22,7 +24,7 @@ from twixt_ai.game import (
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
 Response = Iterable[bytes]
-DEFAULT_UI_ROOT = Path(__file__).resolve().parents[3] / "ui"
+DEFAULT_UI_ROOT = resources.files("twixt_ai.ui")
 _STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
@@ -63,10 +65,12 @@ class GameApplication:
     """WSGI application exposing one game plus the replaceable static UI."""
 
     def __init__(
-        self, session: GameSession | None = None, ui_root: Path | None = None
+        self,
+        session: GameSession | None = None,
+        ui_root: Path | Traversable | None = None,
     ) -> None:
         self.session = session or GameSession()
-        self.ui_root = ui_root or DEFAULT_UI_ROOT
+        self.ui_root = ui_root if ui_root is not None else DEFAULT_UI_ROOT
 
     @staticmethod
     def _json(

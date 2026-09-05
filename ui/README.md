@@ -1,10 +1,11 @@
 # Web UI
 
-This is a thin, dependency-free play and inspection client. It renders the
-canonical state returned by `twixt_ai.backend`; every attempted move is sent to
-the Python engine for validation and transition.
+The thin, dependency-free play and inspection client is packaged from
+`src/twixt_ai/ui` so an installed wheel contains everything the web executable
+serves. It renders canonical state returned by `twixt_ai.backend`; every
+attempted move is sent to the Python engine for validation and transition.
 
-From an installed development checkout, run:
+After installing the project, run:
 
 ```bash
 twixt-ai-web

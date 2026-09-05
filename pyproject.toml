@@ -20,3 +20,6 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"twixt_ai.ui" = ["*.html", "*.js", "*.css"]

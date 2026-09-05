@@ -48,6 +48,21 @@ Failures are isolated to their game and recorded both beside successful game
 artifacts and in the summary. Python callers can supply any agent factories to
 `twixt_ai.selfplay.run_batch`.
 
+Compare two agents head-to-head, or repeat `--agent` three or more times for a
+round robin:
+
+```bash
+twixt-ai-benchmark --agent baseline=random --agent candidate=search \
+  --games-per-pair 20 --seed 1234 --elo --output benchmark.json
+```
+
+Games are paired under the same seed with red/black roles swapped. The JSON
+artifact records each entrant's package version and construction settings,
+every game seed, W/L/D and color splits, Wilson confidence intervals, explicit
+first-player results, and (when requested) Elo-style ratings. Search entrants
+use `--search-depth` and `--node-budget`; use unique names to compare multiple
+configurations of the same built-in agent type.
+
 `twixt_ai.search.HeuristicSearchAgent` (also available as `SearchAgent`) uses
 the shared position heuristic with alpha-beta minimax. Its search limits and
 move ordering are configurable:

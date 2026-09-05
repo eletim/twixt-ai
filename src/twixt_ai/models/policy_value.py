@@ -53,6 +53,17 @@ class PolicyValueConfig:
         return cls(**dict(value))  # type: ignore[arg-type]
 
 
+# Stable Mini Twixt baseline. Keep this explicit rather than changing the
+# general-purpose defaults used by existing 24x24 training runs.
+MINI_POLICY_VALUE_CONFIG = PolicyValueConfig(
+    channels=8,
+    residual_blocks=1,
+    value_hidden=16,
+    board_width=10,
+    board_height=10,
+)
+
+
 class _ResidualBlock(nn.Module):
     def __init__(self, channels: int) -> None:
         super().__init__()
@@ -291,6 +302,7 @@ __all__ = [
     "CHECKPOINT_FORMAT",
     "CHECKPOINT_VERSION",
     "LoadedPolicyValueCheckpoint",
+    "MINI_POLICY_VALUE_CONFIG",
     "PolicyValueConfig",
     "PolicyValueNetwork",
     "action_index_to_coordinate",

@@ -7,7 +7,7 @@ constructed state is structurally valid.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 import json
 from typing import Any, Iterable, Mapping
@@ -202,6 +202,9 @@ class GameState:
     links: tuple[Link, ...] = ()
     side_to_move: Player = Player.RED
     result: GameResult = GameResult.IN_PROGRESS
+    _occupied: frozenset[Coordinate] = field(
+        init=False, repr=False, compare=False, hash=False
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(self.board, BoardDimensions):
@@ -236,6 +239,35 @@ class GameState:
                 raise ValueError("link endpoint is outside the board")
             if occupied.get(link.start) is not link.owner or occupied.get(link.end) is not link.owner:
                 raise ValueError("link endpoints must contain pegs owned by the link owner")
+        object.__setattr__(self, "_occupied", frozenset(occupied))
+
+    @classmethod
+    def _from_canonical(
+        cls,
+        board: BoardDimensions,
+        pegs: tuple[Peg, ...],
+        links: tuple[Link, ...],
+        side_to_move: Player,
+        result: GameResult = GameResult.IN_PROGRESS,
+    ) -> GameState:
+        """Build an internally derived state without repeating validation.
+
+        Transition code calls this only with canonical tuples assembled from
+        an already validated state and newly validated rule values. Keeping
+        this path private preserves the checked public constructor while
+        avoiding a full sort and graph-integrity scan at every MCTS ply.
+        """
+
+        state = object.__new__(cls)
+        object.__setattr__(state, "board", board)
+        object.__setattr__(state, "pegs", pegs)
+        object.__setattr__(state, "links", links)
+        object.__setattr__(state, "side_to_move", side_to_move)
+        object.__setattr__(state, "result", result)
+        object.__setattr__(
+            state, "_occupied", frozenset(peg.coordinate for peg in pegs)
+        )
+        return state
 
     @classmethod
     def initial(cls, board: BoardDimensions | None = None) -> GameState:

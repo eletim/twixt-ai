@@ -4,8 +4,11 @@ from .rules import (
     IllegalPlacementReason,
     PegPlacement,
     PlacementLegality,
+    automatic_links_for_placement,
     check_peg_placement,
+    knight_move_neighbors,
     legal_peg_placements,
+    links_cross,
 )
 from .state import BoardDimensions, Coordinate, GameResult, GameState, Link, Peg, Player, Position
 
@@ -21,6 +24,9 @@ __all__ = [
     "PlacementLegality",
     "Player",
     "Position",
+    "automatic_links_for_placement",
     "check_peg_placement",
+    "knight_move_neighbors",
     "legal_peg_placements",
+    "links_cross",
 ]

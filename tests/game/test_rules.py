@@ -9,11 +9,15 @@ from twixt_ai.game import (
     Coordinate,
     GameState,
     IllegalPlacementReason,
+    Link,
     Peg,
     PegPlacement,
     Player,
+    automatic_links_for_placement,
     check_peg_placement,
+    knight_move_neighbors,
     legal_peg_placements,
+    links_cross,
 )
 
 
@@ -116,3 +120,91 @@ def test_only_peg_placement_action_is_exported() -> None:
 
     assert "swap" not in {name.lower() for name in game.__all__}
     assert "pie" not in {name.lower() for name in game.__all__}
+
+
+def test_knight_move_neighbors_include_only_same_player_pegs() -> None:
+    center = Peg(Player.RED, Coordinate(4, 4))
+    same_player_neighbors = (
+        Peg(Player.RED, Coordinate(2, 3)),
+        Peg(Player.RED, Coordinate(3, 2)),
+        Peg(Player.RED, Coordinate(3, 6)),
+        Peg(Player.RED, Coordinate(5, 2)),
+        Peg(Player.RED, Coordinate(5, 6)),
+        Peg(Player.RED, Coordinate(6, 3)),
+        Peg(Player.RED, Coordinate(6, 5)),
+    )
+    opponent_neighbor = Peg(Player.BLACK, Coordinate(2, 5))
+    non_neighbor = Peg(Player.RED, Coordinate(4, 5))
+    state = GameState(pegs=(*reversed(same_player_neighbors), opponent_neighbor, non_neighbor))
+
+    assert knight_move_neighbors(state, center) == same_player_neighbors
+
+
+@pytest.mark.parametrize(
+    "first, second, expected",
+    [
+        (
+            Link(Player.RED, Coordinate(1, 1), Coordinate(2, 3)),
+            Link(Player.BLACK, Coordinate(1, 2), Coordinate(3, 1)),
+            True,
+        ),
+        (
+            Link(Player.RED, Coordinate(1, 1), Coordinate(2, 3)),
+            Link(Player.RED, Coordinate(1, 1), Coordinate(3, 2)),
+            False,
+        ),
+        (
+            Link(Player.RED, Coordinate(1, 1), Coordinate(2, 3)),
+            Link(Player.BLACK, Coordinate(3, 1), Coordinate(4, 3)),
+            False,
+        ),
+    ],
+)
+def test_link_crossing_uses_segment_interiors(first: Link, second: Link, expected: bool) -> None:
+    assert links_cross(first, second) is expected
+    assert links_cross(second, first) is expected
+
+
+def test_automatic_links_are_same_owner_complete_and_deterministic() -> None:
+    placed = Peg(Player.RED, Coordinate(4, 4))
+    neighbors = (
+        Peg(Player.RED, Coordinate(6, 5)),
+        Peg(Player.BLACK, Coordinate(2, 5)),
+        Peg(Player.RED, Coordinate(3, 2)),
+        Peg(Player.RED, Coordinate(2, 3)),
+    )
+    state = GameState(pegs=neighbors)
+
+    assert automatic_links_for_placement(state, placed) == (
+        Link(Player.RED, Coordinate(2, 3), Coordinate(4, 4)),
+        Link(Player.RED, Coordinate(3, 2), Coordinate(4, 4)),
+        Link(Player.RED, Coordinate(4, 4), Coordinate(6, 5)),
+    )
+
+
+def test_automatic_links_never_cross_existing_links() -> None:
+    blocker_start = Peg(Player.BLACK, Coordinate(1, 2))
+    blocker_end = Peg(Player.BLACK, Coordinate(3, 1))
+    blocked_neighbor = Peg(Player.RED, Coordinate(1, 1))
+    clear_neighbor = Peg(Player.RED, Coordinate(4, 4))
+    state = GameState(
+        pegs=(blocker_start, blocker_end, blocked_neighbor, clear_neighbor),
+        links=(Link(Player.BLACK, blocker_start.coordinate, blocker_end.coordinate),),
+    )
+    placed = Peg(Player.RED, Coordinate(2, 3))
+
+    assert automatic_links_for_placement(state, placed) == (
+        Link(Player.RED, placed.coordinate, clear_neighbor.coordinate),
+    )
+
+
+def test_automatic_link_generation_rejects_invalid_placement_context() -> None:
+    state = GameState(
+        board=BoardDimensions(5, 5),
+        pegs=(Peg(Player.RED, Coordinate(2, 2)),),
+    )
+
+    with pytest.raises(ValueError, match="occupied"):
+        automatic_links_for_placement(state, Peg(Player.RED, Coordinate(2, 2)))
+    with pytest.raises(ValueError, match="outside"):
+        automatic_links_for_placement(state, Peg(Player.RED, Coordinate(5, 2)))

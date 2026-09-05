@@ -1,11 +1,23 @@
-"""Authoritative peg-placement rules for the v0.0.1 ruleset."""
+"""Authoritative peg-placement and automatic-link rules for v0.0.1."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
 
-from .state import Coordinate, GameState, Player
+from .state import Coordinate, GameState, Link, Peg, Player
+
+
+_KNIGHT_OFFSETS = (
+    (-2, -1),
+    (-2, 1),
+    (-1, -2),
+    (-1, 2),
+    (1, -2),
+    (1, 2),
+    (2, -1),
+    (2, 1),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,10 +109,96 @@ def legal_peg_placements(state: GameState) -> tuple[PegPlacement, ...]:
     return tuple(placements)
 
 
+def knight_move_neighbors(state: GameState, peg: Peg) -> tuple[Peg, ...]:
+    """Return same-player pegs a knight's move from *peg*.
+
+    The returned pegs use the canonical coordinate order, independent of the
+    order in which the state's pegs were supplied.
+    """
+
+    if not isinstance(state, GameState):
+        raise TypeError("state must be a GameState")
+    if not isinstance(peg, Peg):
+        raise TypeError("peg must be a Peg")
+
+    neighbor_coordinates = {
+        Coordinate(peg.coordinate.x + dx, peg.coordinate.y + dy)
+        for dx, dy in _KNIGHT_OFFSETS
+        if peg.coordinate.x + dx >= 0 and peg.coordinate.y + dy >= 0
+    }
+    return tuple(
+        candidate
+        for candidate in state.pegs
+        if candidate.owner is peg.owner and candidate.coordinate in neighbor_coordinates
+    )
+
+
+def _orientation(start: Coordinate, end: Coordinate, point: Coordinate) -> int:
+    """Return the signed area of the triangle formed by three points."""
+
+    return (end.x - start.x) * (point.y - start.y) - (end.y - start.y) * (
+        point.x - start.x
+    )
+
+
+def links_cross(first: Link, second: Link) -> bool:
+    """Return whether two links intersect in their interiors.
+
+    Links incident to the same peg meet at an endpoint and do not cross.  The
+    integer orientation test avoids floating-point geometry at board scale.
+    """
+
+    if not isinstance(first, Link) or not isinstance(second, Link):
+        raise TypeError("links must be Link values")
+    if {first.start, first.end} & {second.start, second.end}:
+        return False
+
+    first_start_side = _orientation(first.start, first.end, second.start)
+    first_end_side = _orientation(first.start, first.end, second.end)
+    second_start_side = _orientation(second.start, second.end, first.start)
+    second_end_side = _orientation(second.start, second.end, first.end)
+    return (
+        first_start_side * first_end_side < 0
+        and second_start_side * second_end_side < 0
+    )
+
+
+def automatic_links_for_placement(state: GameState, peg: Peg) -> tuple[Link, ...]:
+    """Return the legal links created by adding *peg* to *state*.
+
+    ``state`` is the position immediately before placement. Existing links
+    take precedence: a candidate crossing any of them is omitted. The result
+    contains newly created links only, in canonical order, so a transition can
+    append it to ``state.links`` without exposing a separate link action.
+    """
+
+    if not isinstance(state, GameState):
+        raise TypeError("state must be a GameState")
+    if not isinstance(peg, Peg):
+        raise TypeError("peg must be a Peg")
+    if not state.board.contains(peg.coordinate):
+        raise ValueError("placed peg is outside the board")
+    if any(existing.coordinate == peg.coordinate for existing in state.pegs):
+        raise ValueError("placed peg coordinate is occupied")
+
+    generated = (
+        Link(peg.owner, peg.coordinate, neighbor.coordinate)
+        for neighbor in knight_move_neighbors(state, peg)
+    )
+    return tuple(
+        candidate
+        for candidate in generated
+        if not any(links_cross(candidate, existing) for existing in state.links)
+    )
+
+
 __all__ = [
     "IllegalPlacementReason",
     "PegPlacement",
     "PlacementLegality",
+    "automatic_links_for_placement",
     "check_peg_placement",
+    "knight_move_neighbors",
     "legal_peg_placements",
+    "links_cross",
 ]

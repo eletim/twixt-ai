@@ -204,6 +204,40 @@ def test_rejects_invalid_match_provenance(
         build_dataset(source, tmp_path / "dataset")
 
 
+def test_rejects_seeded_match_with_inconsistent_decision_seed(
+    tmp_path: Path,
+) -> None:
+    match = run_match(
+        RandomAgent(),
+        RandomAgent(),
+        config=MatchConfig(BoardDimensions(4, 4), 17),
+    ).to_dict()
+    decisions = match["decisions"]
+    decisions[0]["seed"] ^= 1  # type: ignore[index,operator]
+    source = tmp_path / "bad-seed-sequence.json"
+    source.write_text(json.dumps(match))
+
+    with pytest.raises(ValueError, match="configured seed sequence"):
+        build_dataset(source, tmp_path / "dataset")
+
+
+def test_rejects_unseeded_match_with_non_null_decision_seed(
+    tmp_path: Path,
+) -> None:
+    match = run_match(
+        RandomAgent(),
+        RandomAgent(),
+        config=MatchConfig(BoardDimensions(4, 4), None),
+    ).to_dict()
+    decisions = match["decisions"]
+    decisions[0]["seed"] = 1  # type: ignore[index]
+    source = tmp_path / "bad-unseeded-decision.json"
+    source.write_text(json.dumps(match))
+
+    with pytest.raises(ValueError, match="configured seed sequence"):
+        build_dataset(source, tmp_path / "dataset")
+
+
 def test_rejects_inconsistent_mcts_visit_total(tmp_path: Path) -> None:
     match = run_match(
         FirstWithPolicy(),

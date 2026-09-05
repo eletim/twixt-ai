@@ -35,9 +35,10 @@ contains:
 
 Unknown match versions, invalid match configurations or decision seeds, invalid
 replay histories, misaligned decisions, and malformed search statistics are
-rejected instead of being silently converted. In particular, an MCTS policy
-target requires a positive integer `simulations` value equal to the sum of all
-root visit counts.
+rejected instead of being silently converted. Seeded matches must contain the
+exact per-ply seed sequence derived from the match seed; unseeded matches must
+contain only null decision seeds. An MCTS policy target requires a positive
+integer `simulations` value equal to the sum of all root visit counts.
 
 Build a dataset from a self-play run with:
 

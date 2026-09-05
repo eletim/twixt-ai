@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from random import Random
 from typing import Any
 
 from twixt_ai.evaluation import MATCH_FORMAT, MATCH_FORMAT_VERSION, MatchConfig
@@ -252,6 +253,9 @@ def _validated_match(
         raise ValueError(f"match result in {path} does not match record")
     if len(decisions) != len(record.moves):
         raise ValueError(f"match decisions in {path} do not align with moves")
+    seed_source = (
+        Random(match_config.seed) if match_config.seed is not None else None
+    )
     for index, (decision, move) in enumerate(zip(decisions, record.moves)):
         if (
             decision.get("player") != move.player.value
@@ -270,6 +274,14 @@ def _validated_match(
         ):
             raise ValueError(
                 f"match decision {index} seed in {path} must be an integer or null"
+            )
+        expected_seed = (
+            seed_source.randrange(2**64) if seed_source is not None else None
+        )
+        if decision_seed != expected_seed:
+            raise ValueError(
+                f"match decision {index} seed in {path} does not match the "
+                "configured seed sequence"
             )
     return record, decisions  # type: ignore[return-value]
 

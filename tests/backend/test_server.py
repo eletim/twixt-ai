@@ -6,6 +6,8 @@ from io import BytesIO
 import json
 from pathlib import Path
 
+import pytest
+
 from twixt_ai.agents import AgentRequest, AgentResult
 from twixt_ai.backend import GameApplication, GameSession
 from twixt_ai.game import (
@@ -129,6 +131,15 @@ def test_application_serves_replaceable_ui_files(tmp_path: Path) -> None:
     assert body == b"<h1>Twixt</h1>"
 
 
+def test_packaged_ui_disables_setup_until_session_loads() -> None:
+    status, _, body = request(GameApplication(), "/")
+
+    assert status == "200 OK"
+    assert b'<button id="reset" type="button" disabled>' in body
+    assert b'<select id="human-side" disabled>' in body
+    assert b'<select id="agent" aria-label="AI opponent" disabled>' in body
+
+
 def test_session_selects_side_and_runs_registered_agent_through_contract(
     tmp_path: Path,
 ) -> None:
@@ -218,11 +229,22 @@ def test_session_configuration_rejects_unknown_agent(tmp_path: Path) -> None:
     }
 
 
-def test_human_can_complete_match_against_agent_via_session_api(
+@pytest.mark.parametrize("agent_name", ["random", "search"])
+def test_human_can_complete_match_against_default_agents_via_session_api(
     tmp_path: Path,
+    agent_name: str,
 ) -> None:
     session = GameSession(GameState.initial(BoardDimensions(4, 4)))
     application = GameApplication(session, tmp_path)
+    reset_status, _, reset_body = request(
+        application,
+        "/api/session/reset",
+        "POST",
+        {"human_side": "red", "agent": agent_name},
+    )
+
+    assert reset_status == "200 OK"
+    assert agent_name in json.loads(reset_body)["available_agents"]
 
     while session.snapshot().result is GameResult.IN_PROGRESS:
         view = session.view()

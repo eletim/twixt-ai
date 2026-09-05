@@ -21,6 +21,7 @@ from twixt_ai.game import (
     create_game,
     reset_game,
 )
+from twixt_ai.search import SearchAgent
 
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
@@ -63,7 +64,11 @@ class GameSession:
         human_side: Player = Player.RED,
     ) -> None:
         self._state = state or create_game()
-        self._agents = dict({"random": RandomAgent()} if agents is None else agents)
+        self._agents = (
+            {"random": RandomAgent(), "search": SearchAgent()}
+            if agents is None
+            else dict(agents)
+        )
         if not self._agents:
             raise ValueError("at least one agent must be available")
         if any(not isinstance(name, str) or not name for name in self._agents):

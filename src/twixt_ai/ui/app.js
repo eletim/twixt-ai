@@ -194,7 +194,7 @@ async function placePeg(x, y) {
 }
 
 resetButton.addEventListener("click", async () => {
-  if (requestPending) return;
+  if (requestPending || !session) return;
   const humanSide = sideSelect.value;
   const agent = agentSelect.value;
   requestPending = true;

@@ -11,6 +11,8 @@ The persisted position and replay schemas are documented in
 [docs/game-record-format.md](docs/game-record-format.md).
 The checkpoint-stable CNN feature planes and augmentation transforms are defined
 in [docs/neural-input-encoding.md](docs/neural-input-encoding.md).
+The versioned, reproducible training shard schema is defined in
+[docs/training-data-format.md](docs/training-data-format.md).
 
 ## Development
 
@@ -53,6 +55,17 @@ available from the CLI.
 Failures are isolated to their game and recorded both beside successful game
 artifacts and in the summary. Python callers can supply any agent factories to
 `twixt_ai.selfplay.run_batch`.
+
+Convert a completed run into deterministic train/validation JSONL shards:
+
+```bash
+twixt-ai-dataset --input selfplay-run --output-dir dataset \
+  --shard-size 10000 --validation-fraction 0.1 --split-seed experiment-1
+```
+
+Splits are assigned at game granularity, and examples retain match
+configuration, decision seeds, and agent metadata. MCTS visit counts are
+normalized into policy targets when present.
 
 Compare two agents head-to-head, or repeat `--agent` three or more times for a
 round robin:

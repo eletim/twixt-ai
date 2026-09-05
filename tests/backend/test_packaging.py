@@ -22,7 +22,6 @@ def test_installed_wheel_serves_all_ui_assets(tmp_path: Path) -> None:
             "pip",
             "wheel",
             "--no-deps",
-            "--no-build-isolation",
             "--wheel-dir",
             str(wheel_dir),
             str(PROJECT_ROOT),

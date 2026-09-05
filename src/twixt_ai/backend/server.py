@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import argparse
 from importlib import resources
-from importlib.abc import Traversable
 import json
 from pathlib import Path
 from threading import Lock
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Protocol
 from wsgiref.simple_server import make_server
 
 from twixt_ai.game import (
@@ -24,6 +23,16 @@ from twixt_ai.game import (
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
 Response = Iterable[bytes]
+
+
+class ResourceRoot(Protocol):
+    """Subset shared by filesystem paths and package resource trees."""
+
+    def joinpath(self, *descendants: str) -> ResourceRoot: ...
+
+    def read_bytes(self) -> bytes: ...
+
+
 DEFAULT_UI_ROOT = resources.files("twixt_ai.ui")
 _STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -67,7 +76,7 @@ class GameApplication:
     def __init__(
         self,
         session: GameSession | None = None,
-        ui_root: Path | Traversable | None = None,
+        ui_root: Path | ResourceRoot | None = None,
     ) -> None:
         self.session = session or GameSession()
         self.ui_root = ui_root if ui_root is not None else DEFAULT_UI_ROOT
@@ -108,7 +117,7 @@ class GameApplication:
             return self._json(start_response, "404 Not Found", {"error": "not_found"})
         filename, content_type = static
         try:
-            body = (self.ui_root / filename).read_bytes()
+            body = self.ui_root.joinpath(filename).read_bytes()
         except FileNotFoundError:
             return self._json(
                 start_response, "500 Internal Server Error", {"error": "ui_unavailable"}

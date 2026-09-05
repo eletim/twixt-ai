@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from twixt_ai.agents import AgentRequest, AgentResult, RandomAgent
 from twixt_ai.evaluation import MatchConfig, run_match
 from twixt_ai.evaluation.cli import main
@@ -18,6 +20,11 @@ class FirstLegalAgent:
     def choose_move(self, request: AgentRequest) -> AgentResult:
         self.requests.append(request)
         return AgentResult(request.legal_moves[0], {"agent": self.label})
+
+
+class InvalidMetadataAgent:
+    def choose_move(self, request: AgentRequest) -> AgentResult:
+        return AgentResult(request.legal_moves[0], {"diagnostic": object()})
 
 
 def test_match_runs_to_completion_with_explicit_side_assignment() -> None:
@@ -89,6 +96,18 @@ def test_artifact_captures_config_history_and_final_result() -> None:
     assert [entry["coordinate"] for entry in artifact["decisions"]] == [
         move.coordinate.to_dict() for move in result.record.moves
     ]
+
+
+def test_match_rejects_non_json_agent_metadata_when_capturing_decision() -> None:
+    with pytest.raises(
+        TypeError,
+        match=r"metadata\.diagnostic contains non-JSON-compatible value of type object",
+    ):
+        run_match(
+            InvalidMetadataAgent(),
+            FirstLegalAgent("black"),
+            board=BoardDimensions(4, 4),
+        )
 
 
 def test_cli_emits_batch_friendly_json(capsys: object) -> None:

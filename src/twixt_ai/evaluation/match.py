@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import math
 from random import Random
 from types import MappingProxyType
 from typing import Mapping
@@ -28,6 +29,45 @@ MATCH_FORMAT_VERSION = 1
 def _require_seed(seed: int | None) -> None:
     if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
         raise TypeError("seed must be an integer or None")
+
+
+def _freeze_json_value(value: object, path: str) -> object:
+    """Validate and make a recursively immutable copy of a JSON value."""
+
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise TypeError(f"{path} must contain only finite JSON numbers")
+        return value
+    if isinstance(value, Mapping):
+        if any(not isinstance(key, str) for key in value):
+            raise TypeError(f"{path} must contain only string-keyed objects")
+        return MappingProxyType(
+            {
+                key: _freeze_json_value(item, f"{path}.{key}")
+                for key, item in value.items()
+            }
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(
+            _freeze_json_value(item, f"{path}[{index}]")
+            for index, item in enumerate(value)
+        )
+    raise TypeError(
+        f"{path} contains non-JSON-compatible value of type "
+        f"{type(value).__name__}"
+    )
+
+
+def _thaw_json_value(value: object) -> object:
+    """Convert frozen metadata back to independent JSON-native containers."""
+
+    if isinstance(value, Mapping):
+        return {key: _thaw_json_value(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json_value(item) for item in value]
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +101,11 @@ class MatchConfig:
 
 @dataclass(frozen=True, slots=True)
 class MatchDecision:
-    """One validated agent decision and the input seed used to make it."""
+    """One validated agent decision and the input seed used to make it.
+
+    Agent metadata is recursively copied and restricted to JSON-compatible
+    values because every match decision is part of a serializable artifact.
+    """
 
     move: PegPlacement
     seed: int | None
@@ -73,9 +117,9 @@ class MatchDecision:
         _require_seed(self.seed)
         if not isinstance(self.metadata, Mapping):
             raise TypeError("metadata must be a mapping")
-        if any(not isinstance(key, str) for key in self.metadata):
-            raise TypeError("metadata keys must be strings")
-        object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
+        metadata = _freeze_json_value(self.metadata, "metadata")
+        assert isinstance(metadata, Mapping)
+        object.__setattr__(self, "metadata", metadata)
 
     @classmethod
     def from_agent_result(cls, result: AgentResult, seed: int | None) -> MatchDecision:
@@ -86,7 +130,7 @@ class MatchDecision:
             "player": self.move.player.value,
             "coordinate": self.move.coordinate.to_dict(),
             "seed": self.seed,
-            "metadata": dict(self.metadata),
+            "metadata": _thaw_json_value(self.metadata),
         }
 
 

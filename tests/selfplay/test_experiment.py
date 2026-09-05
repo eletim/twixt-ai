@@ -80,3 +80,28 @@ def test_experiment_refuses_nonempty_output(
 
     with pytest.raises(ValueError, match="must be empty"):
         run_mini_dataset_experiment(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "",
+        ".",
+        "..",
+        "../outside",
+        "nested/stage",
+        r"nested\stage",
+        "C:outside",
+        "bad\0name",
+    ],
+)
+def test_stage_name_must_be_a_safe_single_path_component(name: str) -> None:
+    with pytest.raises(ValueError, match="safe single path component"):
+        StageConfig(name, 1, 1, "split")
+
+
+def test_experiment_stage_names_must_be_distinct() -> None:
+    duplicate = StageConfig("same", 1, 1, "split")
+
+    with pytest.raises(ValueError, match="stage names must be distinct"):
+        MiniDatasetExperimentConfig(smoke=duplicate, baseline=duplicate)

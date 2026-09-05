@@ -167,6 +167,14 @@ def test_packaged_ui_summarizes_only_scalar_agent_metadata() -> None:
     assert b"scalarTypes.includes(typeof value)" in body
 
 
+def test_packaged_ui_preserves_custom_board_on_reset() -> None:
+    status, _, body = request(GameApplication(), "/app.js")
+
+    assert status == "200 OK"
+    assert b'presets.push(["custom", view.state.board])' in body
+    assert b'if (presetSelect.value !== "custom") reset.preset' in body
+
+
 def test_session_selects_side_and_runs_registered_agent_through_contract(
     tmp_path: Path,
 ) -> None:

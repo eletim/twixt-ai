@@ -30,6 +30,17 @@ class StageConfig:
     seed: int
     split_seed: str
 
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.name, str)
+            or self.name in {"", ".", ".."}
+            or "/" in self.name
+            or "\\" in self.name
+            or ":" in self.name
+            or "\0" in self.name
+        ):
+            raise ValueError("stage name must be a safe single path component")
+
 
 @dataclass(frozen=True, slots=True)
 class MiniDatasetExperimentConfig:
@@ -44,6 +55,10 @@ class MiniDatasetExperimentConfig:
     baseline: StageConfig = StageConfig(
         "baseline", 100, 560_100, "issue-56-baseline"
     )
+
+    def __post_init__(self) -> None:
+        if self.smoke.name == self.baseline.name:
+            raise ValueError("smoke and baseline stage names must be distinct")
 
     def to_dict(self) -> dict[str, object]:
         def stage(value: StageConfig) -> dict[str, object]:

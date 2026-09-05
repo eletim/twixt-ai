@@ -69,6 +69,7 @@ function populateSetup(view) {
     }));
   }
   const presets = Object.entries(view.available_presets ?? {});
+  if (view.preset === "custom") presets.push(["custom", view.state.board]);
   const presetNames = [...presetSelect.options].map((option) => option.value);
   if (presetNames.join("\0") !== presets.map(([name]) => name).join("\0")) {
     presetSelect.replaceChildren(...presets.map(([name, board]) => {
@@ -80,7 +81,7 @@ function populateSetup(view) {
   }
   sideSelect.value = view.human_side;
   agentSelect.value = view.agent;
-  if (view.preset !== "custom") presetSelect.value = view.preset;
+  presetSelect.value = view.preset;
   resetButton.disabled = requestPending;
   sideSelect.disabled = requestPending;
   agentSelect.disabled = requestPending;
@@ -289,7 +290,8 @@ resetButton.addEventListener("click", async () => {
   if (requestPending || !session) return;
   const humanSide = sideSelect.value;
   const agent = agentSelect.value;
-  const preset = presetSelect.value;
+  const reset = { human_side: humanSide, agent };
+  if (presetSelect.value !== "custom") reset.preset = presetSelect.value;
   requestPending = true;
   messageElement.textContent = "";
   render(session);
@@ -297,7 +299,7 @@ resetButton.addEventListener("click", async () => {
     session = await request("/api/session/reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ human_side: humanSide, agent, preset }),
+      body: JSON.stringify(reset),
     });
   } catch (error) {
     messageElement.textContent = `Could not start game: ${error.message}.`;

@@ -126,6 +126,23 @@ rates, including positions per second. See
 [`docs/engine-performance.md`](docs/engine-performance.md) for methodology,
 baseline results, and identified hotspots.
 
+Reproduce the separate NN-free 10×10 Mini Twixt self-play baseline with one
+command:
+
+```bash
+PYTHONHASHSEED=0 twixt-ai-selfplay-benchmark \
+  --output mini-selfplay-performance.json
+```
+
+The versioned JSON report measures legal moves and move application, MCTS move
+latency plus simulations/nodes per second at 100/400/1600 simulations, complete
+game latency and games/hour, CPU utilization, and fixed-workload scaling from
+one to two workers. It also projects the measured wall-clock cost of 1,000 and
+10,000 games and identifies the slowest measured paths. See
+[`docs/mini-performance.md`](docs/mini-performance.md) for methodology and the
+checked-in baseline. The existing `twixt-ai-engine-benchmark` command remains
+the independent standard 24×24 engine workload.
+
 MCTS is the primary non-neural search baseline. It uses a reproducible
 simulation-count budget, seeded random rollouts with a finite default horizon,
 heuristic evaluation at non-terminal cutoffs, and progressive widening so PUCT

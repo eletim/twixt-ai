@@ -19,6 +19,12 @@ from .match import (
     MatchResult,
     run_match,
 )
+from .performance import (
+    SELFPLAY_PERFORMANCE_FORMAT,
+    SELFPLAY_PERFORMANCE_VERSION,
+    SelfPlayPerformanceConfig,
+    run_selfplay_performance_benchmark,
+)
 
 __all__ = [
     "BENCHMARK_FORMAT",
@@ -35,4 +41,8 @@ __all__ = [
     "MatchResult",
     "run_benchmark",
     "run_match",
+    "SELFPLAY_PERFORMANCE_FORMAT",
+    "SELFPLAY_PERFORMANCE_VERSION",
+    "SelfPlayPerformanceConfig",
+    "run_selfplay_performance_benchmark",
 ]

@@ -28,3 +28,47 @@ checkpoint format, encoding version, architecture name/version, complete
 validates that compatibility metadata before constructing the model and
 loading weights. A change to tensor semantics or model structure therefore
 requires a version change rather than silently loading incompatible weights.
+
+## Mini Twixt baseline
+
+`MINI_POLICY_VALUE_CONFIG` is the deliberately small 10x10 baseline. It uses
+8 trunk channels, 1 residual block, and 16 value-head hidden units for exactly
+24,547 trainable parameters (98,188 bytes of float32 weights). The ordinary
+`PolicyValueConfig` fields and the training CLI's `--channels`,
+`--residual-blocks`, and `--value-hidden` options remain available for larger
+comparison models.
+
+Its input/output contract is `[N, 22, 10, 10]` float tensors to `[N, 100]`
+unmasked row-major policy logits and `[N]` side-to-move values in `[-1, 1]`.
+Legal moves are applied with `legal_move_mask` and `mask_policy_logits`, exactly
+as for the standard model. Mini checkpoints include the complete preset config
+and board dimensions plus the format, architecture, and encoding versions;
+loading constructs that exact model before weights are accepted, and training
+resume additionally rejects a requested config mismatch.
+
+On an AMD Ryzen 9 7900X CPU with PyTorch 2.8.0, one thread, evaluation mode,
+and inference mode, a representative batch of 64 positions took a median of
+0.91 ms (14 microseconds per position) over 100 timed forwards after 20
+warm-ups. This is an environment-specific reference rather than a performance
+guarantee. Reproduce it with:
+
+```python
+import statistics
+import time
+
+import torch
+from twixt_ai.models import MINI_POLICY_VALUE_CONFIG, PolicyValueNetwork
+
+torch.set_num_threads(1)
+model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG).eval()
+batch = torch.zeros((64, *model.input_shape))
+with torch.inference_mode():
+    for _ in range(20):
+        model(batch)
+    samples = []
+    for _ in range(100):
+        start = time.perf_counter()
+        model(batch)
+        samples.append(time.perf_counter() - start)
+print(statistics.median(samples))
+```

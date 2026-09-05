@@ -22,6 +22,19 @@ pytest
 Importing `twixt_ai.game`, `twixt_ai.agents`, or `twixt_ai.evaluation` never
 requires the backend or UI.
 
+## Headless matches
+
+Run a reproducible random-agent match and emit a machine-readable JSON artifact:
+
+```bash
+twixt-ai-match --red random --black random --seed 1234 --output match.json
+```
+
+Use `--width` and `--height` for nonstandard boards, or omit `--output` to
+write the artifact to standard output. Python callers can use
+`twixt_ai.evaluation.run_match` with any agents that implement the common
+agent protocol.
+
 ## Browser play
 
 Start the minimal local human-vs-human UI after installing the project:

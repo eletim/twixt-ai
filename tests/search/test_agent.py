@@ -46,7 +46,7 @@ def test_search_takes_an_immediate_win() -> None:
     assert result.move.coordinate == Coordinate(2, 3)
 
 
-def test_terminal_scores_do_not_depend_on_a_custom_evaluator() -> None:
+def test_terminal_win_dominates_an_above_terminal_custom_score() -> None:
     state = GameState(
         board=BoardDimensions(5, 4),
         pegs=(
@@ -60,7 +60,7 @@ def test_terminal_scores_do_not_depend_on_a_custom_evaluator() -> None:
     def nonterminal_evaluator(position: GameState, player: Player) -> float:
         assert not position.is_terminal
         evaluated.append(position)
-        return 0.0
+        return TERMINAL_SCORE + 1.0
 
     result = SearchAgent(evaluator=nonterminal_evaluator).choose_move(
         AgentRequest(state)

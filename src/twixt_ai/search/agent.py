@@ -16,7 +16,10 @@ from twixt_ai.game import GameState, PegPlacement, Player, apply_move, legal_peg
 
 
 EvaluationFunction = Callable[[GameState, Player], float]
-"""Return a non-terminal position score from the supplied perspective."""
+"""Return a finite non-terminal score from the supplied perspective."""
+
+
+_MAX_HEURISTIC_SCORE = math.nextafter(TERMINAL_SCORE, 0.0)
 
 
 MoveOrderer = Callable[
@@ -35,11 +38,12 @@ def _coordinate_order(
 class HeuristicSearchAgent:
     """Choose moves with depth- and node-bounded alpha-beta minimax.
 
-    Non-terminal leaf positions are scored with the configured evaluator.
-    Terminal wins and losses are handled by search itself, so custom evaluators
-    do not need terminal-state behavior. ``move_orderer`` is invoked at every
-    node and can put tactically promising moves first to improve alpha-beta
-    pruning. It must return each supplied legal move exactly once.
+    Non-terminal leaf positions are scored with the configured evaluator and
+    bounded inside the terminal score range. Terminal wins and losses therefore
+    always dominate heuristic values, and custom evaluators do not need
+    terminal-state behavior. ``move_orderer`` is invoked at every node and can
+    put tactically promising moves first to improve alpha-beta pruning. It must
+    return each supplied legal move exactly once.
 
     Nodes count applied child positions. Consequently the budget is a hard
     bound on state transitions as well as a deterministic search limit.
@@ -93,7 +97,7 @@ class HeuristicSearchAgent:
         score = float(score)
         if not math.isfinite(score):
             raise ValueError("evaluator must return a finite score")
-        return score
+        return max(-_MAX_HEURISTIC_SCORE, min(_MAX_HEURISTIC_SCORE, score))
 
     def _score(
         self,

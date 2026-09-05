@@ -214,6 +214,8 @@ class NeuralInferenceBatcher:
             self._flushing = True
             self._condition.notify_all()
             self._condition.wait_for(lambda: not self._queue and not self._active)
+            if not self._closed:
+                self._flushing = False
 
     def close(self) -> None:
         """Flush pending requests and stop the background worker."""

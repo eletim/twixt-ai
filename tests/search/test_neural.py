@@ -8,10 +8,58 @@ import torch
 from torch import nn
 
 from twixt_ai.agents import AgentRequest
-from twixt_ai.game import BoardDimensions, GameState, legal_peg_placements
+from twixt_ai.game import (
+    BoardDimensions,
+    GameState,
+    PegPlacement,
+    legal_peg_placements,
+)
 from twixt_ai.models import PolicyValueConfig, PolicyValueNetwork
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
+
+
+class BlockingNetwork(PolicyValueNetwork):
+    def __init__(self) -> None:
+        super().__init__(
+            PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+        )
+        self.started = Event()
+        self.release = Event()
+        self.counter_lock = Lock()
+        self.active = 0
+        self.maximum_active = 0
+
+    def forward(self, inputs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        with self.counter_lock:
+            self.active += 1
+            self.maximum_active = max(self.maximum_active, self.active)
+        self.started.set()
+        assert self.release.wait(timeout=2)
+        try:
+            return super().forward(inputs)
+        finally:
+            with self.counter_lock:
+                self.active -= 1
+
+
+def _assert_next_request_waits_for_batch(
+    batcher: NeuralInferenceBatcher,
+    state: GameState,
+    moves: tuple[PegPlacement, ...],
+) -> None:
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(batcher, state, moves)
+        with batcher._condition:
+            assert batcher._condition.wait_for(
+                lambda: len(batcher._queue) == 1 or first.done(), timeout=2
+            )
+        assert not first.done()
+        with pytest.raises(TimeoutError):
+            first.result(timeout=0.05)
+        second = pool.submit(batcher, state, moves)
+        first.result(timeout=2)
+        second.result(timeout=2)
 
 
 def test_neural_inference_masks_policy_and_preserves_mixed_training_modes() -> None:
@@ -98,29 +146,6 @@ def test_batch_size_one_is_a_synchronous_debugging_path() -> None:
 
 
 def test_batch_size_one_serializes_callers_and_close_waits_for_inference() -> None:
-    class BlockingNetwork(PolicyValueNetwork):
-        def __init__(self) -> None:
-            super().__init__(
-                PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
-            )
-            self.started = Event()
-            self.release = Event()
-            self.counter_lock = Lock()
-            self.active = 0
-            self.maximum_active = 0
-
-        def forward(self, inputs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-            with self.counter_lock:
-                self.active += 1
-                self.maximum_active = max(self.maximum_active, self.active)
-            self.started.set()
-            assert self.release.wait(timeout=2)
-            try:
-                return super().forward(inputs)
-            finally:
-                with self.counter_lock:
-                    self.active -= 1
-
     model = BlockingNetwork()
     model.train()
     state = GameState.initial()
@@ -146,3 +171,41 @@ def test_batch_size_one_serializes_callers_and_close_waits_for_inference() -> No
     assert model.maximum_active == 1
     assert model.training
     assert batcher.statistics.requests == 2
+
+
+def test_empty_flush_does_not_force_the_next_batch() -> None:
+    model = PolicyValueNetwork(
+        PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+    )
+    state = GameState.initial()
+    moves = legal_peg_placements(state)
+
+    with NeuralInferenceBatcher(
+        NeuralPolicyValue(model), batch_size=2, max_wait_seconds=1.0
+    ) as batcher:
+        batcher.flush()
+        _assert_next_request_waits_for_batch(batcher, state, moves)
+
+
+def test_active_batch_flush_does_not_force_the_next_batch() -> None:
+    model = BlockingNetwork()
+    state = GameState.initial()
+    moves = legal_peg_placements(state)
+    with NeuralInferenceBatcher(
+        NeuralPolicyValue(model), batch_size=2, max_wait_seconds=1.0
+    ) as batcher:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            first = pool.submit(batcher, state, moves)
+            second = pool.submit(batcher, state, moves)
+            assert model.started.wait(timeout=2)
+            flushing = pool.submit(batcher.flush)
+            with batcher._condition:
+                assert batcher._condition.wait_for(
+                    lambda: batcher._flushing, timeout=2
+                )
+            model.release.set()
+            first.result(timeout=2)
+            second.result(timeout=2)
+            flushing.result(timeout=2)
+
+        _assert_next_request_waits_for_batch(batcher, state, moves)

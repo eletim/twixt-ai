@@ -8,8 +8,8 @@ to agent implementations while giving every agent the same acceptance checks.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol
 
+from twixt_ai.agents import Agent, AgentResult, select_agent_move
 from twixt_ai.game import (
     BoardDimensions,
     Coordinate,
@@ -21,26 +21,19 @@ from twixt_ai.game import (
 )
 
 
-class AgentLike(Protocol):
-    """The minimal behavior exercised by this black-box contract."""
-
-    def choose_move(self, state: GameState) -> PegPlacement:
-        """Choose one legal move from ``state``."""
-
-
 class AgentContract:
     """Mixin containing behavior shared by all agent implementations."""
 
-    agent_factory: Callable[[], AgentLike]
+    agent_factory: Callable[[], Agent]
 
     def test_returns_a_legal_move_without_mutating_the_position(self) -> None:
         state = GameState.initial(BoardDimensions(6, 6))
         snapshot = state.to_json()
 
-        move = self.agent_factory().choose_move(state)
+        result = select_agent_move(self.agent_factory(), state)
 
-        assert isinstance(move, PegPlacement)
-        assert check_peg_placement(state, move).is_legal
+        assert isinstance(result, AgentResult)
+        assert check_peg_placement(state, result.move).is_legal
         assert state.to_json() == snapshot
 
     def test_honors_the_only_available_legal_move(self) -> None:
@@ -57,6 +50,6 @@ class AgentContract:
             pegs=tuple(Peg(Player.BLACK, coordinate) for coordinate in occupied),
         )
 
-        assert self.agent_factory().choose_move(state) == PegPlacement(
-            Player.RED, only_move
-        )
+        result = select_agent_move(self.agent_factory(), state)
+
+        assert result.move == PegPlacement(Player.RED, only_move)

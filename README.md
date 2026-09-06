@@ -15,6 +15,8 @@ The reproducible 10-plane versus 22-plane Mini cost benchmark is documented in
 [docs/encoding-comparison.md](docs/encoding-comparison.md).
 The matched end-to-end training comparison for those encodings is documented in
 [docs/matched-encoding-training.md](docs/matched-encoding-training.md).
+Their matched learned-MCTS playing-strength comparison is documented in
+[docs/encoding-strength-comparison.md](docs/encoding-strength-comparison.md).
 The versioned, reproducible training shard schema is defined in
 [docs/training-data-format.md](docs/training-data-format.md).
 The model training, metrics, and resume workflow is documented in

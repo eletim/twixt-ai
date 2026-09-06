@@ -17,17 +17,26 @@ PYTHONHASHSEED=0 twixt-ai-encoding-comparison \
 
 Repeat `--device` to measure more than one device, for example `--device cpu
 --device cuda`. With no device flags, the command measures CPU and also CUDA
-when CUDA is available. CUDA timings are synchronized, and the report records
-peak allocated device memory. The CPU report records exact input tensor and
-model storage; it does not claim to measure process RSS or allocator overhead.
+when CUDA is available. Only CPU and available CUDA devices are accepted;
+unsupported or duplicate device aliases are rejected. CUDA timings are
+synchronized, and the report records peak allocated device memory. The CPU
+report records exact input tensor and model storage; it does not claim to
+measure process RSS or allocator overhead.
 
 The versioned JSON artifact keeps encoding latency separate from single-position
-and batched model-forward latency. It also reports matched training-step
-throughput, encoded tensor bytes, parameter and buffer bytes, parameter counts,
-the dataset manifest digest, model/workload configuration, Git revision, and
-Python, PyTorch, CPU, and accelerator details. Positive throughput-change
-percentages favor the 10-plane path; positive reduction percentages mean the
-10-plane path used less time or storage.
+and batched model-forward latency. Each workload uses seven paired samples by
+default. The member measured first alternates between v1 and v2 on each sample,
+and every timed model sample starts from a fresh, deterministically initialized
+model. Reports include every raw sample, the median, and the minimum, maximum,
+and median absolute deviation for wall time, latency, and throughput.
+
+The artifact also reports matched training-step throughput, encoded tensor
+bytes, parameter and buffer bytes, parameter counts, the dataset manifest
+digest, model/workload configuration, Git revision, and Python, PyTorch, CPU,
+and accelerator details. Positive throughput-change percentages favor the
+10-plane path; positive reduction percentages mean the 10-plane path used less
+time or storage. Timing percentage comparisons are calculated within each
+paired sample and report the median, range, and median absolute deviation.
 
 These measurements quantify computational cost only. They do not support a
 playing-strength claim; strength requires a controlled paired evaluation.

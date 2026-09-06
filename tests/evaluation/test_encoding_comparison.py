@@ -25,6 +25,7 @@ def _small_config() -> EncodingComparisonConfig:
         encoding_repeats=1,
         forward_iterations=1,
         training_steps=1,
+        samples=2,
         warmups=0,
         devices=("cpu",),
         torch_threads=1,
@@ -39,6 +40,11 @@ def test_report_separates_encoding_forward_training_and_memory() -> None:
     assert report["dataset"]["encoding_positions_per_repeat"] == 33
     assert report["dataset"]["model_batch_examples"] == 2
     assert report["interpretation"].endswith("playing strength.")
+    assert report["version"] == 2
+    assert report["methodology"]["sample_order"] == [
+        ["22_plane_v1", "10_plane_v2"],
+        ["10_plane_v2", "22_plane_v1"],
+    ]
     old = report["results"]["22_plane_v1"]
     new = report["results"]["10_plane_v2"]
     assert (old["planes"], new["planes"]) == (22, 10)
@@ -47,12 +53,21 @@ def test_report_separates_encoding_forward_training_and_memory() -> None:
     assert old["model"]["config"]["channels"] == new["model"]["config"]["channels"]
     for result in (old, new):
         device = result["devices"]["cpu"]
-        assert device["single_position_forward"]["positions_per_second"] > 0
-        assert device["batched_forward"]["positions_per_second"] > 0
+        for workload in ("single_position_forward", "batched_forward", "training"):
+            assert device[workload]["positions_per_second"] > 0
+            assert device[workload]["sample_count"] == 2
+            assert len(device[workload]["samples"]) == 2
+            assert device[workload]["dispersion"]["latency_seconds"]["maximum"] > 0
         assert device["training"]["steps_per_second"] > 0
     assert report["comparison"]["encoding_bytes_reduction_percent"] == pytest.approx(
         100 * 12 / 22
     )
+    assert report["comparison"]["encoding_latency_reduction_percent"][
+        "sample_count"
+    ] == 2
+    assert report["comparison"]["devices"]["cpu"][
+        "training_throughput_change_percent"
+    ]["sample_count"] == 2
     json.dumps(report)
 
 
@@ -62,14 +77,23 @@ def test_cli_writes_versioned_report(tmp_path: Path) -> None:
     assert main([
         "--dataset", str(DATASET), "--output", str(output), "--batch-size", "2",
         "--encoding-repeats", "1", "--forward-iterations", "1",
-        "--training-steps", "1", "--warmups", "0", "--device", "cpu",
+        "--training-steps", "1", "--samples", "2", "--warmups", "0",
+        "--device", "cpu",
     ]) == 0
 
     assert json.loads(output.read_text(encoding="utf-8"))["format"] == ENCODING_COMPARISON_FORMAT
 
 
-@pytest.mark.parametrize("name", ["batch_size", "encoding_repeats", "training_steps"])
+@pytest.mark.parametrize(
+    "name", ["batch_size", "encoding_repeats", "training_steps", "samples"]
+)
 def test_config_rejects_non_positive_workloads(name: str) -> None:
     values = {"dataset_dir": str(DATASET), name: 0}
     with pytest.raises(ValueError, match=name):
         EncodingComparisonConfig(**values)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("device", ["meta", "cpu:0"])
+def test_config_rejects_devices_without_supported_synchronization(device: str) -> None:
+    with pytest.raises(ValueError, match="CPU or CUDA|CPU device"):
+        EncodingComparisonConfig(dataset_dir=str(DATASET), devices=(device,))

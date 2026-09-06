@@ -20,6 +20,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--encoding-repeats", type=int, default=20)
     parser.add_argument("--forward-iterations", type=int, default=100)
     parser.add_argument("--training-steps", type=int, default=50)
+    parser.add_argument("--samples", type=int, default=7)
     parser.add_argument("--warmups", type=int, default=5)
     parser.add_argument("--seed", type=int, default=74)
     parser.add_argument("--torch-threads", type=int, default=1)
@@ -38,6 +39,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             encoding_repeats=args.encoding_repeats,
             forward_iterations=args.forward_iterations,
             training_steps=args.training_steps,
+            samples=args.samples,
             warmups=args.warmups,
             seed=args.seed,
             devices=devices,

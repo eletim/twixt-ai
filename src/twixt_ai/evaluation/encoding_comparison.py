@@ -8,6 +8,7 @@ import json
 import os
 import platform
 from pathlib import Path
+from statistics import median
 import subprocess
 from time import perf_counter
 
@@ -29,7 +30,7 @@ from twixt_ai.training import trainer as trainer_module
 
 
 ENCODING_COMPARISON_FORMAT = "twixt-ai-encoding-comparison"
-ENCODING_COMPARISON_VERSION = 1
+ENCODING_COMPARISON_VERSION = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +42,7 @@ class EncodingComparisonConfig:
     encoding_repeats: int = 20
     forward_iterations: int = 100
     training_steps: int = 50
+    samples: int = 7
     warmups: int = 5
     seed: int = 74
     devices: tuple[str, ...] = ("cpu",)
@@ -54,6 +56,7 @@ class EncodingComparisonConfig:
             "encoding_repeats",
             "forward_iterations",
             "training_steps",
+            "samples",
             "torch_threads",
         ):
             value = getattr(self, name)
@@ -69,13 +72,39 @@ class EncodingComparisonConfig:
             raise TypeError("seed must be an integer")
         if not isinstance(self.devices, tuple) or not self.devices:
             raise ValueError("devices must be a non-empty tuple")
+        resolved_devices: set[str] = set()
         for device in self.devices:
             if not isinstance(device, str) or not device:
                 raise ValueError("devices must contain non-empty strings")
             try:
-                torch.empty(0, device=device)
+                resolved = torch.device(device)
+            except (RuntimeError, TypeError) as exc:
+                raise ValueError(f"invalid device: {device}") from exc
+            if resolved.type not in {"cpu", "cuda"}:
+                raise ValueError("benchmark devices must be CPU or CUDA")
+            if resolved.type == "cpu":
+                if resolved.index is not None:
+                    raise ValueError("CPU device must be specified as 'cpu'")
+                identity = "cpu"
+            else:
+                if not torch.cuda.is_available():
+                    raise ValueError(f"device is unavailable: {device}")
+                index = (
+                    resolved.index
+                    if resolved.index is not None
+                    else torch.cuda.current_device()
+                )
+                if not 0 <= index < torch.cuda.device_count():
+                    raise ValueError(f"device is unavailable: {device}")
+                identity = f"cuda:{index}"
+            if identity in resolved_devices:
+                raise ValueError(f"duplicate device: {device}")
+            try:
+                torch.empty(1, device=device)
+                _synchronize(device)
             except (RuntimeError, TypeError) as exc:
                 raise ValueError(f"device is unavailable: {device}") from exc
+            resolved_devices.add(identity)
 
     def to_dict(self) -> dict[str, object]:
         value = asdict(self)
@@ -98,6 +127,41 @@ def _measure(operation: Callable[[], object], count: int, device: str) -> dict[s
         "wall_seconds": seconds,
         "latency_seconds": seconds / count,
         "positions_per_second": count / seconds,
+    }
+
+
+def _summarize(samples: list[dict[str, float]]) -> dict[str, object]:
+    if not samples:
+        raise ValueError("at least one measurement sample is required")
+    metrics = ("wall_seconds", "latency_seconds", "positions_per_second")
+    summary: dict[str, object] = {"sample_count": len(samples), "samples": samples}
+    dispersion: dict[str, object] = {}
+    for metric in metrics:
+        values = [sample[metric] for sample in samples]
+        center = median(values)
+        summary[metric] = center
+        dispersion[metric] = {
+            "minimum": min(values),
+            "maximum": max(values),
+            "median_absolute_deviation": median(
+                [abs(value - center) for value in values]
+            ),
+        }
+    summary["dispersion"] = dispersion
+    return summary
+
+
+def _summarize_values(values: list[float]) -> dict[str, object]:
+    center = median(values)
+    return {
+        "sample_count": len(values),
+        "samples": values,
+        "median": center,
+        "minimum": min(values),
+        "maximum": max(values),
+        "median_absolute_deviation": median(
+            [abs(value - center) for value in values]
+        ),
     }
 
 
@@ -215,39 +279,46 @@ def _peak_memory(device: str) -> int | None:
     )
 
 
-def _benchmark_model(
+def _benchmark_forward_sample(
     model_config: PolicyValueConfig,
     batch: tuple[Tensor, Tensor, Tensor],
     config: EncodingComparisonConfig,
     device: str,
-) -> dict[str, object]:
-    torch.manual_seed(config.seed)
+    *,
+    sample: int,
+    batched: bool,
+) -> tuple[dict[str, float], int | None]:
+    torch.manual_seed(config.seed + sample)
     model = PolicyValueNetwork(model_config).to(device)
-    inputs, policies, outcomes = (value.to(device) for value in batch)
+    inputs = batch[0].to(device)
+    selected = inputs if batched else inputs[:1]
     model.eval()
     with torch.no_grad():
         for _ in range(config.warmups):
-            model(inputs[:1])
-            model(inputs)
+            model(selected)
 
         if torch.device(device).type == "cuda":
             torch.cuda.reset_peak_memory_stats(device)
-
-        single = _measure(
-            lambda: _repeat(lambda: model(inputs[:1]), config.forward_iterations),
-            config.forward_iterations,
+        measurement = _measure(
+            lambda: _repeat(lambda: model(selected), config.forward_iterations),
+            config.forward_iterations * len(selected),
             device,
         )
-        batched = _measure(
-            lambda: _repeat(lambda: model(inputs), config.forward_iterations),
-            config.forward_iterations * config.batch_size,
-            device,
-        )
-    forward_peak = _peak_memory(device)
+    return measurement, _peak_memory(device)
 
-    # Reinitialize so warmups and forward measurements cannot affect optimizer state.
-    torch.manual_seed(config.seed)
+
+def _benchmark_training_sample(
+    model_config: PolicyValueConfig,
+    batch: tuple[Tensor, Tensor, Tensor],
+    config: EncodingComparisonConfig,
+    device: str,
+    *,
+    sample: int,
+) -> tuple[dict[str, float], int | None]:
+    torch.manual_seed(config.seed + sample)
     model = PolicyValueNetwork(model_config).to(device)
+    inputs, policies, outcomes = (value.to(device) for value in batch)
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
     def step() -> None:
@@ -270,16 +341,12 @@ def _benchmark_model(
     )
     training["steps_per_second"] = training["positions_per_second"] / config.batch_size
     training["seconds_per_step"] = training["latency_seconds"] * config.batch_size
-    return {
-        "single_position_forward": single,
-        "batched_forward": batched,
-        "training": training,
-        "memory": {
-            "input_batch_bytes": _tensor_bytes(inputs),
-            "forward_peak_allocated_bytes": forward_peak,
-            "training_peak_allocated_bytes": _peak_memory(device),
-        },
-    }
+    return training, _peak_memory(device)
+
+
+def _sample_order(sample: int) -> tuple[str, str]:
+    order = ("22_plane_v1", "10_plane_v2")
+    return order if sample % 2 == 0 else tuple(reversed(order))
 
 
 def _percent_reduction(old: float | int, new: float | int) -> float:
@@ -328,16 +395,6 @@ def run_encoding_comparison_benchmark(
             for _ in range(config.warmups):
                 for state in states:
                     encode_position_for_version(state, version)
-            encoding = _measure(
-                lambda: _repeat(
-                    lambda: [
-                        encode_position_for_version(state, version) for state in states
-                    ],
-                    config.encoding_repeats,
-                ),
-                config.encoding_repeats * len(states),
-                "cpu",
-            )
             one = encode_position_for_version(states[0], version)
             model_config = _model_config(version)
             model = PolicyValueNetwork(model_config)
@@ -345,7 +402,6 @@ def run_encoding_comparison_benchmark(
                 "encoding_version": version,
                 "planes": model_config.input_channels,
                 "encoding": {
-                    **encoding,
                     "bytes_per_position": _tensor_bytes(one),
                     "batch_bytes": _tensor_bytes(one) * config.batch_size,
                 },
@@ -354,16 +410,109 @@ def run_encoding_comparison_benchmark(
                     "parameter_count": sum(item.numel() for item in model.parameters()),
                     "parameter_and_buffer_bytes": _module_bytes(model),
                 },
-                "devices": {
-                    device: _benchmark_model(
-                        model_config,
-                        _batch(examples.items, config.batch_size),
+                "devices": {},
+            }
+
+        encoding_samples: dict[str, list[dict[str, float]]] = {
+            name: [] for name in versions
+        }
+        for sample in range(config.samples):
+            for name in _sample_order(sample):
+                version = versions[name][0]
+                encoding_samples[name].append(
+                    _measure(
+                        lambda: _repeat(
+                            lambda: [
+                                encode_position_for_version(state, version)
+                                for state in states
+                            ],
+                            config.encoding_repeats,
+                        ),
+                        config.encoding_repeats * len(states),
+                        "cpu",
+                    )
+                )
+        for name in versions:
+            results[name]["encoding"].update(_summarize(encoding_samples[name]))  # type: ignore[union-attr]
+
+        batches = {
+            name: _batch(examples.items, config.batch_size)
+            for name, (_, examples) in versions.items()
+        }
+        for device in config.devices:
+            measurements = {
+                name: {"single": [], "batched": [], "training": []}
+                for name in versions
+            }
+            peaks = {
+                name: {"forward": [], "training": []} for name in versions
+            }
+            for sample in range(config.samples):
+                order = _sample_order(sample)
+                for name in order:
+                    measured, peak = _benchmark_forward_sample(
+                        _model_config(versions[name][0]),
+                        batches[name],
                         config,
                         device,
+                        sample=sample,
+                        batched=False,
                     )
-                    for device in config.devices
-                },
-            }
+                    measurements[name]["single"].append(measured)
+                    if peak is not None:
+                        peaks[name]["forward"].append(peak)
+                for name in order:
+                    measured, peak = _benchmark_forward_sample(
+                        _model_config(versions[name][0]),
+                        batches[name],
+                        config,
+                        device,
+                        sample=sample,
+                        batched=True,
+                    )
+                    measurements[name]["batched"].append(measured)
+                    if peak is not None:
+                        peaks[name]["forward"].append(peak)
+                for name in order:
+                    measured, peak = _benchmark_training_sample(
+                        _model_config(versions[name][0]),
+                        batches[name],
+                        config,
+                        device,
+                        sample=sample,
+                    )
+                    measurements[name]["training"].append(measured)
+                    if peak is not None:
+                        peaks[name]["training"].append(peak)
+
+            for name in versions:
+                training = _summarize(measurements[name]["training"])
+                training["steps_per_second"] = (
+                    training["positions_per_second"] / config.batch_size  # type: ignore[operator]
+                )
+                training["seconds_per_step"] = (
+                    training["latency_seconds"] * config.batch_size  # type: ignore[operator]
+                )
+                results[name]["devices"][device] = {  # type: ignore[index]
+                    "single_position_forward": _summarize(
+                        measurements[name]["single"]
+                    ),
+                    "batched_forward": _summarize(measurements[name]["batched"]),
+                    "training": training,
+                    "memory": {
+                        "input_batch_bytes": _tensor_bytes(batches[name][0]),
+                        "forward_peak_allocated_bytes": (
+                            max(peaks[name]["forward"])
+                            if peaks[name]["forward"]
+                            else None
+                        ),
+                        "training_peak_allocated_bytes": (
+                            max(peaks[name]["training"])
+                            if peaks[name]["training"]
+                            else None
+                        ),
+                    },
+                }
 
         old, new = results["22_plane_v1"], results["10_plane_v2"]
         comparisons: dict[str, object] = {
@@ -371,9 +520,17 @@ def run_encoding_comparison_benchmark(
                 old["encoding"]["bytes_per_position"],  # type: ignore[index]
                 new["encoding"]["bytes_per_position"],  # type: ignore[index]
             ),
-            "encoding_latency_reduction_percent": _percent_reduction(
-                old["encoding"]["latency_seconds"],  # type: ignore[index]
-                new["encoding"]["latency_seconds"],  # type: ignore[index]
+            "encoding_latency_reduction_percent": _summarize_values(
+                [
+                    _percent_reduction(
+                        old_sample["latency_seconds"],
+                        new_sample["latency_seconds"],
+                    )
+                    for old_sample, new_sample in zip(
+                        old["encoding"]["samples"],  # type: ignore[index]
+                        new["encoding"]["samples"],  # type: ignore[index]
+                    )
+                ]
             ),
             "model_parameters_reduction_percent": _percent_reduction(
                 old["model"]["parameter_count"],  # type: ignore[index]
@@ -384,18 +541,29 @@ def run_encoding_comparison_benchmark(
         for device in config.devices:
             old_device = old["devices"][device]  # type: ignore[index]
             new_device = new["devices"][device]  # type: ignore[index]
+            def throughput_changes(workload: str) -> dict[str, object]:
+                return _summarize_values(
+                    [
+                        -_percent_reduction(
+                            old_sample["positions_per_second"],
+                            new_sample["positions_per_second"],
+                        )
+                        for old_sample, new_sample in zip(
+                            old_device[workload]["samples"],
+                            new_device[workload]["samples"],
+                        )
+                    ]
+                )
+
             comparisons["devices"][device] = {  # type: ignore[index]
-                "single_forward_throughput_change_percent": -_percent_reduction(
-                    old_device["single_position_forward"]["positions_per_second"],
-                    new_device["single_position_forward"]["positions_per_second"],
+                "single_forward_throughput_change_percent": throughput_changes(
+                    "single_position_forward"
                 ),
-                "batched_forward_throughput_change_percent": -_percent_reduction(
-                    old_device["batched_forward"]["positions_per_second"],
-                    new_device["batched_forward"]["positions_per_second"],
+                "batched_forward_throughput_change_percent": throughput_changes(
+                    "batched_forward"
                 ),
-                "training_throughput_change_percent": -_percent_reduction(
-                    old_device["training"]["positions_per_second"],
-                    new_device["training"]["positions_per_second"],
+                "training_throughput_change_percent": throughput_changes(
+                    "training"
                 ),
             }
         return {
@@ -415,6 +583,13 @@ def run_encoding_comparison_benchmark(
                 "board": board.to_dict(),
             },
             "environment": _environment(),
+            "methodology": {
+                "summary_statistic": "median",
+                "dispersion": "minimum, maximum, and median absolute deviation",
+                "pairing": "each sample measures both encodings on the same workload",
+                "sample_order": [list(_sample_order(sample)) for sample in range(config.samples)],
+                "fresh_model_per_timed_sample": True,
+            },
             "results": results,
             "comparison": comparisons,
             "interpretation": "Speed and memory measurements do not measure playing strength.",

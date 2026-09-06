@@ -22,6 +22,12 @@ from .mini_experiment import (
     MiniTrainingExperimentConfig,
     run_mini_training_experiment,
 )
+from .encoding_experiment import (
+    MATCHED_ENCODING_TRAINING_FORMAT,
+    MATCHED_ENCODING_TRAINING_VERSION,
+    MatchedEncodingTrainingConfig,
+    run_matched_encoding_training,
+)
 from .generations import (
     GENERATIONS_FORMAT,
     GENERATIONS_VERSION,
@@ -50,6 +56,9 @@ __all__ = [
     "TrainingConfig",
     "TrainingSummary",
     "MiniTrainingExperimentConfig",
+    "MATCHED_ENCODING_TRAINING_FORMAT",
+    "MATCHED_ENCODING_TRAINING_VERSION",
+    "MatchedEncodingTrainingConfig",
     "GENERATIONS_FORMAT",
     "GENERATIONS_VERSION",
     "MiniGenerationConfig",
@@ -60,6 +69,7 @@ __all__ = [
     "build_mini_inspection_report",
     "render_mini_inspection_report",
     "run_mini_training_experiment",
+    "run_matched_encoding_training",
     "run_mini_training_generations",
     "train_model",
 ]

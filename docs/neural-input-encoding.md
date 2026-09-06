@@ -1,4 +1,18 @@
-# Neural input encoding v1
+# Neural input encodings
+
+Encoding versions are checkpoint compatibility data. The original 22-plane
+format remains version 1 and the compact side-to-move normalized format is
+version 2. A checkpoint must record the version it was trained with; callers
+must never select an encoder from tensor dimensions alone.
+
+`PolicyValueConfig` records both `encoding_version` and `input_channels`.
+Version 1 requires 22 channels and version 2 requires 10; mismatched or unknown
+combinations are rejected before a model is built. Checkpoints store the
+selected version both at the top level and in the model config and reject any
+disagreement when loading. Configs from existing v1 checkpoints that predate
+these two fields continue to load as version 1 with 22 channels.
+
+## Version 1: 22 planes
 
 Learned agents consume a channel-first PyTorch `float32` tensor with shape
 `[22, height, width]` (or `[22, 24, 24]` for the standard preset). Rows are
@@ -38,3 +52,44 @@ dimensions and reject positions from a different board size.
 No auxiliary heuristic features are included in v1: occupancy, connectivity,
 turn, and immutable goal geometry are sufficient primitive inputs, and derived
 features would increase compatibility surface without adding information.
+
+## Version 2: 10 normalized planes
+
+The compact Mini encoder is exposed as `encode_mini_position`, with version
+`MINI_ENCODING_VERSION`. On the validated 10-by-10 preset its tensor shape is
+`[10, 10, 10]`. It has no history, last-move, turn, or goal-border planes.
+`MINI_NORMALIZED_POLICY_VALUE_CONFIG` is the matching opt-in network preset;
+the existing `MINI_POLICY_VALUE_CONFIG` remains on v1 pending controlled
+comparison and an explicit default-selection decision.
+
+| Channels | Meaning |
+| --- | --- |
+| 0-1 | Side-to-move (`self`) pegs, opponent pegs |
+| 2-5 | Self links in the four canonical orientations |
+| 6-9 | Opponent links in the four canonical orientations |
+
+Red's north/south goal orientation is canonical. A Red-to-move position is
+unchanged; a Black-to-move position is transposed (`normalized x = game y`,
+`normalized y = game x`). Player colors are then expressed semantically as
+`self` and `opponent`. Thus the current player always connects the normalized
+north and south edges. `game_to_normalized_coordinate` and
+`normalized_to_game_coordinate` apply this exact transform.
+
+Each undirected link is stored exactly once. After normalization, endpoints
+are ordered left-to-right and a bit is placed at the left endpoint in one of
+the `(dx,dy)` planes `(+1,-2)`, `(+1,+2)`, `(+2,-1)`, or `(+2,+1)`.
+`decode_mini_position` reconstructs all pegs and links when given the original
+side to move, which is the perspective metadata inherently required by a
+normalized representation.
+
+Policy logits use row-major coordinates in the normalized frame.
+`game_coordinate_to_normalized_action_index` maps game actions into that frame
+and `normalized_action_index_to_game_coordinate` reverses the mapping. Board
+dimensions are configurable; for rectangular Black positions the normalized
+width and height are exchanged.
+
+Production training and neural MCTS inference dispatch from the model config's
+`encoding_version`. For version 2 they encode positions with the compact
+encoder and transpose Black-to-move policy targets, legal masks, and returned
+move priors consistently. Version 1 continues to use game-frame row-major
+policy coordinates.

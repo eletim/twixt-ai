@@ -1,19 +1,19 @@
 # Policy/value network v1
 
-`PolicyValueNetwork` is the first learned Twixt baseline. It consumes batches
-of canonical encoding-v1 positions shaped `[N, 22, height, width]`. A small shared
-convolutional residual trunk feeds two heads:
+`PolicyValueNetwork` is the first learned Twixt baseline. Its checkpoint-stable
+configuration selects encoding v1 with 22 input channels or encoding v2 with
+10 input channels. A small shared convolutional residual trunk feeds two heads:
 
 - the policy head returns `width * height` unnormalized logits for training;
 - the value head returns one `tanh`-bounded value per position in `[-1, 1]`,
   from the encoded position's side-to-move perspective.
 
-Policy index `y * width + x` represents placing a peg at coordinate `(x, y)`.
-This row-major mapping is independent of player because the input encodes the
-side to move. `coordinate_to_action_index`, `action_index_to_coordinate`, and
-`move_to_action_index` expose the mapping. `legal_move_mask` creates the
-Boolean action mask, while `mask_policy_logits` replaces illegal logits with
-negative infinity without modifying the training output.
+For v1, policy index `y * width + x` represents game coordinate `(x, y)`. For
+v2, it represents the row-major coordinate after side-to-move normalization.
+Training and `NeuralPolicyValue` dispatch input encoding, targets, masks, and
+returned move priors from the configured encoding version. `mask_policy_logits`
+replaces illegal logits with negative infinity without modifying the training
+output.
 
 Training code calls the network directly and applies its own policy/value
 losses. Inference uses `twixt_ai.search.neural.NeuralPolicyValue`, which switches
@@ -45,6 +45,12 @@ as for the standard model. Mini checkpoints include the complete preset config
 and board dimensions plus the format, architecture, and encoding versions;
 loading constructs that exact model before weights are accepted, and training
 resume additionally rejects a requested config mismatch.
+
+`MINI_NORMALIZED_POLICY_VALUE_CONFIG` is the corresponding opt-in encoding-v2
+preset with `[N, 10, 10, 10]` inputs. It has the same trunk and heads, but
+23,683 parameters because its first convolution consumes 10 rather than 22
+planes. The original Mini preset remains v1 until comparison work selects a
+default.
 
 On an AMD Ryzen 9 7900X CPU with PyTorch 2.8.0, one thread, evaluation mode,
 and inference mode, a representative batch of 64 positions took a median of

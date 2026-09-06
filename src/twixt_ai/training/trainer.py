@@ -23,8 +23,8 @@ from twixt_ai.models import (
     ENCODING_VERSION,
     PolicyValueConfig,
     PolicyValueNetwork,
-    coordinate_to_action_index,
-    encode_position,
+    coordinate_to_action_index_for_version,
+    encode_position_for_version,
     load_policy_value_checkpoint,
 )
 
@@ -157,8 +157,10 @@ class _Examples:
         manifest: Mapping[str, Any],
         split: str,
         board: BoardDimensions,
+        encoding_version: int,
     ) -> None:
         self.board = board
+        self.encoding_version = encoding_version
         self.action_count = board.width * board.height
         split_value = manifest.get("splits", {}).get(split)
         if not isinstance(split_value, Mapping) or not isinstance(split_value.get("shards"), list):
@@ -204,12 +206,14 @@ class _Examples:
         state = GameState.from_dict(value.get("position"))  # type: ignore[arg-type]
         if state.board != self.board:
             raise ValueError("example board dimensions do not match the dataset manifest")
-        inputs = encode_position(state)
+        inputs = encode_position_for_version(state, self.encoding_version)
         target = torch.zeros(self.action_count, dtype=torch.float32)
         policy = value.get("policy")
         if policy is None:
-            target[coordinate_to_action_index(
+            target[coordinate_to_action_index_for_version(
                 self._coordinate(value.get("action"), "action"),
+                state.side_to_move,
+                self.encoding_version,
                 board_width=self.board.width,
                 board_height=self.board.height,
             )] = 1
@@ -232,8 +236,10 @@ class _Examples:
                 ):
                     raise ValueError("policy entries must be unique with positive probabilities")
                 seen.add(coordinate)
-                target[coordinate_to_action_index(
+                target[coordinate_to_action_index_for_version(
                     coordinate,
+                    state.side_to_move,
+                    self.encoding_version,
                     board_width=self.board.width,
                     board_height=self.board.height,
                 )] = probability
@@ -251,6 +257,8 @@ class _Examples:
 
 def _load_dataset(
     root: Path,
+    *,
+    encoding_version: int = ENCODING_VERSION,
 ) -> tuple[dict[str, Any], str, BoardDimensions, _Examples, _Examples]:
     manifest_path = root / "manifest.json"
     try:
@@ -266,8 +274,8 @@ def _load_dataset(
     if not isinstance(raw_board, Mapping) or set(raw_board) != {"width", "height"}:
         raise ValueError("dataset board must contain exactly width and height")
     board = BoardDimensions(raw_board["width"], raw_board["height"])  # type: ignore[arg-type]
-    train = _Examples(root, manifest, "train", board)
-    validation = _Examples(root, manifest, "validation", board)
+    train = _Examples(root, manifest, "train", board, encoding_version)
+    validation = _Examples(root, manifest, "validation", board, encoding_version)
     if not len(train):
         raise ValueError("training split must contain at least one example")
     return manifest, hashlib.sha256(content).hexdigest(), board, train, validation
@@ -341,7 +349,7 @@ def _checkpoint_payload(
         "checkpoint_version": CHECKPOINT_VERSION,
         "architecture": ARCHITECTURE_NAME,
         "architecture_version": ARCHITECTURE_VERSION,
-        "encoding_version": ENCODING_VERSION,
+        "encoding_version": model.config.encoding_version,
         "config": model.config.to_dict(),
         "state_dict": model.state_dict(),
         "metadata": {
@@ -416,7 +424,12 @@ def train_model(
     if resume and initial_checkpoint is not None:
         raise ValueError("initial_checkpoint cannot be used when resuming")
     root = Path(dataset_dir)
-    _, dataset_sha256, board, train, validation = _load_dataset(root)
+    encoding_version = (
+        model_config.encoding_version if model_config is not None else ENCODING_VERSION
+    )
+    _, dataset_sha256, board, train, validation = _load_dataset(
+        root, encoding_version=encoding_version
+    )
     architecture_config = model_config or PolicyValueConfig(
         board_width=board.width, board_height=board.height
     )
@@ -482,6 +495,8 @@ def train_model(
         saved_model_config = PolicyValueConfig.from_dict(
             payload.get("config")  # type: ignore[arg-type]
         )
+        if payload.get("encoding_version") != saved_model_config.encoding_version:
+            raise ValueError("resume checkpoint encoding version does not match model config")
         if saved_model_config != architecture_config:
             raise ValueError("resume model configuration does not match latest.pt")
         model.load_state_dict(payload["state_dict"])  # type: ignore[arg-type]

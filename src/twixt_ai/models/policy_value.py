@@ -14,6 +14,7 @@ from torch import Tensor, nn
 from twixt_ai.game import BoardDimensions, Coordinate, PegPlacement
 
 from .encoding import BOARD_SIZE, ENCODING_VERSION, NUM_CHANNELS
+from .mini_encoding import MINI_ENCODING_VERSION, MINI_NUM_CHANNELS
 
 
 ACTION_COUNT = BOARD_SIZE * BOARD_SIZE
@@ -21,6 +22,11 @@ ARCHITECTURE_NAME = "twixt-resnet-policy-value"
 ARCHITECTURE_VERSION = 1
 CHECKPOINT_FORMAT = "twixt-ai-policy-value"
 CHECKPOINT_VERSION = 1
+
+_ENCODING_CHANNELS = {
+    ENCODING_VERSION: NUM_CHANNELS,
+    MINI_ENCODING_VERSION: MINI_NUM_CHANNELS,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,12 +38,30 @@ class PolicyValueConfig:
     value_hidden: int = 64
     board_width: int = BOARD_SIZE
     board_height: int = BOARD_SIZE
+    input_channels: int = NUM_CHANNELS
+    encoding_version: int = ENCODING_VERSION
 
     def __post_init__(self) -> None:
-        for name in ("channels", "residual_blocks", "value_hidden", "board_width", "board_height"):
+        for name in (
+            "channels",
+            "residual_blocks",
+            "value_hidden",
+            "board_width",
+            "board_height",
+            "input_channels",
+            "encoding_version",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
+        expected_channels = _ENCODING_CHANNELS.get(self.encoding_version)
+        if expected_channels is None:
+            raise ValueError(f"unsupported encoding version: {self.encoding_version}")
+        if self.input_channels != expected_channels:
+            raise ValueError(
+                f"encoding version {self.encoding_version} requires "
+                f"{expected_channels} input channels"
+            )
 
     def to_dict(self) -> dict[str, int]:
         return asdict(self)
@@ -47,9 +71,14 @@ class PolicyValueConfig:
         if not isinstance(value, Mapping):
             raise TypeError("model config must be a mapping")
         legacy = {"channels", "residual_blocks", "value_hidden"}
-        expected = {*legacy, "board_width", "board_height"}
-        if set(value) not in (legacy, expected):
-            raise ValueError(f"model config must contain {sorted(legacy)} with optional board dimensions")
+        with_board = {*legacy, "board_width", "board_height"}
+        with_encoding = {*legacy, "input_channels", "encoding_version"}
+        expected = {*with_board, "input_channels", "encoding_version"}
+        if set(value) not in (legacy, with_board, with_encoding, expected):
+            raise ValueError(
+                f"model config must contain {sorted(legacy)}, with optional legacy "
+                "board dimensions, or the complete versioned encoding fields"
+            )
         return cls(**dict(value))  # type: ignore[arg-type]
 
 
@@ -61,6 +90,18 @@ MINI_POLICY_VALUE_CONFIG = PolicyValueConfig(
     value_hidden=16,
     board_width=10,
     board_height=10,
+)
+
+# Opt-in v2 comparison preset. The v1 Mini preset above remains the default
+# until the controlled experiments choose one encoding.
+MINI_NORMALIZED_POLICY_VALUE_CONFIG = PolicyValueConfig(
+    channels=8,
+    residual_blocks=1,
+    value_hidden=16,
+    board_width=10,
+    board_height=10,
+    input_channels=MINI_NUM_CHANNELS,
+    encoding_version=MINI_ENCODING_VERSION,
 )
 
 
@@ -84,7 +125,7 @@ class PolicyValueNetwork(nn.Module):
     """Shared residual trunk with policy logits and a bounded value head.
 
     ``forward`` is the training interface. It accepts a batch shaped
-    ``[N, 22, height, width]`` and returns unmasked policy logits shaped
+    ``[N, input_channels, height, width]`` and returns unmasked policy logits shaped
     ``[N, height * width]`` plus values shaped ``[N]``. Values are in
     ``[-1, 1]`` and always describe the encoded position from its side-to-move
     perspective.
@@ -94,14 +135,20 @@ class PolicyValueNetwork(nn.Module):
         super().__init__()
         self.config = config or PolicyValueConfig()
         self.input_shape = (
-            NUM_CHANNELS,
+            self.config.input_channels,
             self.config.board_height,
             self.config.board_width,
         )
         self.action_count = self.config.board_width * self.config.board_height
         channels = self.config.channels
         self.trunk = nn.Sequential(
-            nn.Conv2d(NUM_CHANNELS, channels, kernel_size=3, padding=1, bias=False),
+            nn.Conv2d(
+                self.config.input_channels,
+                channels,
+                kernel_size=3,
+                padding=1,
+                bias=False,
+            ),
             nn.BatchNorm2d(channels),
             nn.ReLU(inplace=True),
             *(_ResidualBlock(channels) for _ in range(self.config.residual_blocks)),
@@ -250,7 +297,7 @@ def save_policy_value_checkpoint(
         "checkpoint_version": CHECKPOINT_VERSION,
         "architecture": ARCHITECTURE_NAME,
         "architecture_version": ARCHITECTURE_VERSION,
-        "encoding_version": ENCODING_VERSION,
+        "encoding_version": model.config.encoding_version,
         "config": model.config.to_dict(),
         "state_dict": model.state_dict(),
         "metadata": dict(metadata or {}),
@@ -273,7 +320,6 @@ def load_policy_value_checkpoint(
         "checkpoint_version": CHECKPOINT_VERSION,
         "architecture": ARCHITECTURE_NAME,
         "architecture_version": ARCHITECTURE_VERSION,
-        "encoding_version": ENCODING_VERSION,
     }
     for key, expected in compatibility.items():
         if payload.get(key) != expected:
@@ -282,6 +328,12 @@ def load_policy_value_checkpoint(
                 f"got {payload.get(key)!r}"
             )
     config = PolicyValueConfig.from_dict(payload.get("config"))  # type: ignore[arg-type]
+    if payload.get("encoding_version") != config.encoding_version:
+        raise ValueError(
+            "incompatible checkpoint encoding_version: expected "
+            f"{config.encoding_version!r} from model config, "
+            f"got {payload.get('encoding_version')!r}"
+        )
     state_dict = payload.get("state_dict")
     metadata = payload.get("metadata")
     if not isinstance(state_dict, Mapping):
@@ -302,6 +354,7 @@ __all__ = [
     "CHECKPOINT_FORMAT",
     "CHECKPOINT_VERSION",
     "LoadedPolicyValueCheckpoint",
+    "MINI_NORMALIZED_POLICY_VALUE_CONFIG",
     "MINI_POLICY_VALUE_CONFIG",
     "PolicyValueConfig",
     "PolicyValueNetwork",

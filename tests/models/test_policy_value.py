@@ -15,11 +15,17 @@ from twixt_ai.game import (
 )
 from twixt_ai.models import (
     ACTION_COUNT,
+    ENCODING_VERSION,
+    MINI_ENCODING_VERSION,
+    MINI_NORMALIZED_POLICY_VALUE_CONFIG,
+    MINI_NUM_CHANNELS,
     MINI_POLICY_VALUE_CONFIG,
+    NUM_CHANNELS,
     PolicyValueConfig,
     PolicyValueNetwork,
     action_index_to_coordinate,
     coordinate_to_action_index,
+    encode_mini_position,
     encode_position,
     legal_move_mask,
     load_policy_value_checkpoint,
@@ -95,6 +101,34 @@ def test_mini_baseline_is_compact_and_preserves_the_model_contract() -> None:
     assert torch.equal(masked[0, mask], logits[0, mask])
 
 
+def test_normalized_mini_model_accepts_the_ten_plane_encoding() -> None:
+    model = PolicyValueNetwork(MINI_NORMALIZED_POLICY_VALUE_CONFIG)
+    inputs = encode_mini_position(
+        GameState.initial(BoardDimensions(10, 10))
+    ).unsqueeze(0)
+
+    logits, values = model(inputs)
+
+    assert model.input_shape == (10, 10, 10)
+    assert MINI_NORMALIZED_POLICY_VALUE_CONFIG.input_channels == MINI_NUM_CHANNELS
+    assert (
+        MINI_NORMALIZED_POLICY_VALUE_CONFIG.encoding_version
+        == MINI_ENCODING_VERSION
+    )
+    assert logits.shape == (1, 100)
+    assert values.shape == (1,)
+
+
+def test_encoding_version_and_channel_count_must_match() -> None:
+    with pytest.raises(ValueError, match="requires 10 input channels"):
+        PolicyValueConfig(
+            input_channels=NUM_CHANNELS,
+            encoding_version=MINI_ENCODING_VERSION,
+        )
+    with pytest.raises(ValueError, match="unsupported encoding version"):
+        PolicyValueConfig(input_channels=10, encoding_version=99)
+
+
 def test_action_mapping_is_row_major_and_invertible() -> None:
     for index in range(ACTION_COUNT):
         coordinate = action_index_to_coordinate(index)
@@ -129,6 +163,65 @@ def test_checkpoint_round_trip_preserves_config_weights_and_metadata(tmp_path) -
     assert loaded.metadata == {"step": 12}
     for expected, actual in zip(model.state_dict().values(), loaded.model.state_dict().values()):
         assert torch.equal(expected, actual)
+
+
+@pytest.mark.parametrize(
+    ("config", "encoding_version", "input_channels"),
+    (
+        (MINI_POLICY_VALUE_CONFIG, ENCODING_VERSION, NUM_CHANNELS),
+        (
+            MINI_NORMALIZED_POLICY_VALUE_CONFIG,
+            MINI_ENCODING_VERSION,
+            MINI_NUM_CHANNELS,
+        ),
+    ),
+)
+def test_checkpoint_round_trip_preserves_selected_encoding(
+    tmp_path,
+    config: PolicyValueConfig,
+    encoding_version: int,
+    input_channels: int,
+) -> None:
+    checkpoint_path = tmp_path / f"encoding-v{encoding_version}.pt"
+    model = PolicyValueNetwork(config)
+
+    save_policy_value_checkpoint(checkpoint_path, model)
+    payload = torch.load(checkpoint_path, weights_only=True)
+    loaded = load_policy_value_checkpoint(checkpoint_path)
+
+    assert payload["encoding_version"] == encoding_version
+    assert payload["config"]["encoding_version"] == encoding_version
+    assert payload["config"]["input_channels"] == input_channels
+    assert loaded.model.config == config
+    assert loaded.model.input_shape == (input_channels, 10, 10)
+
+
+def test_loader_accepts_legacy_v1_config_without_encoding_fields(tmp_path) -> None:
+    checkpoint_path = tmp_path / "legacy-v1.pt"
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    save_policy_value_checkpoint(checkpoint_path, model)
+    payload = torch.load(checkpoint_path, weights_only=True)
+    payload["config"].pop("input_channels")
+    payload["config"].pop("encoding_version")
+    torch.save(payload, checkpoint_path)
+
+    loaded = load_policy_value_checkpoint(checkpoint_path)
+
+    assert loaded.model.config.input_channels == NUM_CHANNELS
+    assert loaded.model.config.encoding_version == ENCODING_VERSION
+
+
+def test_loader_rejects_disagreeing_checkpoint_encoding_metadata(tmp_path) -> None:
+    checkpoint_path = tmp_path / "mismatched.pt"
+    save_policy_value_checkpoint(
+        checkpoint_path, PolicyValueNetwork(MINI_NORMALIZED_POLICY_VALUE_CONFIG)
+    )
+    payload = torch.load(checkpoint_path, weights_only=True)
+    payload["encoding_version"] = ENCODING_VERSION
+    torch.save(payload, checkpoint_path)
+
+    with pytest.raises(ValueError, match="encoding_version"):
+        load_policy_value_checkpoint(checkpoint_path)
 
 
 def test_mini_checkpoint_records_and_enforces_complete_model_config(tmp_path) -> None:

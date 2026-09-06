@@ -17,6 +17,8 @@ The matched end-to-end training comparison for those encodings is documented in
 [docs/matched-encoding-training.md](docs/matched-encoding-training.md).
 Their matched learned-MCTS playing-strength comparison is documented in
 [docs/encoding-strength-comparison.md](docs/encoding-strength-comparison.md).
+The resulting decision to retain the 22-plane v1 Mini default is documented in
+[docs/mini-encoding-decision.md](docs/mini-encoding-decision.md).
 The versioned, reproducible training shard schema is defined in
 [docs/training-data-format.md](docs/training-data-format.md).
 The model training, metrics, and resume workflow is documented in

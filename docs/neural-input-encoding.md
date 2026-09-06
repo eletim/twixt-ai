@@ -59,8 +59,9 @@ The compact Mini encoder is exposed as `encode_mini_position`, with version
 `MINI_ENCODING_VERSION`. On the validated 10-by-10 preset its tensor shape is
 `[10, 10, 10]`. It has no history, last-move, turn, or goal-border planes.
 `MINI_NORMALIZED_POLICY_VALUE_CONFIG` is the matching opt-in network preset;
-the existing `MINI_POLICY_VALUE_CONFIG` remains on v1 pending controlled
-comparison and an explicit default-selection decision.
+the v0.0.3 [Mini encoding decision](mini-encoding-decision.md) retained
+`MINI_POLICY_VALUE_CONFIG` on v1 as the explicit default because measured
+playing strength did not justify changing it.
 
 | Channels | Meaning |
 | --- | --- |

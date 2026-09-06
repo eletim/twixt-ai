@@ -31,7 +31,9 @@ requires a version change rather than silently loading incompatible weights.
 
 ## Mini Twixt baseline
 
-`MINI_POLICY_VALUE_CONFIG` is the deliberately small 10x10 baseline. It uses
+`MINI_POLICY_VALUE_CONFIG` is the explicit default 10x10 baseline. Issue 77
+retained its 22-plane encoding v1 after the v0.0.3 measurements did not show
+that encoding v2 preserved learned playing strength. It uses
 8 trunk channels, 1 residual block, and 16 value-head hidden units for exactly
 24,547 trainable parameters (98,188 bytes of float32 weights). The ordinary
 `PolicyValueConfig` fields and the training CLI's `--channels`,
@@ -49,8 +51,9 @@ resume additionally rejects a requested config mismatch.
 `MINI_NORMALIZED_POLICY_VALUE_CONFIG` is the corresponding opt-in encoding-v2
 preset with `[N, 10, 10, 10]` inputs. It has the same trunk and heads, but
 23,683 parameters because its first convolution consumes 10 rather than 22
-planes. The original Mini preset remains v1 until comparison work selects a
-default.
+planes. It remains supported for regression and comparison, but is not the
+default. See the [Mini encoding decision](mini-encoding-decision.md) for the
+measured correctness, cost, training, and playing-strength evidence.
 
 On an AMD Ryzen 9 7900X CPU with PyTorch 2.8.0, one thread, evaluation mode,
 and inference mode, a representative batch of 64 positions took a median of

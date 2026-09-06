@@ -91,6 +91,8 @@ def test_mini_baseline_is_compact_and_preserves_the_model_contract() -> None:
         value_hidden=16,
         board_width=10,
         board_height=10,
+        input_channels=NUM_CHANNELS,
+        encoding_version=ENCODING_VERSION,
     )
     assert sum(parameter.numel() for parameter in model.parameters()) == 24_547
     assert inputs.shape == (1, 22, 10, 10)

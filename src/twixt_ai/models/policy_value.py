@@ -82,8 +82,10 @@ class PolicyValueConfig:
         return cls(**dict(value))  # type: ignore[arg-type]
 
 
-# Stable Mini Twixt baseline. Keep this explicit rather than changing the
-# general-purpose defaults used by existing 24x24 training runs.
+# Issue 77 retained the version 1 encoding as the explicit Mini default because
+# the v0.0.3 strength comparison did not establish that version 2 preserved
+# playing strength. Keep this separate from the 24x24 defaults and from the
+# loadable version 2 comparison preset below.
 MINI_POLICY_VALUE_CONFIG = PolicyValueConfig(
     channels=8,
     residual_blocks=1,
@@ -92,8 +94,8 @@ MINI_POLICY_VALUE_CONFIG = PolicyValueConfig(
     board_height=10,
 )
 
-# Opt-in v2 comparison preset. The v1 Mini preset above remains the default
-# until the controlled experiments choose one encoding.
+# Non-default v2 comparison preset. Its distinct encoding metadata keeps v2
+# checkpoints loadable without reinterpreting them as the v1 default.
 MINI_NORMALIZED_POLICY_VALUE_CONFIG = PolicyValueConfig(
     channels=8,
     residual_blocks=1,

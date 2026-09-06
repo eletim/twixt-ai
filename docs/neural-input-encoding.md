@@ -87,3 +87,9 @@ Policy logits use row-major coordinates in the normalized frame.
 and `normalized_action_index_to_game_coordinate` reverses the mapping. Board
 dimensions are configurable; for rectangular Black positions the normalized
 width and height are exchanged.
+
+Production training and neural MCTS inference dispatch from the model config's
+`encoding_version`. For version 2 they encode positions with the compact
+encoder and transpose Black-to-move policy targets, legal masks, and returned
+move priors consistently. Version 1 continues to use game-frame row-major
+policy coordinates.

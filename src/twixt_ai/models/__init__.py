@@ -48,6 +48,12 @@ from .policy_value import (
     move_to_action_index,
     save_policy_value_checkpoint,
 )
+from .versioned_encoding import (
+    coordinate_to_action_index_for_version,
+    encode_position_for_version,
+    legal_move_mask_for_version,
+    move_to_action_index_for_version,
+)
 
 __all__ = [
     "BOARD_SIZE",
@@ -76,15 +82,19 @@ __all__ = [
     "PolicyValueNetwork",
     "action_index_to_coordinate",
     "coordinate_to_action_index",
+    "coordinate_to_action_index_for_version",
     "decode_mini_position",
     "encode_mini_position",
     "encode_position",
+    "encode_position_for_version",
     "game_coordinate_to_normalized_action_index",
     "game_to_normalized_coordinate",
     "legal_move_mask",
+    "legal_move_mask_for_version",
     "load_policy_value_checkpoint",
     "mask_policy_logits",
     "move_to_action_index",
+    "move_to_action_index_for_version",
     "normalized_action_index_to_game_coordinate",
     "normalized_board_dimensions",
     "normalized_to_game_coordinate",

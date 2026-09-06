@@ -49,20 +49,27 @@ Forward and training steps reused the first 32 examples under both encodings,
 giving a fixed matched batch. The host was an AMD Ryzen 9 7900X with an NVIDIA
 RTX 4060 and PyTorch 2.8.0; PyTorch used one host thread. Selected results are:
 
+Values below are medians with the seven-sample minimum–maximum range in
+parentheses.
+
 | Metric | 22-plane v1 | 10-plane v2 |
 | --- | ---: | ---: |
-| Encoding latency (µs/position) | 86.3 | 70.6 |
+| Encoding latency (µs/position) | 86.4 (86.1–86.9) | 75.9 (75.6–76.7) |
 | Encoded bytes/position | 8,800 | 4,000 |
 | Model parameters | 24,547 | 23,683 |
-| CPU single forward (positions/s) | 8,011 | 8,939 |
-| CPU batch-32 forward (positions/s) | 51,740 | 66,544 |
-| CPU training (positions/s) | 13,206 | 14,661 |
-| CUDA single forward (positions/s) | 4,758 | 4,778 |
-| CUDA batch-32 forward (positions/s) | 152,502 | 153,150 |
-| CUDA training (positions/s) | 30,469 | 29,154 |
+| CPU single forward (positions/s) | 8,482 (7,959–8,555) | 8,983 (8,527–9,165) |
+| CPU batch-32 forward (positions/s) | 52,371 (51,263–53,185) | 65,826 (62,223–66,456) |
+| CPU training (positions/s) | 12,982 (12,671–13,104) | 14,573 (14,154–14,596) |
+| CUDA single forward (positions/s) | 4,846 (4,657–4,890) | 4,939 (4,853–5,036) |
+| CUDA batch-32 forward (positions/s) | 153,353 (150,530–155,973) | 151,816 (150,118–153,666) |
+| CUDA training (positions/s) | 30,940 (25,872–31,305) | 30,984 (28,151–31,596) |
 
-On this run, compact encoding reduced tensor storage by 54.5%, encoding latency
-by 18.2%, and model parameters by 3.5%. CPU forward and training throughput
-improved. CUDA forward throughput was effectively unchanged, while CUDA
-training was 4.3% slower. Timing results are samples of this machine and should
-be rerun when hardware, PyTorch, or workload configuration changes.
+Paired-sample medians show that compact encoding reduced tensor storage by
+54.5%, encoding latency by 12.1% (0.3 percentage-point MAD), and model
+parameters by 3.5%. CPU throughput increased by 5.8% for single forwards, 23.8%
+for batch-32 forwards, and 11.6% for training; every paired CPU sample was
+positive. CUDA changes were not material: +1.9% for single forwards, −1.0% for
+batch-32 forwards, and +1.4% for training. CUDA training was the noisiest result
+and its paired range crossed zero (−1.5% to +19.8%, 2.0 percentage-point MAD).
+Timing results are samples of this machine and should be rerun when hardware,
+PyTorch, or workload configuration changes.

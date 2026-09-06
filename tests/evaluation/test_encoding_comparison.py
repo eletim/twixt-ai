@@ -48,6 +48,8 @@ def test_report_separates_encoding_forward_training_and_memory() -> None:
     old = report["results"]["22_plane_v1"]
     new = report["results"]["10_plane_v2"]
     assert (old["planes"], new["planes"]) == (22, 10)
+    assert old["encoding"]["sample_count"] == 2
+    assert new["encoding"]["sample_count"] == 2
     assert old["encoding"]["bytes_per_position"] == 22 * 10 * 10 * 4
     assert new["encoding"]["bytes_per_position"] == 10 * 10 * 10 * 4
     assert old["model"]["config"]["channels"] == new["model"]["config"]["channels"]
@@ -97,3 +99,8 @@ def test_config_rejects_non_positive_workloads(name: str) -> None:
 def test_config_rejects_devices_without_supported_synchronization(device: str) -> None:
     with pytest.raises(ValueError, match="CPU or CUDA|CPU device"):
         EncodingComparisonConfig(dataset_dir=str(DATASET), devices=(device,))
+
+
+def test_config_rejects_duplicate_device_aliases() -> None:
+    with pytest.raises(ValueError, match="duplicate device"):
+        EncodingComparisonConfig(dataset_dir=str(DATASET), devices=("cpu", "cpu"))

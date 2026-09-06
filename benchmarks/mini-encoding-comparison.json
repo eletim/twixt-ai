@@ -2,18 +2,123 @@
   "comparison": {
     "devices": {
       "cpu": {
-        "batched_forward_throughput_change_percent": 28.61369243405225,
-        "single_forward_throughput_change_percent": 11.59533283201885,
-        "training_throughput_change_percent": 11.013798498910065
+        "batched_forward_throughput_change_percent": {
+          "maximum": 28.215935391001416,
+          "median": 23.768863187545776,
+          "median_absolute_deviation": 2.1925863056356327,
+          "minimum": 18.812254258103877,
+          "sample_count": 7,
+          "samples": [
+            18.812254258103877,
+            25.01134182540488,
+            25.659154240274212,
+            21.576276881910143,
+            20.52932897970073,
+            23.768863187545776,
+            28.215935391001416
+          ]
+        },
+        "single_forward_throughput_change_percent": {
+          "maximum": 8.415534538653585,
+          "median": 5.763032319708854,
+          "median_absolute_deviation": 0.8524050220740644,
+          "minimum": 4.799582017288973,
+          "sample_count": 7,
+          "samples": [
+            7.129158951589149,
+            6.352957129961829,
+            4.91062729763479,
+            4.799582017288973,
+            8.415534538653585,
+            5.186319909938822,
+            5.763032319708854
+          ]
+        },
+        "training_throughput_change_percent": {
+          "maximum": 15.012815038732583,
+          "median": 11.597898030683128,
+          "median_absolute_deviation": 0.7843504702274586,
+          "minimum": 9.062663634875793,
+          "sample_count": 7,
+          "samples": [
+            12.382248500910586,
+            13.854688070202695,
+            11.208809928268705,
+            10.81513840354092,
+            11.597898030683128,
+            15.012815038732583,
+            9.062663634875793
+          ]
+        }
       },
       "cuda": {
-        "batched_forward_throughput_change_percent": 0.4248528353330316,
-        "single_forward_throughput_change_percent": 0.43049688907695266,
-        "training_throughput_change_percent": -4.315715652918571
+        "batched_forward_throughput_change_percent": {
+          "maximum": -0.27395572670985535,
+          "median": -0.9913814145684844,
+          "median_absolute_deviation": 0.48809810939856335,
+          "minimum": -1.8456863774419943,
+          "sample_count": 7,
+          "samples": [
+            -1.4794795239670477,
+            -1.8456863774419943,
+            -0.27395572670985535,
+            -1.6560975065446353,
+            -0.9913814145684844,
+            -0.8518522024615061,
+            -0.9015836943091042
+          ]
+        },
+        "single_forward_throughput_change_percent": {
+          "maximum": 4.211703282018798,
+          "median": 1.9176276692188372,
+          "median_absolute_deviation": 1.0129202479621338,
+          "minimum": 0.17926381888618004,
+          "sample_count": 7,
+          "samples": [
+            2.982408088534005,
+            1.9176276692188372,
+            4.211703282018798,
+            1.6501134057280131,
+            0.17926381888618004,
+            2.930547917180971,
+            1.3374338883054924
+          ]
+        },
+        "training_throughput_change_percent": {
+          "maximum": 19.758117413475826,
+          "median": 1.355125538275513,
+          "median_absolute_deviation": 1.9450774133992805,
+          "minimum": -1.5171668101065698,
+          "sample_count": 7,
+          "samples": [
+            -0.5899518751237677,
+            19.758117413475826,
+            8.48804115748267,
+            -1.5171668101065698,
+            0.9300523067567491,
+            1.355125538275513,
+            1.4365992289195
+          ]
+        }
       }
     },
     "encoding_bytes_reduction_percent": 54.54545454545455,
-    "encoding_latency_reduction_percent": 18.230575021904404,
+    "encoding_latency_reduction_percent": {
+      "maximum": 13.017258429643864,
+      "median": 12.11758158236178,
+      "median_absolute_deviation": 0.3081572219747599,
+      "minimum": 11.250632135037671,
+      "sample_count": 7,
+      "samples": [
+        12.08626883778636,
+        12.42573880433654,
+        12.11758158236178,
+        13.017258429643864,
+        11.250632135037671,
+        11.274094294684605,
+        12.244065343856025
+      ]
+    },
     "model_parameters_reduction_percent": 3.51977838432395
   },
   "config": {
@@ -25,6 +130,7 @@
     ],
     "encoding_repeats": 20,
     "forward_iterations": 100,
+    "samples": 7,
     "seed": 74,
     "torch_threads": 1,
     "training_steps": 50,
@@ -60,7 +166,7 @@
     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
     "git": {
       "dirty": false,
-      "revision": "158975c4f6bdd83686626fb8bab8f07651d8d364"
+      "revision": "c59d87db77745507ff71a88bea9a80cd417619fc"
     },
     "machine": "x86_64",
     "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
@@ -70,14 +176,105 @@
   },
   "format": "twixt-ai-encoding-comparison",
   "interpretation": "Speed and memory measurements do not measure playing strength.",
+  "methodology": {
+    "dispersion": "minimum, maximum, and median absolute deviation",
+    "fresh_model_per_timed_sample": true,
+    "pairing": "each sample measures both encodings on the same workload",
+    "sample_order": [
+      [
+        "22_plane_v1",
+        "10_plane_v2"
+      ],
+      [
+        "10_plane_v2",
+        "22_plane_v1"
+      ],
+      [
+        "22_plane_v1",
+        "10_plane_v2"
+      ],
+      [
+        "10_plane_v2",
+        "22_plane_v1"
+      ],
+      [
+        "22_plane_v1",
+        "10_plane_v2"
+      ],
+      [
+        "10_plane_v2",
+        "22_plane_v1"
+      ],
+      [
+        "22_plane_v1",
+        "10_plane_v2"
+      ]
+    ],
+    "summary_statistic": "median"
+  },
   "results": {
     "10_plane_v2": {
       "devices": {
         "cpu": {
           "batched_forward": {
-            "latency_seconds": 1.5027542176540009e-05,
-            "positions_per_second": 66544.48134313892,
-            "wall_seconds": 0.04808813496492803
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 1.607128284376813e-05,
+                "median_absolute_deviation": 1.4409342838916961e-07,
+                "minimum": 1.5047463130031246e-05
+              },
+              "positions_per_second": {
+                "maximum": 66456.3847977957,
+                "median_absolute_deviation": 630.3454347840598,
+                "minimum": 62222.78642726796
+              },
+              "wall_seconds": {
+                "maximum": 0.05142810510005802,
+                "median_absolute_deviation": 0.0004610989708453417,
+                "minimum": 0.04815188201609999
+              }
+            },
+            "latency_seconds": 1.5191556558420416e-05,
+            "positions_per_second": 65826.03936301165,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 1.607128284376813e-05,
+                "positions_per_second": 62222.78642726796,
+                "wall_seconds": 0.05142810510005802
+              },
+              {
+                "latency_seconds": 1.512124374130508e-05,
+                "positions_per_second": 66132.1262396166,
+                "wall_seconds": 0.048387979972176254
+              },
+              {
+                "latency_seconds": 1.5116106224013493e-05,
+                "positions_per_second": 66154.6025927892,
+                "wall_seconds": 0.048371539916843176
+              },
+              {
+                "latency_seconds": 1.6045281554397662e-05,
+                "positions_per_second": 62323.61810602955,
+                "wall_seconds": 0.051344900974072516
+              },
+              {
+                "latency_seconds": 1.589316438185051e-05,
+                "positions_per_second": 62920.131949429044,
+                "wall_seconds": 0.050858126021921635
+              },
+              {
+                "latency_seconds": 1.5191556558420416e-05,
+                "positions_per_second": 65826.03936301165,
+                "wall_seconds": 0.04861298098694533
+              },
+              {
+                "latency_seconds": 1.5047463130031246e-05,
+                "positions_per_second": 66456.3847977957,
+                "wall_seconds": 0.04815188201609999
+              }
+            ],
+            "wall_seconds": 0.04861298098694533
           },
           "memory": {
             "forward_peak_allocated_bytes": null,
@@ -85,49 +282,407 @@
             "training_peak_allocated_bytes": null
           },
           "single_position_forward": {
-            "latency_seconds": 0.00011186353978700936,
-            "positions_per_second": 8939.463223710085,
-            "wall_seconds": 0.011186353978700936
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 0.00011728115961886942,
+                "median_absolute_deviation": 1.0780990123748698e-06,
+                "minimum": 0.0001091135700698942
+              },
+              "positions_per_second": {
+                "maximum": 9164.762910419266,
+                "median_absolute_deviation": 86.16353877195252,
+                "minimum": 8526.51869447503
+              },
+              "wall_seconds": {
+                "maximum": 0.011728115961886942,
+                "median_absolute_deviation": 0.00010780990123748779,
+                "minimum": 0.01091135700698942
+              }
+            },
+            "latency_seconds": 0.00011132038081996143,
+            "positions_per_second": 8983.081019254696,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 0.00011728115961886942,
+                "positions_per_second": 8526.51869447503,
+                "wall_seconds": 0.011728115961886942
+              },
+              {
+                "latency_seconds": 0.00011076244059950113,
+                "positions_per_second": 9028.331215775901,
+                "wall_seconds": 0.011076244059950113
+              },
+              {
+                "latency_seconds": 0.0001123984798323363,
+                "positions_per_second": 8896.917480482743,
+                "wall_seconds": 0.01123984798323363
+              },
+              {
+                "latency_seconds": 0.00011249416042119264,
+                "positions_per_second": 8889.350311659477,
+                "wall_seconds": 0.011249416042119265
+              },
+              {
+                "latency_seconds": 0.0001091135700698942,
+                "positions_per_second": 9164.762910419266,
+                "wall_seconds": 0.01091135700698942
+              },
+              {
+                "latency_seconds": 0.00011112542008049786,
+                "positions_per_second": 8998.841122720729,
+                "wall_seconds": 0.011112542008049786
+              },
+              {
+                "latency_seconds": 0.00011132038081996143,
+                "positions_per_second": 8983.081019254696,
+                "wall_seconds": 0.011132038081996143
+              }
+            ],
+            "wall_seconds": 0.011132038081996143
           },
           "training": {
-            "latency_seconds": 6.821009505074471e-05,
-            "positions_per_second": 14660.586519576798,
-            "seconds_per_step": 0.002182723041623831,
-            "steps_per_second": 458.14332873677495,
-            "wall_seconds": 0.10913615208119154
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 7.065256562782451e-05,
+                "median_absolute_deviation": 9.379502444062274e-08,
+                "minimum": 6.851025311334524e-05
+              },
+              "positions_per_second": {
+                "maximum": 14596.355356410268,
+                "median_absolute_deviation": 19.892189624013554,
+                "minimum": 14153.767681526038
+              },
+              "wall_seconds": {
+                "maximum": 0.11304410500451922,
+                "median_absolute_deviation": 0.0001500720391049981,
+                "minimum": 0.10961640498135239
+              }
+            },
+            "latency_seconds": 6.862020250991918e-05,
+            "positions_per_second": 14572.96777658807,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 6.85430893645389e-05,
+                "positions_per_second": 14589.362826668195,
+                "seconds_per_step": 0.002193378859665245,
+                "steps_per_second": 455.9175883333811,
+                "wall_seconds": 0.10966894298326224
+              },
+              {
+                "latency_seconds": 6.851025311334524e-05,
+                "positions_per_second": 14596.355356410268,
+                "seconds_per_step": 0.002192328099627048,
+                "steps_per_second": 456.13610488782086,
+                "wall_seconds": 0.10961640498135239
+              },
+              {
+                "latency_seconds": 6.862020250991918e-05,
+                "positions_per_second": 14572.96777658807,
+                "seconds_per_step": 0.002195846480317414,
+                "steps_per_second": 455.4052430183772,
+                "wall_seconds": 0.10979232401587069
+              },
+              {
+                "latency_seconds": 6.893716185004451e-05,
+                "positions_per_second": 14505.964173216893,
+                "seconds_per_step": 0.0022059891792014243,
+                "steps_per_second": 453.3113804130279,
+                "wall_seconds": 0.1102994589600712
+              },
+              {
+                "latency_seconds": 6.87139975343598e-05,
+                "positions_per_second": 14553.075586964056,
+                "seconds_per_step": 0.002198847921099514,
+                "steps_per_second": 454.78361209262675,
+                "wall_seconds": 0.10994239605497569
+              },
+              {
+                "latency_seconds": 6.861721121822483e-05,
+                "positions_per_second": 14573.603069056215,
+                "seconds_per_step": 0.0021957507589831947,
+                "steps_per_second": 455.4250959080067,
+                "wall_seconds": 0.10978753794915974
+              },
+              {
+                "latency_seconds": 7.065256562782451e-05,
+                "positions_per_second": 14153.767681526038,
+                "seconds_per_step": 0.0022608821000903844,
+                "steps_per_second": 442.3052400476887,
+                "wall_seconds": 0.11304410500451922
+              }
+            ],
+            "seconds_per_step": 0.002195846480317414,
+            "steps_per_second": 455.4052430183772,
+            "wall_seconds": 0.10979232401587069
           }
         },
         "cuda": {
           "batched_forward": {
-            "latency_seconds": 6.529539678012952e-06,
-            "positions_per_second": 153150.1528916839,
-            "wall_seconds": 0.020894526969641447
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 6.66143219859805e-06,
+                "median_absolute_deviation": 4.252593498676995e-08,
+                "minimum": 6.50763377052499e-06
+              },
+              "positions_per_second": {
+                "maximum": 153665.6848345243,
+                "median_absolute_deviation": 973.8505600871868,
+                "minimum": 150117.86807804753
+              },
+              "wall_seconds": {
+                "maximum": 0.02131658303551376,
+                "median_absolute_deviation": 0.0001360829919576645,
+                "minimum": 0.020824428065679967
+              }
+            },
+            "latency_seconds": 6.586934687220492e-06,
+            "positions_per_second": 151815.68475851594,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 6.50763377052499e-06,
+                "positions_per_second": 153665.6848345243,
+                "wall_seconds": 0.020824428065679967
+              },
+              {
+                "latency_seconds": 6.629460622207262e-06,
+                "positions_per_second": 150841.83419842875,
+                "wall_seconds": 0.021214273991063237
+              },
+              {
+                "latency_seconds": 6.66143219859805e-06,
+                "positions_per_second": 150117.86807804753,
+                "wall_seconds": 0.02131658303551376
+              },
+              {
+                "latency_seconds": 6.654312819591724e-06,
+                "positions_per_second": 150278.4775996382,
+                "wall_seconds": 0.021293801022693515
+              },
+              {
+                "latency_seconds": 6.575012193934527e-06,
+                "positions_per_second": 152090.97268633262,
+                "wall_seconds": 0.021040039020590484
+              },
+              {
+                "latency_seconds": 6.586934687220492e-06,
+                "positions_per_second": 151815.68475851594,
+                "wall_seconds": 0.021078190999105573
+              },
+              {
+                "latency_seconds": 6.580228437087498e-06,
+                "positions_per_second": 151970.4079517662,
+                "wall_seconds": 0.021056730998679996
+              }
+            ],
+            "wall_seconds": 0.021078190999105573
           },
           "memory": {
-            "forward_peak_allocated_bytes": 18481152,
+            "forward_peak_allocated_bytes": 18467840,
             "input_batch_bytes": 128000,
             "training_peak_allocated_bytes": 19258368
           },
           "single_position_forward": {
-            "latency_seconds": 0.00020927677978761495,
-            "positions_per_second": 4778.360986894258,
-            "wall_seconds": 0.020927677978761494
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 0.00020606982987374068,
+                "median_absolute_deviation": 1.9303907174617247e-06,
+                "minimum": 0.00019858520943671464
+              },
+              "positions_per_second": {
+                "maximum": 5035.62175066558,
+                "median_absolute_deviation": 46.651905601529506,
+                "minimum": 4852.723955819742
+              },
+              "wall_seconds": {
+                "maximum": 0.020606982987374067,
+                "median_absolute_deviation": 0.00019303907174617052,
+                "minimum": 0.019858520943671465
+              }
+            },
+            "latency_seconds": 0.00020245440886355935,
+            "positions_per_second": 4939.383664763422,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 0.00019858520943671464,
+                "positions_per_second": 5035.62175066558,
+                "wall_seconds": 0.019858520943671465
+              },
+              {
+                "latency_seconds": 0.00020245440886355935,
+                "positions_per_second": 4939.383664763422,
+                "wall_seconds": 0.020245440886355937
+              },
+              {
+                "latency_seconds": 0.00020606982987374068,
+                "positions_per_second": 4852.723955819742,
+                "wall_seconds": 0.020606982987374067
+              },
+              {
+                "latency_seconds": 0.00020438479958102108,
+                "positions_per_second": 4892.731759161892,
+                "wall_seconds": 0.020438479958102107
+              },
+              {
+                "latency_seconds": 0.00020521676051430405,
+                "positions_per_second": 4872.896334070618,
+                "wall_seconds": 0.020521676051430404
+              },
+              {
+                "latency_seconds": 0.0002015284902881831,
+                "positions_per_second": 4962.077563177361,
+                "wall_seconds": 0.02015284902881831
+              },
+              {
+                "latency_seconds": 0.00020205336972139776,
+                "positions_per_second": 4949.187441807354,
+                "wall_seconds": 0.020205336972139776
+              }
+            ],
+            "wall_seconds": 0.020245440886355937
           },
           "training": {
-            "latency_seconds": 3.430098746321164e-05,
-            "positions_per_second": 29153.679644719152,
-            "seconds_per_step": 0.0010976315988227726,
-            "steps_per_second": 911.0524888974735,
-            "wall_seconds": 0.054881579941138625
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 3.5522874386515466e-05,
+                "median_absolute_deviation": 5.824331310577691e-07,
+                "minimum": 3.1649832526454704e-05
+              },
+              "positions_per_second": {
+                "maximum": 31595.743805726113,
+                "median_absolute_deviation": 569.4021850144891,
+                "minimum": 28150.87509865478
+              },
+              "wall_seconds": {
+                "maximum": 0.05683659901842475,
+                "median_absolute_deviation": 0.0009318930096924305,
+                "minimum": 0.05063973204232752
+              }
+            },
+            "latency_seconds": 3.227512061130255e-05,
+            "positions_per_second": 30983.617754469553,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 3.2423201919300485e-05,
+                "positions_per_second": 30842.111229142127,
+                "seconds_per_step": 0.0010375424614176155,
+                "steps_per_second": 963.8159759106915,
+                "wall_seconds": 0.05187712307088077
+              },
+              {
+                "latency_seconds": 3.227512061130255e-05,
+                "positions_per_second": 30983.617754469553,
+                "seconds_per_step": 0.0010328038595616817,
+                "steps_per_second": 968.2380548271735,
+                "wall_seconds": 0.05164019297808409
+              },
+              {
+                "latency_seconds": 3.5522874386515466e-05,
+                "positions_per_second": 28150.87509865478,
+                "seconds_per_step": 0.001136731980368495,
+                "steps_per_second": 879.7148468329618,
+                "wall_seconds": 0.05683659901842475
+              },
+              {
+                "latency_seconds": 3.302994940895587e-05,
+                "positions_per_second": 30275.55348688654,
+                "seconds_per_step": 0.0010569583810865878,
+                "steps_per_second": 946.1110464652044,
+                "wall_seconds": 0.052847919054329395
+              },
+              {
+                "latency_seconds": 3.1649832526454704e-05,
+                "positions_per_second": 31595.743805726113,
+                "seconds_per_step": 0.0010127946408465505,
+                "steps_per_second": 987.366993928941,
+                "wall_seconds": 0.05063973204232752
+              },
+              {
+                "latency_seconds": 3.1888507510302586e-05,
+                "positions_per_second": 31359.26006185515,
+                "seconds_per_step": 0.0010204322403296827,
+                "steps_per_second": 979.9768769329735,
+                "wall_seconds": 0.05102161201648414
+              },
+              {
+                "latency_seconds": 3.1692687480244784e-05,
+                "positions_per_second": 31553.019939484042,
+                "seconds_per_step": 0.001014165999367833,
+                "steps_per_second": 986.0318731088763,
+                "wall_seconds": 0.05070829996839166
+              }
+            ],
+            "seconds_per_step": 0.0010328038595616817,
+            "steps_per_second": 968.2380548271735,
+            "wall_seconds": 0.05164019297808409
           }
         }
       },
       "encoding": {
         "batch_bytes": 128000,
         "bytes_per_position": 4000,
-        "latency_seconds": 7.055443635888109e-05,
-        "positions_per_second": 14173.453174700677,
-        "wall_seconds": 2.7671449939953163
+        "dispersion": {
+          "latency_seconds": {
+            "maximum": 7.666582442605882e-05,
+            "median_absolute_deviation": 2.2576045205038885e-07,
+            "minimum": 7.561934956758816e-05
+          },
+          "positions_per_second": {
+            "maximum": 13224.128555961799,
+            "median_absolute_deviation": 39.31912501255465,
+            "minimum": 13043.621554796697
+          },
+          "wall_seconds": {
+            "maximum": 3.006833633990027,
+            "median_absolute_deviation": 0.00885432492941618,
+            "minimum": 2.9657908900408074
+          }
+        },
+        "latency_seconds": 7.58872778427515e-05,
+        "positions_per_second": 13177.439334062457,
+        "sample_count": 7,
+        "samples": [
+          {
+            "latency_seconds": 7.566151739070112e-05,
+            "positions_per_second": 13216.758459075012,
+            "wall_seconds": 2.9674447120632976
+          },
+          {
+            "latency_seconds": 7.58524790917006e-05,
+            "positions_per_second": 13183.48473213468,
+            "wall_seconds": 2.9749342299764976
+          },
+          {
+            "latency_seconds": 7.58872778427515e-05,
+            "positions_per_second": 13177.439334062457,
+            "wall_seconds": 2.976299036992714
+          },
+          {
+            "latency_seconds": 7.561934956758816e-05,
+            "positions_per_second": 13224.128555961799,
+            "wall_seconds": 2.9657908900408074
+          },
+          {
+            "latency_seconds": 7.666582442605882e-05,
+            "positions_per_second": 13043.621554796697,
+            "wall_seconds": 3.006833633990027
+          },
+          {
+            "latency_seconds": 7.65827018381721e-05,
+            "positions_per_second": 13057.7790545065,
+            "wall_seconds": 3.0035735660931095
+          },
+          {
+            "latency_seconds": 7.60563541043926e-05,
+            "positions_per_second": 13148.145368990881,
+            "wall_seconds": 2.9829302079742774
+          }
+        ],
+        "wall_seconds": 2.976299036992714
       },
       "encoding_version": 2,
       "model": {
@@ -149,9 +704,64 @@
       "devices": {
         "cpu": {
           "batched_forward": {
-            "latency_seconds": 1.932747687533265e-05,
-            "positions_per_second": 51739.81096706337,
-            "wall_seconds": 0.06184792600106448
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 1.9507255929056554e-05,
+                "median_absolute_deviation": 1.9138373318128342e-07,
+                "minimum": 1.8802416852850002e-05
+              },
+              "positions_per_second": {
+                "maximum": 53184.65215541818,
+                "median_absolute_deviation": 530.2202507116599,
+                "minimum": 51262.97638359655
+              },
+              "wall_seconds": {
+                "maximum": 0.062423218972980976,
+                "median_absolute_deviation": 0.0006124279461801052,
+                "minimum": 0.060167733929120004
+              }
+            },
+            "latency_seconds": 1.909465343487682e-05,
+            "positions_per_second": 52370.68079871391,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 1.909465343487682e-05,
+                "positions_per_second": 52370.68079871391,
+                "wall_seconds": 0.06110289099160582
+              },
+              {
+                "latency_seconds": 1.8903269701695535e-05,
+                "positions_per_second": 52900.90104942557,
+                "wall_seconds": 0.06049046304542571
+              },
+              {
+                "latency_seconds": 1.8994771235156804e-05,
+                "positions_per_second": 52646.067047605844,
+                "wall_seconds": 0.060783267952501774
+              },
+              {
+                "latency_seconds": 1.9507255929056554e-05,
+                "positions_per_second": 51262.97638359655,
+                "wall_seconds": 0.062423218972980976
+              },
+              {
+                "latency_seconds": 1.9155924383085222e-05,
+                "positions_per_second": 52203.17119663539,
+                "wall_seconds": 0.06129895802587271
+              },
+              {
+                "latency_seconds": 1.8802416852850002e-05,
+                "positions_per_second": 53184.65215541818,
+                "wall_seconds": 0.060167733929120004
+              },
+              {
+                "latency_seconds": 1.9293245604785624e-05,
+                "positions_per_second": 51831.61094222288,
+                "wall_seconds": 0.061738385935314
+              }
+            ],
+            "wall_seconds": 0.06110289099160582
           },
           "memory": {
             "forward_peak_allocated_bytes": null,
@@ -159,49 +769,407 @@
             "training_peak_allocated_bytes": null
           },
           "single_position_forward": {
-            "latency_seconds": 0.00012483448954299093,
-            "positions_per_second": 8010.606713424471,
-            "wall_seconds": 0.012483448954299092
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 0.00012564231990836561,
+                "median_absolute_deviation": 1.575995702296517e-07,
+                "minimum": 0.00011688873986713588
+              },
+              "positions_per_second": {
+                "maximum": 8555.143986808924,
+                "median_absolute_deviation": 11.354209996861755,
+                "minimum": 7959.101684283826
+              },
+              "wall_seconds": {
+                "maximum": 0.01256423199083656,
+                "median_absolute_deviation": 1.5759957022964954e-05,
+                "minimum": 0.011688873986713588
+              }
+            },
+            "latency_seconds": 0.00011789340991526843,
+            "positions_per_second": 8482.238326287394,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 0.00012564231990836561,
+                "positions_per_second": 7959.101684283826,
+                "wall_seconds": 0.01256423199083656
+              },
+              {
+                "latency_seconds": 0.00011779913096688687,
+                "positions_per_second": 8489.02697152408,
+                "wall_seconds": 0.011779913096688688
+              },
+              {
+                "latency_seconds": 0.00011791795026510954,
+                "positions_per_second": 8480.473055643739,
+                "wall_seconds": 0.011791795026510954
+              },
+              {
+                "latency_seconds": 0.00011789340991526843,
+                "positions_per_second": 8482.238326287394,
+                "wall_seconds": 0.011789340991526842
+              },
+              {
+                "latency_seconds": 0.00011829606024548412,
+                "positions_per_second": 8453.36689932727,
+                "wall_seconds": 0.011829606024548411
+              },
+              {
+                "latency_seconds": 0.00011688873986713588,
+                "positions_per_second": 8555.143986808924,
+                "wall_seconds": 0.011688873986713588
+              },
+              {
+                "latency_seconds": 0.00011773581034503878,
+                "positions_per_second": 8493.592536284255,
+                "wall_seconds": 0.011773581034503877
+              }
+            ],
+            "wall_seconds": 0.011789340991526842
           },
           "training": {
-            "latency_seconds": 7.572261747554876e-05,
-            "positions_per_second": 13206.093943106303,
-            "seconds_per_step": 0.0024231237592175605,
-            "steps_per_second": 412.690435722072,
-            "wall_seconds": 0.12115618796087801
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 7.89185862231534e-05,
+                "median_absolute_deviation": 6.374537042575006e-07,
+                "minimum": 7.63117105816491e-05
+              },
+              "positions_per_second": {
+                "maximum": 13104.148660513358,
+                "median_absolute_deviation": 108.3265132162087,
+                "minimum": 12671.28629461708
+              },
+              "wall_seconds": {
+                "maximum": 0.12626973795704544,
+                "median_absolute_deviation": 0.0010199259268119931,
+                "minimum": 0.12209873693063855
+              }
+            },
+            "latency_seconds": 7.703026501985732e-05,
+            "positions_per_second": 12981.910418485695,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 7.703026501985732e-05,
+                "positions_per_second": 12981.910418485695,
+                "seconds_per_step": 0.0024649684806354343,
+                "steps_per_second": 405.684700577678,
+                "wall_seconds": 0.12324842403177172
+              },
+              {
+                "latency_seconds": 7.800213497830555e-05,
+                "positions_per_second": 12820.16191323643,
+                "seconds_per_step": 0.0024960683193057777,
+                "steps_per_second": 400.63005978863845,
+                "wall_seconds": 0.12480341596528888
+              },
+              {
+                "latency_seconds": 7.63117105816491e-05,
+                "positions_per_second": 13104.148660513358,
+                "seconds_per_step": 0.002441974738612771,
+                "steps_per_second": 409.50464564104243,
+                "wall_seconds": 0.12209873693063855
+              },
+              {
+                "latency_seconds": 7.639281131559982e-05,
+                "positions_per_second": 13090.236931701904,
+                "seconds_per_step": 0.0024445699620991943,
+                "steps_per_second": 409.0699041156845,
+                "wall_seconds": 0.12222849810495973
+              },
+              {
+                "latency_seconds": 7.668337690120097e-05,
+                "positions_per_second": 13040.635929327971,
+                "seconds_per_step": 0.002453868060838431,
+                "steps_per_second": 407.5198727914991,
+                "wall_seconds": 0.12269340304192156
+              },
+              {
+                "latency_seconds": 7.89185862231534e-05,
+                "positions_per_second": 12671.28629461708,
+                "seconds_per_step": 0.002525394759140909,
+                "steps_per_second": 395.9776967067838,
+                "wall_seconds": 0.12626973795704544
+              },
+              {
+                "latency_seconds": 7.705557000008412e-05,
+                "positions_per_second": 12977.647170722485,
+                "seconds_per_step": 0.002465778240002692,
+                "steps_per_second": 405.55147408507764,
+                "wall_seconds": 0.12328891200013459
+              }
+            ],
+            "seconds_per_step": 0.0024649684806354343,
+            "steps_per_second": 405.684700577678,
+            "wall_seconds": 0.12324842403177172
           }
         },
         "cuda": {
           "batched_forward": {
-            "latency_seconds": 6.557280612469185e-06,
-            "positions_per_second": 152502.2427892473,
-            "wall_seconds": 0.020983297959901392
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 6.643182823609095e-06,
+                "median_absolute_deviation": 1.3800599845126203e-08,
+                "minimum": 6.411354661395308e-06
+              },
+              "positions_per_second": {
+                "maximum": 155973.2775385677,
+                "median_absolute_deviation": 325.2390568066621,
+                "minimum": 150530.25433021606
+              },
+              "wall_seconds": {
+                "maximum": 0.021258185035549104,
+                "median_absolute_deviation": 4.416191950440407e-05,
+                "minimum": 0.020516334916464984
+              }
+            },
+            "latency_seconds": 6.5209021704504264e-06,
+            "positions_per_second": 153353.0137181809,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 6.411354661395308e-06,
+                "positions_per_second": 155973.2775385677,
+                "wall_seconds": 0.020516334916464984
+              },
+              {
+                "latency_seconds": 6.5071015706053e-06,
+                "positions_per_second": 153678.25277498757,
+                "wall_seconds": 0.02082272502593696
+              },
+              {
+                "latency_seconds": 6.643182823609095e-06,
+                "positions_per_second": 150530.25433021606,
+                "wall_seconds": 0.021258185035549104
+              },
+              {
+                "latency_seconds": 6.544110910908785e-06,
+                "positions_per_second": 152809.1460572647,
+                "wall_seconds": 0.02094115491490811
+              },
+              {
+                "latency_seconds": 6.509828745038249e-06,
+                "positions_per_second": 153613.87206417587,
+                "wall_seconds": 0.020831451984122396
+              },
+              {
+                "latency_seconds": 6.530823739012703e-06,
+                "positions_per_second": 153120.04120190433,
+                "wall_seconds": 0.02089863596484065
+              },
+              {
+                "latency_seconds": 6.5209021704504264e-06,
+                "positions_per_second": 153353.0137181809,
+                "wall_seconds": 0.020866886945441365
+              }
+            ],
+            "wall_seconds": 0.020866886945441365
           },
           "memory": {
-            "forward_peak_allocated_bytes": 10118656,
+            "forward_peak_allocated_bytes": 18625024,
             "input_batch_bytes": 281600,
             "training_peak_allocated_bytes": 19422720
           },
           "single_position_forward": {
-            "latency_seconds": 0.00021017770981416107,
-            "positions_per_second": 4757.878468103012,
-            "wall_seconds": 0.021017770981416106
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 0.00021474887966178358,
+                "median_absolute_deviation": 1.4206499326974197e-06,
+                "minimum": 0.00020450783078558742
+              },
+              "positions_per_second": {
+                "maximum": 4889.788308636612,
+                "median_absolute_deviation": 33.140119428309845,
+                "minimum": 4656.601708818874
+              },
+              "wall_seconds": {
+                "maximum": 0.021474887966178358,
+                "median_absolute_deviation": 0.00014206499326974154,
+                "minimum": 0.020450783078558743
+              }
+            },
+            "latency_seconds": 0.00020633673062548042,
+            "positions_per_second": 4846.446858824614,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 0.00020450783078558742,
+                "positions_per_second": 4889.788308636612,
+                "wall_seconds": 0.020450783078558743
+              },
+              {
+                "latency_seconds": 0.00020633673062548042,
+                "positions_per_second": 4846.446858824614,
+                "wall_seconds": 0.02063367306254804
+              },
+              {
+                "latency_seconds": 0.00021474887966178358,
+                "positions_per_second": 4656.601708818874,
+                "wall_seconds": 0.021474887966178358
+              },
+              {
+                "latency_seconds": 0.00020775738055817784,
+                "positions_per_second": 4813.306739396304,
+                "wall_seconds": 0.020775738055817783
+              },
+              {
+                "latency_seconds": 0.00020558463991619648,
+                "positions_per_second": 4864.1766252947455,
+                "wall_seconds": 0.020558463991619647
+              },
+              {
+                "latency_seconds": 0.0002074343792628497,
+                "positions_per_second": 4820.801660523465,
+                "wall_seconds": 0.02074343792628497
+              },
+              {
+                "latency_seconds": 0.0002047556999605149,
+                "positions_per_second": 4883.8689237605595,
+                "wall_seconds": 0.02047556999605149
+              }
+            ],
+            "wall_seconds": 0.02063367306254804
           },
           "training": {
-            "latency_seconds": 3.2820654378156175e-05,
-            "positions_per_second": 30468.618586275083,
-            "seconds_per_step": 0.0010502609401009976,
-            "steps_per_second": 952.1443308210963,
-            "wall_seconds": 0.052513047005049884
+            "dispersion": {
+              "latency_seconds": {
+                "maximum": 3.865207683702465e-05,
+                "median_absolute_deviation": 2.081931597785997e-07,
+                "minimum": 3.194419252395164e-05
+              },
+              "positions_per_second": {
+                "maximum": 31304.594700592403,
+                "median_absolute_deviation": 198.02412587184153,
+                "minimum": 25871.831007075525
+              },
+              "wall_seconds": {
+                "maximum": 0.06184332293923944,
+                "median_absolute_deviation": 0.0003331090556457639,
+                "minimum": 0.05111070803832263
+              }
+            },
+            "latency_seconds": 3.23206368193496e-05,
+            "positions_per_second": 30939.984431288296,
+            "sample_count": 7,
+            "samples": [
+              {
+                "latency_seconds": 3.223192063160241e-05,
+                "positions_per_second": 31025.144651775136,
+                "seconds_per_step": 0.001031421460211277,
+                "steps_per_second": 969.535770367973,
+                "wall_seconds": 0.05157107301056385
+              },
+              {
+                "latency_seconds": 3.865207683702465e-05,
+                "positions_per_second": 25871.831007075525,
+                "seconds_per_step": 0.001236866458784789,
+                "steps_per_second": 808.4947189711102,
+                "wall_seconds": 0.06184332293923944
+              },
+              {
+                "latency_seconds": 3.853807058476377e-05,
+                "positions_per_second": 25948.367025809413,
+                "seconds_per_step": 0.0012332182587124407,
+                "steps_per_second": 810.8864695565442,
+                "wall_seconds": 0.061660912935622036
+              },
+              {
+                "latency_seconds": 3.25288299791282e-05,
+                "positions_per_second": 30741.960305416455,
+                "seconds_per_step": 0.0010409225593321025,
+                "steps_per_second": 960.6862595442642,
+                "wall_seconds": 0.05204612796660513
+              },
+              {
+                "latency_seconds": 3.194419252395164e-05,
+                "positions_per_second": 31304.594700592403,
+                "seconds_per_step": 0.0010222141607664525,
+                "steps_per_second": 978.2685843935126,
+                "wall_seconds": 0.05111070803832263
+              },
+              {
+                "latency_seconds": 3.23206368193496e-05,
+                "positions_per_second": 30939.984431288296,
+                "seconds_per_step": 0.0010342603782191873,
+                "steps_per_second": 966.8745134777593,
+                "wall_seconds": 0.05171301891095936
+              },
+              {
+                "latency_seconds": 3.214798438420985e-05,
+                "positions_per_second": 31106.14923936478,
+                "seconds_per_step": 0.0010287355002947152,
+                "steps_per_second": 972.0671637301493,
+                "wall_seconds": 0.05143677501473576
+              }
+            ],
+            "seconds_per_step": 0.0010342603782191873,
+            "steps_per_second": 966.8745134777593,
+            "wall_seconds": 0.05171301891095936
           }
         }
       },
       "encoding": {
         "batch_bytes": 281600,
         "bytes_per_position": 8800,
-        "latency_seconds": 8.628461845950516e-05,
-        "positions_per_second": 11589.551160492378,
-        "wall_seconds": 3.384082735981792
+        "dispersion": {
+          "latency_seconds": {
+            "maximum": 8.69360383478179e-05,
+            "median_absolute_deviation": 2.3039459516348618e-07,
+            "minimum": 8.606336733802663e-05
+          },
+          "positions_per_second": {
+            "maximum": 11619.345500070336,
+            "median_absolute_deviation": 30.792322570001488,
+            "minimum": 11502.70956676392
+          },
+          "wall_seconds": {
+            "maximum": 3.409631424001418,
+            "median_absolute_deviation": 0.009036076022312045,
+            "minimum": 3.3754052669974044
+          }
+        },
+        "latency_seconds": 8.638464280975007e-05,
+        "positions_per_second": 11576.13167658004,
+        "sample_count": 7,
+        "samples": [
+          {
+            "latency_seconds": 8.606336733802663e-05,
+            "positions_per_second": 11619.345500070336,
+            "wall_seconds": 3.3754052669974044
+          },
+          {
+            "latency_seconds": 8.661503740491355e-05,
+            "positions_per_second": 11545.339354010039,
+            "wall_seconds": 3.39704176702071
+          },
+          {
+            "latency_seconds": 8.635092116163333e-05,
+            "positions_per_second": 11580.652372291208,
+            "wall_seconds": 3.386683127959259
+          },
+          {
+            "latency_seconds": 8.69360383478179e-05,
+            "positions_per_second": 11502.70956676392,
+            "wall_seconds": 3.409631424001418
+          },
+          {
+            "latency_seconds": 8.638464280975007e-05,
+            "positions_per_second": 11576.13167658004,
+            "wall_seconds": 3.3880056909983978
+          },
+          {
+            "latency_seconds": 8.631380117158295e-05,
+            "positions_per_second": 11585.632731109861,
+            "wall_seconds": 3.385227281949483
+          },
+          {
+            "latency_seconds": 8.666804632918092e-05,
+            "positions_per_second": 11538.277858506457,
+            "wall_seconds": 3.3991207770304754
+          }
+        ],
+        "wall_seconds": 3.3880056909983978
       },
       "encoding_version": 1,
       "model": {
@@ -220,5 +1188,5 @@
       "planes": 22
     }
   },
-  "version": 1
+  "version": 2
 }

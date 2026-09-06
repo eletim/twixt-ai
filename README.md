@@ -11,6 +11,8 @@ The persisted position and replay schemas are documented in
 [docs/game-record-format.md](docs/game-record-format.md).
 The checkpoint-stable CNN feature planes and augmentation transforms are defined
 in [docs/neural-input-encoding.md](docs/neural-input-encoding.md).
+The reproducible 10-plane versus 22-plane Mini cost benchmark is documented in
+[docs/encoding-comparison.md](docs/encoding-comparison.md).
 The versioned, reproducible training shard schema is defined in
 [docs/training-data-format.md](docs/training-data-format.md).
 The model training, metrics, and resume workflow is documented in

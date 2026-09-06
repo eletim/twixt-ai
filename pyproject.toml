@@ -17,6 +17,7 @@ dev = ["pytest>=8", "torch>=2"]
 twixt-ai-benchmark = "twixt_ai.evaluation.benchmark_cli:main"
 twixt-ai-engine-benchmark = "twixt_ai.game.performance_cli:main"
 twixt-ai-inference-benchmark = "twixt_ai.evaluation.inference_cli:main"
+twixt-ai-encoding-comparison = "twixt_ai.evaluation.encoding_comparison_cli:main"
 twixt-ai-selfplay-benchmark = "twixt_ai.evaluation.performance_cli:main"
 twixt-ai-match = "twixt_ai.evaluation.cli:main"
 twixt-ai-selfplay = "twixt_ai.selfplay.cli:main"

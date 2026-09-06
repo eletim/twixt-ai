@@ -1,0 +1,224 @@
+{
+  "comparison": {
+    "devices": {
+      "cpu": {
+        "batched_forward_throughput_change_percent": 26.140062499691084,
+        "single_forward_throughput_change_percent": 13.902040296495558,
+        "training_throughput_change_percent": 10.912283460138887
+      },
+      "cuda": {
+        "batched_forward_throughput_change_percent": -1.3555015560433863,
+        "single_forward_throughput_change_percent": 2.12471405285118,
+        "training_throughput_change_percent": -0.9033754743417709
+      }
+    },
+    "encoding_bytes_reduction_percent": 54.54545454545455,
+    "encoding_latency_reduction_percent": 20.095993817993477,
+    "model_parameters_reduction_percent": 3.51977838432395
+  },
+  "config": {
+    "batch_size": 32,
+    "dataset_dir": "experiments/issue-56/baseline/dataset",
+    "devices": [
+      "cpu",
+      "cuda"
+    ],
+    "encoding_repeats": 20,
+    "forward_iterations": 100,
+    "seed": 74,
+    "torch_threads": 1,
+    "training_steps": 50,
+    "warmups": 5
+  },
+  "dataset": {
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "encoding_positions_per_repeat": 1961,
+    "manifest": "experiments/issue-56/baseline/dataset/manifest.json",
+    "manifest_sha256": "7143ec19f4bb7e226010ddae6b20590128e1dcb108276795988390395c3eabc1",
+    "model_batch_examples": 32,
+    "model_batch_selection": "first training examples; cycle in order only when batch size exceeds the training split",
+    "training_examples": 1961
+  },
+  "environment": {
+    "accelerator": {
+      "cuda_available": true,
+      "cudnn": 91002,
+      "devices": [
+        {
+          "index": 0,
+          "name": "NVIDIA GeForce RTX 4060",
+          "total_memory_bytes": 8309637120
+        }
+      ],
+      "driver": "550.163.01",
+      "torch_cuda": "12.8"
+    },
+    "available_cpus": 24,
+    "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+    "git": {
+      "dirty": true,
+      "revision": "ba5e8e3229d6717912066f7e3d107b257f1b03bb"
+    },
+    "machine": "x86_64",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "torch": "2.8.0+cu128",
+    "torch_threads": 1
+  },
+  "format": "twixt-ai-encoding-comparison",
+  "interpretation": "Speed and memory measurements do not measure playing strength.",
+  "results": {
+    "10_plane_v2": {
+      "devices": {
+        "cpu": {
+          "batched_forward": {
+            "latency_seconds": 1.535383657028433e-05,
+            "positions_per_second": 65130.30117406555,
+            "wall_seconds": 0.049132277024909854
+          },
+          "memory": {
+            "forward_peak_allocated_bytes": null,
+            "input_batch_bytes": 128000,
+            "training_peak_allocated_bytes": null
+          },
+          "single_position_forward": {
+            "latency_seconds": 0.00011113325948826969,
+            "positions_per_second": 8998.20633899028,
+            "wall_seconds": 0.011113325948826969
+          },
+          "training": {
+            "latency_seconds": 6.958967431273777e-05,
+            "positions_per_second": 14369.947982598316,
+            "seconds_per_step": 0.0022268695780076086,
+            "steps_per_second": 449.0608744561974,
+            "wall_seconds": 0.11134347890038043
+          }
+        },
+        "cuda": {
+          "batched_forward": {
+            "latency_seconds": 6.631586256844457e-06,
+            "positions_per_second": 150793.48458566764,
+            "wall_seconds": 0.021221076021902263
+          },
+          "memory": {
+            "forward_peak_allocated_bytes": 18481152,
+            "input_batch_bytes": 128000,
+            "training_peak_allocated_bytes": 19258368
+          },
+          "single_position_forward": {
+            "latency_seconds": 0.00020799599005840718,
+            "positions_per_second": 4807.784994889521,
+            "wall_seconds": 0.02079959900584072
+          },
+          "training": {
+            "latency_seconds": 3.4126037498936056e-05,
+            "positions_per_second": 29303.138403665438,
+            "seconds_per_step": 0.0010920331999659538,
+            "steps_per_second": 915.7230751145449,
+            "wall_seconds": 0.05460165999829769
+          }
+        }
+      },
+      "encoding": {
+        "batch_bytes": 128000,
+        "bytes_per_position": 4000,
+        "latency_seconds": 6.901508016183626e-05,
+        "positions_per_second": 14489.586879491546,
+        "wall_seconds": 2.7067714439472184
+      },
+      "encoding_version": 2,
+      "model": {
+        "config": {
+          "board_height": 10,
+          "board_width": 10,
+          "channels": 8,
+          "encoding_version": 2,
+          "input_channels": 10,
+          "residual_blocks": 1,
+          "value_hidden": 16
+        },
+        "parameter_and_buffer_bytes": 94988,
+        "parameter_count": 23683
+      },
+      "planes": 10
+    },
+    "22_plane_v1": {
+      "devices": {
+        "cpu": {
+          "batched_forward": {
+            "latency_seconds": 1.936733904585708e-05,
+            "positions_per_second": 51633.31925114993,
+            "wall_seconds": 0.061975484946742654
+          },
+          "memory": {
+            "forward_peak_allocated_bytes": null,
+            "input_batch_bytes": 281600,
+            "training_peak_allocated_bytes": null
+          },
+          "single_position_forward": {
+            "latency_seconds": 0.00012658305000513793,
+            "positions_per_second": 7899.951849472822,
+            "wall_seconds": 0.012658305000513792
+          },
+          "training": {
+            "latency_seconds": 7.718349683273118e-05,
+            "positions_per_second": 12956.137529855092,
+            "seconds_per_step": 0.0024698718986473976,
+            "steps_per_second": 404.8792978079716,
+            "wall_seconds": 0.12349359493236989
+          }
+        },
+        "cuda": {
+          "batched_forward": {
+            "latency_seconds": 6.541695001942571e-06,
+            "positions_per_second": 152865.57989986506,
+            "wall_seconds": 0.020933424006216228
+          },
+          "memory": {
+            "forward_peak_allocated_bytes": 10118656,
+            "input_batch_bytes": 281600,
+            "training_peak_allocated_bytes": 19422720
+          },
+          "single_position_forward": {
+            "latency_seconds": 0.0002124153100885451,
+            "positions_per_second": 4707.7585866251875,
+            "wall_seconds": 0.02124153100885451
+          },
+          "training": {
+            "latency_seconds": 3.381775124580599e-05,
+            "positions_per_second": 29570.26896115743,
+            "seconds_per_step": 0.0010821680398657918,
+            "steps_per_second": 924.0709050361697,
+            "wall_seconds": 0.05410840199328959
+          }
+        }
+      },
+      "encoding": {
+        "batch_bytes": 281600,
+        "bytes_per_position": 8800,
+        "latency_seconds": 8.637249051647385e-05,
+        "positions_per_second": 11577.760395936131,
+        "wall_seconds": 3.3875290780561045
+      },
+      "encoding_version": 1,
+      "model": {
+        "config": {
+          "board_height": 10,
+          "board_width": 10,
+          "channels": 8,
+          "encoding_version": 1,
+          "input_channels": 22,
+          "residual_blocks": 1,
+          "value_hidden": 16
+        },
+        "parameter_and_buffer_bytes": 98444,
+        "parameter_count": 24547
+      },
+      "planes": 22
+    }
+  },
+  "version": 1
+}

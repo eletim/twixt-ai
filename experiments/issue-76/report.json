@@ -1,0 +1,4030 @@
+{
+  "checkpoints": {
+    "10-plane": {
+      "bytes": 314490,
+      "metadata": {
+        "best_epoch": 3,
+        "best_loss": 5.334902169242982,
+        "board": {
+          "height": 10,
+          "width": 10
+        },
+        "dataset_sha256": "7143ec19f4bb7e226010ddae6b20590128e1dcb108276795988390395c3eabc1",
+        "epoch": 3,
+        "training_config": {
+          "batch_size": 64,
+          "device": "cpu",
+          "epochs": 20,
+          "learning_rate": 0.001,
+          "optimizer": "adamw",
+          "scheduler": "none",
+          "scheduler_gamma": 0.1,
+          "scheduler_step_size": 1,
+          "seed": 750100,
+          "weight_decay": 0.0001
+        },
+        "training_format": "twixt-ai-training-checkpoint",
+        "training_version": 1
+      },
+      "model_config": {
+        "board_height": 10,
+        "board_width": 10,
+        "channels": 8,
+        "encoding_version": 2,
+        "input_channels": 10,
+        "residual_blocks": 1,
+        "value_hidden": 16
+      },
+      "path": "experiments/issue-75/10-plane-v2/training/best.pt",
+      "sha256": "89e8a8a2e594275854e132fef328f909345a3328c54c059e44149a1551d5dbc5"
+    },
+    "22-plane": {
+      "bytes": 324730,
+      "metadata": {
+        "best_epoch": 2,
+        "best_loss": 5.347465738173454,
+        "board": {
+          "height": 10,
+          "width": 10
+        },
+        "dataset_sha256": "7143ec19f4bb7e226010ddae6b20590128e1dcb108276795988390395c3eabc1",
+        "epoch": 2,
+        "training_config": {
+          "batch_size": 64,
+          "device": "cpu",
+          "epochs": 20,
+          "learning_rate": 0.001,
+          "optimizer": "adamw",
+          "scheduler": "none",
+          "scheduler_gamma": 0.1,
+          "scheduler_step_size": 1,
+          "seed": 750100,
+          "weight_decay": 0.0001
+        },
+        "training_format": "twixt-ai-training-checkpoint",
+        "training_version": 1
+      },
+      "model_config": {
+        "board_height": 10,
+        "board_width": 10,
+        "channels": 8,
+        "encoding_version": 1,
+        "input_channels": 22,
+        "residual_blocks": 1,
+        "value_hidden": 16
+      },
+      "path": "experiments/issue-75/22-plane-v1/training/best.pt",
+      "sha256": "2269521a60b6cafca61ec6e15d6ca9eb31582b4a3447ee345170d56b84a13d94"
+    }
+  },
+  "config": {
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "confidence_level": 0.95,
+    "games_per_matchup": 20,
+    "rollout_limit": 4,
+    "seed": 760100,
+    "simulations": 20
+  },
+  "environment": {
+    "available_cpus": 24,
+    "device": "cpu",
+    "implementation": "CPython",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "torch": "2.8.0+cu128"
+  },
+  "format": "twixt-ai-encoding-strength-comparison",
+  "matchups": [
+    {
+      "agents": [
+        "10-plane-policy-value",
+        "22-plane-policy-value"
+      ],
+      "comparison": [
+        "10-plane",
+        "22-plane"
+      ],
+      "first_player": {
+        "draws": 6,
+        "games": 20,
+        "losses": 8,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.1454772448676043,
+          "upper": 0.5189728183535234,
+          "value": 0.3
+        },
+        "wins": 6
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 27,
+            "winner": "10-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 45,
+            "winner": "22-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 93,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 34,
+            "winner": "22-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 28,
+            "winner": "10-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 24,
+            "winner": "22-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 50,
+            "winner": "10-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 37,
+            "winner": "10-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 35,
+            "winner": "22-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 92,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 79,
+            "winner": "22-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 28,
+            "winner": "10-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 50,
+            "winner": "10-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 32,
+            "winner": "22-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "10-plane-policy-value"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 50,
+            "winner": "22-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "22-plane-policy-value"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 51,
+            "winner": "22-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "policy-value",
+      "role_splits": {
+        "10-plane-policy-value": {
+          "black": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.1681803297062362,
+              "upper": 0.6873262302663417,
+              "value": 0.4
+            },
+            "wins": 4
+          },
+          "overall": {
+            "draw_rate": 0.3,
+            "draws": 6,
+            "games": 20,
+            "losses": 8,
+            "win_rate": {
+              "lower": 0.1454772448676043,
+              "upper": 0.5189728183535234,
+              "value": 0.3
+            },
+            "wins": 6
+          },
+          "red": {
+            "draw_rate": 0.4,
+            "draws": 4,
+            "games": 10,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.056682151454375246,
+              "upper": 0.5098375284633582,
+              "value": 0.2
+            },
+            "wins": 2
+          }
+        },
+        "22-plane-policy-value": {
+          "black": {
+            "draw_rate": 0.4,
+            "draws": 4,
+            "games": 10,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.1681803297062362,
+              "upper": 0.6873262302663417,
+              "value": 0.4
+            },
+            "wins": 4
+          },
+          "overall": {
+            "draw_rate": 0.3,
+            "draws": 6,
+            "games": 20,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.2188065323728171,
+              "upper": 0.6134184992377468,
+              "value": 0.4
+            },
+            "wins": 8
+          },
+          "red": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.1681803297062362,
+              "upper": 0.6873262302663417,
+              "value": 0.4
+            },
+            "wins": 4
+          }
+        }
+      },
+      "runtime": {
+        "moves": 1133,
+        "seconds_per_game": 1.1231218893022743,
+        "seconds_per_move": 0.019825629113897163,
+        "wall_seconds": 22.462437786045484
+      },
+      "strength": {
+        "agents": [
+          "10-plane-policy-value",
+          "22-plane-policy-value"
+        ],
+        "draws": 6,
+        "games": 20,
+        "win_rate": {
+          "10-plane-policy-value": {
+            "lower": 0.1454772448676043,
+            "upper": 0.5189728183535234,
+            "value": 0.3
+          },
+          "22-plane-policy-value": {
+            "lower": 0.2188065323728171,
+            "upper": 0.6134184992377468,
+            "value": 0.4
+          }
+        },
+        "wins": {
+          "10-plane-policy-value": 6,
+          "22-plane-policy-value": 8
+        }
+      }
+    },
+    {
+      "agents": [
+        "10-plane-policy-value",
+        "non-neural-mcts"
+      ],
+      "comparison": [
+        "10-plane",
+        "non-neural-mcts"
+      ],
+      "first_player": {
+        "draws": 2,
+        "games": 20,
+        "losses": 9,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.25819785825562425,
+          "upper": 0.6579146575496576,
+          "value": 0.45
+        },
+        "wins": 9
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 26,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 52,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 31,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 30,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 23,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 26,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 29,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 30,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 29,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 33,
+            "winner": "10-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 15,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 20,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 29,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 48,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 37,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 44,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 37,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-value"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 18,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "policy-value",
+      "role_splits": {
+        "10-plane-policy-value": {
+          "black": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 8,
+            "win_rate": {
+              "lower": 2.7755575615628914e-17,
+              "upper": 0.27753279986288915,
+              "value": 0.0
+            },
+            "wins": 0
+          },
+          "overall": {
+            "draw_rate": 0.1,
+            "draws": 2,
+            "games": 20,
+            "losses": 17,
+            "win_rate": {
+              "lower": 0.008881448800795375,
+              "upper": 0.236131193446742,
+              "value": 0.05
+            },
+            "wins": 1
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 9,
+            "win_rate": {
+              "lower": 0.017876213095072896,
+              "upper": 0.40415002679523837,
+              "value": 0.1
+            },
+            "wins": 1
+          }
+        },
+        "non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.5958499732047616,
+              "upper": 0.982123786904927,
+              "value": 0.9
+            },
+            "wins": 9
+          },
+          "overall": {
+            "draw_rate": 0.1,
+            "draws": 2,
+            "games": 20,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.6395811352592431,
+              "upper": 0.9476312541037835,
+              "value": 0.85
+            },
+            "wins": 17
+          },
+          "red": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.49016247153664183,
+              "upper": 0.9433178485456247,
+              "value": 0.8
+            },
+            "wins": 8
+          }
+        }
+      },
+      "runtime": {
+        "moves": 747,
+        "seconds_per_game": 0.65511164565105,
+        "seconds_per_move": 0.01753980309641365,
+        "wall_seconds": 13.102232913020998
+      },
+      "strength": {
+        "agents": [
+          "10-plane-policy-value",
+          "non-neural-mcts"
+        ],
+        "draws": 2,
+        "games": 20,
+        "win_rate": {
+          "10-plane-policy-value": {
+            "lower": 0.008881448800795375,
+            "upper": 0.236131193446742,
+            "value": 0.05
+          },
+          "non-neural-mcts": {
+            "lower": 0.6395811352592431,
+            "upper": 0.9476312541037835,
+            "value": 0.85
+          }
+        },
+        "wins": {
+          "10-plane-policy-value": 1,
+          "non-neural-mcts": 17
+        }
+      }
+    },
+    {
+      "agents": [
+        "22-plane-policy-value",
+        "non-neural-mcts"
+      ],
+      "comparison": [
+        "22-plane",
+        "non-neural-mcts"
+      ],
+      "first_player": {
+        "draws": 3,
+        "games": 20,
+        "losses": 7,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.2992980081982124,
+          "upper": 0.7007019918017876,
+          "value": 0.5
+        },
+        "wins": 10
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 35,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 35,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 22,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 25,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 46,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 31,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 50,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 39,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 28,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 21,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 18,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 38,
+            "winner": "22-plane-policy-value",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 21,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 41,
+            "winner": "22-plane-policy-value",
+            "winning_side": "red"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 39,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-value"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 34,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-value",
+            "red": "non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 41,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "policy-value",
+      "role_splits": {
+        "22-plane-policy-value": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 9,
+            "win_rate": {
+              "lower": 0.017876213095072896,
+              "upper": 0.40415002679523837,
+              "value": 0.1
+            },
+            "wins": 1
+          },
+          "overall": {
+            "draw_rate": 0.15,
+            "draws": 3,
+            "games": 20,
+            "losses": 15,
+            "win_rate": {
+              "lower": 0.027866481213768224,
+              "upper": 0.30103364522848725,
+              "value": 0.1
+            },
+            "wins": 2
+          },
+          "red": {
+            "draw_rate": 0.3,
+            "draws": 3,
+            "games": 10,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.017876213095072896,
+              "upper": 0.40415002679523837,
+              "value": 0.1
+            },
+            "wins": 1
+          }
+        },
+        "non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.3,
+            "draws": 3,
+            "games": 10,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.3126737697336583,
+              "upper": 0.8318196702937637,
+              "value": 0.6
+            },
+            "wins": 6
+          },
+          "overall": {
+            "draw_rate": 0.15,
+            "draws": 3,
+            "games": 20,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.531299122381256,
+              "upper": 0.8881382985923343,
+              "value": 0.75
+            },
+            "wins": 15
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.5958499732047616,
+              "upper": 0.982123786904927,
+              "value": 0.9
+            },
+            "wins": 9
+          }
+        }
+      },
+      "runtime": {
+        "moves": 849,
+        "seconds_per_game": 0.7171049652970396,
+        "seconds_per_move": 0.0168929320446888,
+        "wall_seconds": 14.342099305940792
+      },
+      "strength": {
+        "agents": [
+          "22-plane-policy-value",
+          "non-neural-mcts"
+        ],
+        "draws": 3,
+        "games": 20,
+        "win_rate": {
+          "22-plane-policy-value": {
+            "lower": 0.027866481213768224,
+            "upper": 0.30103364522848725,
+            "value": 0.1
+          },
+          "non-neural-mcts": {
+            "lower": 0.531299122381256,
+            "upper": 0.8881382985923343,
+            "value": 0.75
+          }
+        },
+        "wins": {
+          "22-plane-policy-value": 2,
+          "non-neural-mcts": 15
+        }
+      }
+    },
+    {
+      "agents": [
+        "10-plane-policy-only",
+        "22-plane-policy-only"
+      ],
+      "comparison": [
+        "10-plane",
+        "22-plane"
+      ],
+      "first_player": {
+        "draws": 2,
+        "games": 20,
+        "losses": 10,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.2188065323728171,
+          "upper": 0.6134184992377468,
+          "value": 0.4
+        },
+        "wins": 8
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 43,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 25,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 38,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 19,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 90,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 41,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 92,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 20,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 12,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 41,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 24,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 36,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 28,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 26,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 21,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 25,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 32,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 22,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "10-plane-policy-only"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 36,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "22-plane-policy-only"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 23,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "policy-only",
+      "role_splits": {
+        "10-plane-policy-only": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.1681803297062362,
+              "upper": 0.6873262302663417,
+              "value": 0.4
+            },
+            "wins": 4
+          },
+          "overall": {
+            "draw_rate": 0.1,
+            "draws": 2,
+            "games": 20,
+            "losses": 12,
+            "win_rate": {
+              "lower": 0.1454772448676043,
+              "upper": 0.5189728183535234,
+              "value": 0.3
+            },
+            "wins": 6
+          },
+          "red": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.056682151454375246,
+              "upper": 0.5098375284633582,
+              "value": 0.2
+            },
+            "wins": 2
+          }
+        },
+        "22-plane-policy-only": {
+          "black": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.3126737697336583,
+              "upper": 0.8318196702937637,
+              "value": 0.6
+            },
+            "wins": 6
+          },
+          "overall": {
+            "draw_rate": 0.1,
+            "draws": 2,
+            "games": 20,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.38658150076225317,
+              "upper": 0.7811934676271829,
+              "value": 0.6
+            },
+            "wins": 12
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.3126737697336583,
+              "upper": 0.8318196702937637,
+              "value": 0.6
+            },
+            "wins": 6
+          }
+        }
+      },
+      "runtime": {
+        "moves": 694,
+        "seconds_per_game": 1.1110394886520225,
+        "seconds_per_move": 0.03201842906778163,
+        "wall_seconds": 22.22078977304045
+      },
+      "strength": {
+        "agents": [
+          "10-plane-policy-only",
+          "22-plane-policy-only"
+        ],
+        "draws": 2,
+        "games": 20,
+        "win_rate": {
+          "10-plane-policy-only": {
+            "lower": 0.1454772448676043,
+            "upper": 0.5189728183535234,
+            "value": 0.3
+          },
+          "22-plane-policy-only": {
+            "lower": 0.38658150076225317,
+            "upper": 0.7811934676271829,
+            "value": 0.6
+          }
+        },
+        "wins": {
+          "10-plane-policy-only": 6,
+          "22-plane-policy-only": 12
+        }
+      }
+    },
+    {
+      "agents": [
+        "10-plane-policy-only",
+        "non-neural-mcts"
+      ],
+      "comparison": [
+        "10-plane",
+        "non-neural-mcts"
+      ],
+      "first_player": {
+        "draws": 1,
+        "games": 20,
+        "losses": 8,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.3420853424503424,
+          "upper": 0.7418021417443758,
+          "value": 0.55
+        },
+        "wins": 11
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 19,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 41,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 23,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 28,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 25,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 24,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 32,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 26,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 25,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 25,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 24,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 27,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 32,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 37,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 31,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 48,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 19,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-policy-only"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 29,
+            "winner": "10-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "10-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 26,
+            "winner": "10-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "policy-only",
+      "role_splits": {
+        "10-plane-policy-only": {
+          "black": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.23659309051256405,
+              "upper": 0.763406909487436,
+              "value": 0.5
+            },
+            "wins": 5
+          },
+          "overall": {
+            "draw_rate": 0.05,
+            "draws": 1,
+            "games": 20,
+            "losses": 7,
+            "win_rate": {
+              "lower": 0.38658150076225317,
+              "upper": 0.7811934676271829,
+              "value": 0.6
+            },
+            "wins": 12
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 3,
+            "win_rate": {
+              "lower": 0.39677814746114537,
+              "upper": 0.8922087325936989,
+              "value": 0.7
+            },
+            "wins": 7
+          }
+        },
+        "non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 7,
+            "win_rate": {
+              "lower": 0.10779126740630102,
+              "upper": 0.6032218525388546,
+              "value": 0.3
+            },
+            "wins": 3
+          },
+          "overall": {
+            "draw_rate": 0.05,
+            "draws": 1,
+            "games": 20,
+            "losses": 12,
+            "win_rate": {
+              "lower": 0.1811918241010821,
+              "upper": 0.5671457233147637,
+              "value": 0.35
+            },
+            "wins": 7
+          },
+          "red": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 5,
+            "win_rate": {
+              "lower": 0.1681803297062362,
+              "upper": 0.6873262302663417,
+              "value": 0.4
+            },
+            "wins": 4
+          }
+        }
+      },
+      "runtime": {
+        "moves": 636,
+        "seconds_per_game": 0.7079753875557799,
+        "seconds_per_move": 0.02226337696716289,
+        "wall_seconds": 14.159507751115598
+      },
+      "strength": {
+        "agents": [
+          "10-plane-policy-only",
+          "non-neural-mcts"
+        ],
+        "draws": 1,
+        "games": 20,
+        "win_rate": {
+          "10-plane-policy-only": {
+            "lower": 0.38658150076225317,
+            "upper": 0.7811934676271829,
+            "value": 0.6
+          },
+          "non-neural-mcts": {
+            "lower": 0.1811918241010821,
+            "upper": 0.5671457233147637,
+            "value": 0.35
+          }
+        },
+        "wins": {
+          "10-plane-policy-only": 12,
+          "non-neural-mcts": 7
+        }
+      }
+    },
+    {
+      "agents": [
+        "22-plane-policy-only",
+        "non-neural-mcts"
+      ],
+      "comparison": [
+        "22-plane",
+        "non-neural-mcts"
+      ],
+      "first_player": {
+        "draws": 2,
+        "games": 20,
+        "losses": 6,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.38658150076225317,
+          "upper": 0.7811934676271829,
+          "value": 0.6
+        },
+        "wins": 12
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 26,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 92,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 25,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 33,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 21,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 21,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 34,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 19,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 27,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 27,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 52,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 17,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 20,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 17,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 15,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 42,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 40,
+            "winner": "22-plane-policy-only",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-policy-only"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 39,
+            "winner": "22-plane-policy-only",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "22-plane-policy-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 33,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "policy-only",
+      "role_splits": {
+        "22-plane-policy-only": {
+          "black": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 5,
+            "win_rate": {
+              "lower": 0.1681803297062362,
+              "upper": 0.6873262302663417,
+              "value": 0.4
+            },
+            "wins": 4
+          },
+          "overall": {
+            "draw_rate": 0.1,
+            "draws": 2,
+            "games": 20,
+            "losses": 7,
+            "win_rate": {
+              "lower": 0.3420853424503424,
+              "upper": 0.7418021417443758,
+              "value": 0.55
+            },
+            "wins": 11
+          },
+          "red": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.39677814746114537,
+              "upper": 0.8922087325936989,
+              "value": 0.7
+            },
+            "wins": 7
+          }
+        },
+        "non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 7,
+            "win_rate": {
+              "lower": 0.056682151454375246,
+              "upper": 0.5098375284633582,
+              "value": 0.2
+            },
+            "wins": 2
+          },
+          "overall": {
+            "draw_rate": 0.1,
+            "draws": 2,
+            "games": 20,
+            "losses": 11,
+            "win_rate": {
+              "lower": 0.1811918241010821,
+              "upper": 0.5671457233147637,
+              "value": 0.35
+            },
+            "wins": 7
+          },
+          "red": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.23659309051256405,
+              "upper": 0.763406909487436,
+              "value": 0.5
+            },
+            "wins": 5
+          }
+        }
+      },
+      "runtime": {
+        "moves": 695,
+        "seconds_per_game": 0.7730221376987174,
+        "seconds_per_move": 0.02224524137262496,
+        "wall_seconds": 15.460442753974348
+      },
+      "strength": {
+        "agents": [
+          "22-plane-policy-only",
+          "non-neural-mcts"
+        ],
+        "draws": 2,
+        "games": 20,
+        "win_rate": {
+          "22-plane-policy-only": {
+            "lower": 0.3420853424503424,
+            "upper": 0.7418021417443758,
+            "value": 0.55
+          },
+          "non-neural-mcts": {
+            "lower": 0.1811918241010821,
+            "upper": 0.5671457233147637,
+            "value": 0.35
+          }
+        },
+        "wins": {
+          "22-plane-policy-only": 11,
+          "non-neural-mcts": 7
+        }
+      }
+    },
+    {
+      "agents": [
+        "10-plane-value-only",
+        "22-plane-value-only"
+      ],
+      "comparison": [
+        "10-plane",
+        "22-plane"
+      ],
+      "first_player": {
+        "draws": 4,
+        "games": 20,
+        "losses": 8,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.2188065323728171,
+          "upper": 0.6134184992377468,
+          "value": 0.4
+        },
+        "wins": 8
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 67,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 36,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 36,
+            "winner": "10-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 34,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 54,
+            "winner": "10-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 57,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 36,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 49,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 33,
+            "winner": "10-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 35,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 48,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 63,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 44,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 31,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "10-plane-value-only"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 53,
+            "winner": "10-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "22-plane-value-only"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 60,
+            "winner": "10-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "value-only",
+      "role_splits": {
+        "10-plane-value-only": {
+          "black": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.10779126740630102,
+              "upper": 0.6032218525388546,
+              "value": 0.3
+            },
+            "wins": 3
+          },
+          "overall": {
+            "draw_rate": 0.2,
+            "draws": 4,
+            "games": 20,
+            "losses": 11,
+            "win_rate": {
+              "lower": 0.11186170140766566,
+              "upper": 0.46870087761874396,
+              "value": 0.25
+            },
+            "wins": 5
+          },
+          "red": {
+            "draw_rate": 0.3,
+            "draws": 3,
+            "games": 10,
+            "losses": 5,
+            "win_rate": {
+              "lower": 0.056682151454375246,
+              "upper": 0.5098375284633582,
+              "value": 0.2
+            },
+            "wins": 2
+          }
+        },
+        "22-plane-value-only": {
+          "black": {
+            "draw_rate": 0.3,
+            "draws": 3,
+            "games": 10,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.23659309051256405,
+              "upper": 0.763406909487436,
+              "value": 0.5
+            },
+            "wins": 5
+          },
+          "overall": {
+            "draw_rate": 0.2,
+            "draws": 4,
+            "games": 20,
+            "losses": 5,
+            "win_rate": {
+              "lower": 0.3420853424503424,
+              "upper": 0.7418021417443758,
+              "value": 0.55
+            },
+            "wins": 11
+          },
+          "red": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 3,
+            "win_rate": {
+              "lower": 0.3126737697336583,
+              "upper": 0.8318196702937637,
+              "value": 0.6
+            },
+            "wins": 6
+          }
+        }
+      },
+      "runtime": {
+        "moves": 1120,
+        "seconds_per_game": 1.0953504890028853,
+        "seconds_per_move": 0.019559830160765807,
+        "wall_seconds": 21.907009780057706
+      },
+      "strength": {
+        "agents": [
+          "10-plane-value-only",
+          "22-plane-value-only"
+        ],
+        "draws": 4,
+        "games": 20,
+        "win_rate": {
+          "10-plane-value-only": {
+            "lower": 0.11186170140766566,
+            "upper": 0.46870087761874396,
+            "value": 0.25
+          },
+          "22-plane-value-only": {
+            "lower": 0.3420853424503424,
+            "upper": 0.7418021417443758,
+            "value": 0.55
+          }
+        },
+        "wins": {
+          "10-plane-value-only": 5,
+          "22-plane-value-only": 11
+        }
+      }
+    },
+    {
+      "agents": [
+        "10-plane-value-only",
+        "non-neural-mcts"
+      ],
+      "comparison": [
+        "10-plane",
+        "non-neural-mcts"
+      ],
+      "first_player": {
+        "draws": 0,
+        "games": 20,
+        "losses": 8,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.38658150076225317,
+          "upper": 0.7811934676271829,
+          "value": 0.6
+        },
+        "wins": 12
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 24,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 21,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 46,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 27,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 46,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 25,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 28,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 31,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 20,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 29,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 35,
+            "winner": "10-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 27,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 20,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 19,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 35,
+            "winner": "10-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 65,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 74,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 33,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "10-plane-value-only"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 40,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "10-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 25,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "value-only",
+      "role_splits": {
+        "10-plane-value-only": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 10,
+            "win_rate": {
+              "lower": 2.7755575615628914e-17,
+              "upper": 0.27753279986288915,
+              "value": 0.0
+            },
+            "wins": 0
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 18,
+            "win_rate": {
+              "lower": 0.027866481213768224,
+              "upper": 0.30103364522848725,
+              "value": 0.1
+            },
+            "wins": 2
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 8,
+            "win_rate": {
+              "lower": 0.056682151454375246,
+              "upper": 0.5098375284633582,
+              "value": 0.2
+            },
+            "wins": 2
+          }
+        },
+        "non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.49016247153664183,
+              "upper": 0.9433178485456247,
+              "value": 0.8
+            },
+            "wins": 8
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.6989663547715128,
+              "upper": 0.9721335187862319,
+              "value": 0.9
+            },
+            "wins": 18
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 10,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.7224672001371109,
+              "upper": 1.0,
+              "value": 1.0
+            },
+            "wins": 10
+          }
+        }
+      },
+      "runtime": {
+        "moves": 670,
+        "seconds_per_game": 0.5676672933972441,
+        "seconds_per_move": 0.01694529234021624,
+        "wall_seconds": 11.353345867944881
+      },
+      "strength": {
+        "agents": [
+          "10-plane-value-only",
+          "non-neural-mcts"
+        ],
+        "draws": 0,
+        "games": 20,
+        "win_rate": {
+          "10-plane-value-only": {
+            "lower": 0.027866481213768224,
+            "upper": 0.30103364522848725,
+            "value": 0.1
+          },
+          "non-neural-mcts": {
+            "lower": 0.6989663547715128,
+            "upper": 0.9721335187862319,
+            "value": 0.9
+          }
+        },
+        "wins": {
+          "10-plane-value-only": 2,
+          "non-neural-mcts": 18
+        }
+      }
+    },
+    {
+      "agents": [
+        "22-plane-value-only",
+        "non-neural-mcts"
+      ],
+      "comparison": [
+        "22-plane",
+        "non-neural-mcts"
+      ],
+      "first_player": {
+        "draws": 3,
+        "games": 20,
+        "losses": 10,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.1811918241010821,
+          "upper": 0.5671457233147637,
+          "value": 0.35
+        },
+        "wins": 7
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 30,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 47,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5712081694519141547
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 34,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 25,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 9323247368046728632
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 33,
+            "winner": "22-plane-value-only",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 21,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8726580239780179946
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 74,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 27,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10326431812796219837
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 38,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 5620963265154749462
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 30,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 8842213936740326743
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 44,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 31,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12359935827033118924
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 40,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 38,
+            "winner": "22-plane-value-only",
+            "winning_side": "black"
+          },
+          "seed": 15242229781644939788
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 40,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 11416264553583922679
+        },
+        {
+          "agents": {
+            "black": "non-neural-mcts",
+            "red": "22-plane-value-only"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 40,
+            "winner": "non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2221136300426020266
+        },
+        {
+          "agents": {
+            "black": "22-plane-value-only",
+            "red": "non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 41,
+            "winner": "non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 2221136300426020266
+        }
+      ],
+      "guidance": "value-only",
+      "role_splits": {
+        "22-plane-value-only": {
+          "black": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.056682151454375246,
+              "upper": 0.5098375284633582,
+              "value": 0.2
+            },
+            "wins": 2
+          },
+          "overall": {
+            "draw_rate": 0.15,
+            "draws": 3,
+            "games": 20,
+            "losses": 14,
+            "win_rate": {
+              "lower": 0.052368745896216595,
+              "upper": 0.3604188647407569,
+              "value": 0.15
+            },
+            "wins": 3
+          },
+          "red": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 8,
+            "win_rate": {
+              "lower": 0.017876213095072896,
+              "upper": 0.40415002679523837,
+              "value": 0.1
+            },
+            "wins": 1
+          }
+        },
+        "non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.1,
+            "draws": 1,
+            "games": 10,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.49016247153664183,
+              "upper": 0.9433178485456247,
+              "value": 0.8
+            },
+            "wins": 8
+          },
+          "overall": {
+            "draw_rate": 0.15,
+            "draws": 3,
+            "games": 20,
+            "losses": 3,
+            "win_rate": {
+              "lower": 0.4810271816464765,
+              "upper": 0.8545227551323956,
+              "value": 0.7
+            },
+            "wins": 14
+          },
+          "red": {
+            "draw_rate": 0.2,
+            "draws": 2,
+            "games": 10,
+            "losses": 2,
+            "win_rate": {
+              "lower": 0.3126737697336583,
+              "upper": 0.8318196702937637,
+              "value": 0.6
+            },
+            "wins": 6
+          }
+        }
+      },
+      "runtime": {
+        "moves": 919,
+        "seconds_per_game": 0.7775504639022983,
+        "seconds_per_move": 0.016921664067514653,
+        "wall_seconds": 15.551009278045967
+      },
+      "strength": {
+        "agents": [
+          "22-plane-value-only",
+          "non-neural-mcts"
+        ],
+        "draws": 3,
+        "games": 20,
+        "win_rate": {
+          "22-plane-value-only": {
+            "lower": 0.052368745896216595,
+            "upper": 0.3604188647407569,
+            "value": 0.15
+          },
+          "non-neural-mcts": {
+            "lower": 0.4810271816464765,
+            "upper": 0.8545227551323956,
+            "value": 0.7
+          }
+        },
+        "wins": {
+          "22-plane-value-only": 3,
+          "non-neural-mcts": 14
+        }
+      }
+    }
+  ],
+  "methodology": {
+    "comparisons": [
+      [
+        "10-plane",
+        "22-plane"
+      ],
+      [
+        "10-plane",
+        "non-neural-mcts"
+      ],
+      [
+        "22-plane",
+        "non-neural-mcts"
+      ]
+    ],
+    "confidence_interval": "Wilson score interval for win rate",
+    "equal_mcts_simulation_budgets": true,
+    "guidance_modes": [
+      "policy-value",
+      "policy-only",
+      "value-only"
+    ],
+    "matched_model_capacity_and_training_data": true,
+    "paired_role_swaps": true,
+    "runtime_interpretation": "Complete two-agent matchup workload; strength is determined by fixed budgets, not elapsed time.",
+    "shared_pair_seed_schedule": true
+  },
+  "runtime": {
+    "wall_seconds": 150.56116145499982
+  },
+  "version": 1
+}

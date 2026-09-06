@@ -14,9 +14,8 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F
 
-from twixt_ai.game import Coordinate, GameState
+from twixt_ai.game import BoardDimensions, Coordinate, GameState
 from twixt_ai.models import (
-    ACTION_COUNT,
     ARCHITECTURE_NAME,
     ARCHITECTURE_VERSION,
     CHECKPOINT_FORMAT,
@@ -24,8 +23,9 @@ from twixt_ai.models import (
     ENCODING_VERSION,
     PolicyValueConfig,
     PolicyValueNetwork,
-    coordinate_to_action_index,
-    encode_position,
+    coordinate_to_action_index_for_version,
+    encode_position_for_version,
+    load_policy_value_checkpoint,
 )
 
 from .data import DATASET_FORMAT, DATASET_VERSION, EXAMPLE_FORMAT, EXAMPLE_VERSION
@@ -130,6 +130,10 @@ class TrainingSummary:
             "version": TRAINING_VERSION,
             "config": self.config.to_dict(),
             "model_config": self.model_config.to_dict(),
+            "board": {
+                "width": self.model_config.board_width,
+                "height": self.model_config.board_height,
+            },
             "dataset_sha256": self.dataset_sha256,
             "completed_epochs": self.completed_epochs,
             "best_epoch": self.best_epoch,
@@ -147,7 +151,17 @@ class TrainingSummary:
 
 
 class _Examples:
-    def __init__(self, root: Path, manifest: Mapping[str, Any], split: str) -> None:
+    def __init__(
+        self,
+        root: Path,
+        manifest: Mapping[str, Any],
+        split: str,
+        board: BoardDimensions,
+        encoding_version: int,
+    ) -> None:
+        self.board = board
+        self.encoding_version = encoding_version
+        self.action_count = board.width * board.height
         split_value = manifest.get("splits", {}).get(split)
         if not isinstance(split_value, Mapping) or not isinstance(split_value.get("shards"), list):
             raise ValueError(f"dataset manifest has no valid {split} split")
@@ -184,18 +198,25 @@ class _Examples:
             raise ValueError(f"{name} must contain exactly x and y")
         return Coordinate(value["x"], value["y"])  # type: ignore[arg-type]
 
-    @classmethod
-    def _parse(cls, value: object) -> tuple[Tensor, Tensor, Tensor]:
+    def _parse(self, value: object) -> tuple[Tensor, Tensor, Tensor]:
         if not isinstance(value, Mapping):
             raise TypeError("example must be an object")
         if value.get("format") != EXAMPLE_FORMAT or value.get("version") != EXAMPLE_VERSION:
             raise ValueError("unsupported training example format or version")
         state = GameState.from_dict(value.get("position"))  # type: ignore[arg-type]
-        inputs = encode_position(state)
-        target = torch.zeros(ACTION_COUNT, dtype=torch.float32)
+        if state.board != self.board:
+            raise ValueError("example board dimensions do not match the dataset manifest")
+        inputs = encode_position_for_version(state, self.encoding_version)
+        target = torch.zeros(self.action_count, dtype=torch.float32)
         policy = value.get("policy")
         if policy is None:
-            target[coordinate_to_action_index(cls._coordinate(value.get("action"), "action"))] = 1
+            target[coordinate_to_action_index_for_version(
+                self._coordinate(value.get("action"), "action"),
+                state.side_to_move,
+                self.encoding_version,
+                board_width=self.board.width,
+                board_height=self.board.height,
+            )] = 1
         else:
             if not isinstance(policy, list) or not policy:
                 raise ValueError("policy must be a non-empty array")
@@ -204,7 +225,7 @@ class _Examples:
             for index, item in enumerate(policy):
                 if not isinstance(item, Mapping):
                     raise ValueError(f"policy[{index}] must be an object")
-                coordinate = cls._coordinate(item.get("coordinate"), f"policy[{index}].coordinate")
+                coordinate = self._coordinate(item.get("coordinate"), f"policy[{index}].coordinate")
                 probability = item.get("probability")
                 if (
                     coordinate in seen
@@ -215,7 +236,13 @@ class _Examples:
                 ):
                     raise ValueError("policy entries must be unique with positive probabilities")
                 seen.add(coordinate)
-                target[coordinate_to_action_index(coordinate)] = probability
+                target[coordinate_to_action_index_for_version(
+                    coordinate,
+                    state.side_to_move,
+                    self.encoding_version,
+                    board_width=self.board.width,
+                    board_height=self.board.height,
+                )] = probability
                 total += probability
             if not math.isclose(total, 1.0, rel_tol=1e-6, abs_tol=1e-6):
                 raise ValueError("policy probabilities must sum to one")
@@ -228,7 +255,11 @@ class _Examples:
         return len(self.items)
 
 
-def _load_dataset(root: Path) -> tuple[dict[str, Any], str, _Examples, _Examples]:
+def _load_dataset(
+    root: Path,
+    *,
+    encoding_version: int = ENCODING_VERSION,
+) -> tuple[dict[str, Any], str, BoardDimensions, _Examples, _Examples]:
     manifest_path = root / "manifest.json"
     try:
         content = manifest_path.read_bytes()
@@ -239,11 +270,15 @@ def _load_dataset(root: Path) -> tuple[dict[str, Any], str, _Examples, _Examples
         raise ValueError("dataset manifest must be an object")
     if manifest.get("format") != DATASET_FORMAT or manifest.get("version") != DATASET_VERSION:
         raise ValueError("unsupported dataset format or version")
-    train = _Examples(root, manifest, "train")
-    validation = _Examples(root, manifest, "validation")
+    raw_board = manifest.get("board", {"width": 24, "height": 24})
+    if not isinstance(raw_board, Mapping) or set(raw_board) != {"width", "height"}:
+        raise ValueError("dataset board must contain exactly width and height")
+    board = BoardDimensions(raw_board["width"], raw_board["height"])  # type: ignore[arg-type]
+    train = _Examples(root, manifest, "train", board, encoding_version)
+    validation = _Examples(root, manifest, "validation", board, encoding_version)
     if not len(train):
         raise ValueError("training split must contain at least one example")
-    return manifest, hashlib.sha256(content).hexdigest(), train, validation
+    return manifest, hashlib.sha256(content).hexdigest(), board, train, validation
 
 
 def _optimizer(model: PolicyValueNetwork, config: TrainingConfig) -> torch.optim.Optimizer:
@@ -314,7 +349,7 @@ def _checkpoint_payload(
         "checkpoint_version": CHECKPOINT_VERSION,
         "architecture": ARCHITECTURE_NAME,
         "architecture_version": ARCHITECTURE_VERSION,
-        "encoding_version": ENCODING_VERSION,
+        "encoding_version": model.config.encoding_version,
         "config": model.config.to_dict(),
         "state_dict": model.state_dict(),
         "metadata": {
@@ -325,6 +360,10 @@ def _checkpoint_payload(
             "best_loss": best_loss,
             "training_config": config.to_dict(),
             "dataset_sha256": dataset_sha256,
+            "board": {
+                "width": model.config.board_width,
+                "height": model.config.board_height,
+            },
         },
         "training_state": {
             "format": TRAINING_FORMAT,
@@ -366,22 +405,39 @@ def train_model(
     config: TrainingConfig | None = None,
     model_config: PolicyValueConfig | None = None,
     resume: bool = False,
+    initial_checkpoint: str | Path | None = None,
 ) -> TrainingSummary:
     """Train from a versioned dataset and write ``latest.pt`` and ``best.pt``.
 
-    Resuming restores model, optimizer, scheduler, epoch, and metric history.
+    ``initial_checkpoint`` warm-starts a new run from compatible model weights
+    while creating fresh optimizer state and metric history. Resuming restores
+    model, optimizer, scheduler, epoch, and metric history.
     The dataset digest and all configuration except the requested total epoch
     count must match the interrupted run.
     """
 
     training_config = config or TrainingConfig()
-    architecture_config = model_config or PolicyValueConfig()
     if not isinstance(training_config, TrainingConfig):
         raise TypeError("config must be a TrainingConfig or None")
-    if not isinstance(architecture_config, PolicyValueConfig):
+    if model_config is not None and not isinstance(model_config, PolicyValueConfig):
         raise TypeError("model_config must be a PolicyValueConfig or None")
+    if resume and initial_checkpoint is not None:
+        raise ValueError("initial_checkpoint cannot be used when resuming")
     root = Path(dataset_dir)
-    _, dataset_sha256, train, validation = _load_dataset(root)
+    encoding_version = (
+        model_config.encoding_version if model_config is not None else ENCODING_VERSION
+    )
+    _, dataset_sha256, board, train, validation = _load_dataset(
+        root, encoding_version=encoding_version
+    )
+    architecture_config = model_config or PolicyValueConfig(
+        board_width=board.width, board_height=board.height
+    )
+    if (
+        architecture_config.board_width != board.width
+        or architecture_config.board_height != board.height
+    ):
+        raise ValueError("model board dimensions do not match the dataset")
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     latest_path = output / "latest.pt"
@@ -412,6 +468,14 @@ def train_model(
     best_loss = math.inf
     history: list[EpochMetrics] = []
 
+    if initial_checkpoint is not None:
+        initialized = load_policy_value_checkpoint(
+            initial_checkpoint, map_location=device
+        )
+        if initialized.model.config != architecture_config:
+            raise ValueError("initial checkpoint model configuration does not match")
+        model.load_state_dict(initialized.model.state_dict())
+
     if resume:
         if not latest_path.is_file():
             raise ValueError("cannot resume without latest.pt")
@@ -428,7 +492,12 @@ def train_model(
             raise ValueError("resumed epochs cannot be less than the original target")
         if state.get("dataset_sha256") != dataset_sha256:
             raise ValueError("resume dataset does not match latest.pt")
-        if payload.get("config") != architecture_config.to_dict():
+        saved_model_config = PolicyValueConfig.from_dict(
+            payload.get("config")  # type: ignore[arg-type]
+        )
+        if payload.get("encoding_version") != saved_model_config.encoding_version:
+            raise ValueError("resume checkpoint encoding version does not match model config")
+        if saved_model_config != architecture_config:
             raise ValueError("resume model configuration does not match latest.pt")
         model.load_state_dict(payload["state_dict"])  # type: ignore[arg-type]
         optimizer.load_state_dict(state["optimizer"])  # type: ignore[arg-type]

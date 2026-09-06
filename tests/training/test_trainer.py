@@ -9,14 +9,27 @@ from pathlib import Path
 import pytest
 import torch
 
-from twixt_ai.game import GameState
-from twixt_ai.models import PolicyValueConfig, load_policy_value_checkpoint
+from twixt_ai.game import BoardDimensions, GameState, Player, legal_peg_placements
+from twixt_ai.models import (
+    MINI_ENCODING_VERSION,
+    MINI_NUM_CHANNELS,
+    PolicyValueConfig,
+    PolicyValueNetwork,
+    load_policy_value_checkpoint,
+    save_policy_value_checkpoint,
+)
+from twixt_ai.search.neural import NeuralPolicyValue
 from twixt_ai.training import TrainingConfig, train_model
 from twixt_ai.training import trainer as trainer_module
 from twixt_ai.training.train_cli import main
 
 
-def _dataset(root: Path) -> Path:
+def _dataset(
+    root: Path,
+    board: BoardDimensions = BoardDimensions(),
+    *,
+    side_to_move: Player = Player.RED,
+) -> Path:
     root.mkdir()
     (root / "train").mkdir()
     (root / "validation").mkdir()
@@ -26,7 +39,9 @@ def _dataset(root: Path) -> Path:
             "format": "twixt-ai-training-example",
             "version": 1,
             "id": identifier,
-            "position": GameState.initial().to_dict(),
+            "position": GameState(
+                board=board, side_to_move=side_to_move
+            ).to_dict(),
             "action": {"x": x, "y": 1},
             "outcome": outcome,
             "source": {},
@@ -52,6 +67,7 @@ def _dataset(root: Path) -> Path:
     manifest = {
         "format": "twixt-ai-training-dataset",
         "version": 1,
+        "board": board.to_dict(),
         "splits": {
             "train": {
                 "examples": 2,
@@ -100,6 +116,85 @@ def test_trains_fixture_and_identifies_loadable_checkpoints(tmp_path: Path) -> N
     assert json.loads((output / "summary.json").read_text()) == summary.to_dict()
 
 
+def test_training_infers_mini_model_shape_from_dataset(tmp_path: Path) -> None:
+    output = tmp_path / "run"
+
+    summary = train_model(
+        _dataset(tmp_path / "dataset", BoardDimensions(10, 10)),
+        output,
+        config=_config(1),
+    )
+    loaded = load_policy_value_checkpoint(output / "latest.pt")
+
+    assert summary.to_dict()["board"] == {"height": 10, "width": 10}
+    assert loaded.model.config.board_width == 10
+    assert loaded.model.config.board_height == 10
+    assert loaded.metadata["board"] == {"height": 10, "width": 10}
+
+
+def test_v2_training_and_loaded_inference_support_black_to_move(tmp_path: Path) -> None:
+    board = BoardDimensions(10, 10)
+    dataset = _dataset(
+        tmp_path / "dataset", board, side_to_move=Player.BLACK
+    )
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(
+        channels=2,
+        residual_blocks=1,
+        value_hidden=4,
+        board_width=10,
+        board_height=10,
+        input_channels=MINI_NUM_CHANNELS,
+        encoding_version=MINI_ENCODING_VERSION,
+    )
+
+    summary = train_model(
+        dataset, output, config=_config(1), model_config=model_config
+    )
+    loaded = load_policy_value_checkpoint(output / "latest.pt")
+    _, _, _, train_examples, _ = trainer_module._load_dataset(
+        dataset, encoding_version=MINI_ENCODING_VERSION
+    )
+    inputs, policy, _ = train_examples.items[0]
+    state = GameState(board=board, side_to_move=Player.BLACK)
+    estimate = NeuralPolicyValue(loaded.model)(state, legal_peg_placements(state))
+
+    assert summary.completed_epochs == 1
+    assert loaded.model.config == model_config
+    assert inputs.shape == (10, 10, 10)
+    assert policy[11] == pytest.approx(0.75)
+    assert policy[21] == pytest.approx(0.25)
+    assert policy[12] == 0
+    assert sum(estimate.priors.values()) == pytest.approx(1.0)
+
+
+def test_training_can_warm_start_from_checkpoint(tmp_path: Path) -> None:
+    board = BoardDimensions(10, 10)
+    model_config = PolicyValueConfig(
+        channels=2, residual_blocks=1, value_hidden=4,
+        board_width=10, board_height=10,
+    )
+    initial = tmp_path / "initial.pt"
+    torch.manual_seed(123)
+    save_policy_value_checkpoint(initial, PolicyValueNetwork(model_config))
+
+    summary = train_model(
+        _dataset(tmp_path / "dataset", board),
+        tmp_path / "run",
+        config=TrainingConfig(epochs=1, batch_size=2, learning_rate=1e-6),
+        model_config=model_config,
+        initial_checkpoint=initial,
+    )
+
+    assert summary.completed_epochs == 1
+    with pytest.raises(ValueError, match="cannot be used when resuming"):
+        train_model(
+            tmp_path / "dataset", tmp_path / "run",
+            config=TrainingConfig(epochs=2), model_config=model_config,
+            resume=True, initial_checkpoint=initial,
+        )
+
+
 def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
     dataset = _dataset(tmp_path / "dataset")
     model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
@@ -120,6 +215,56 @@ def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
         resumed_model.state_dict().values(), direct_model.state_dict().values()
     ):
         assert torch.equal(resumed_weight, direct_weight)
+
+
+def test_resume_accepts_legacy_model_config_without_board_dimensions(
+    tmp_path: Path,
+) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    train_model(dataset, output, config=_config(1), model_config=model_config)
+    latest_path = output / "latest.pt"
+    payload = torch.load(latest_path, weights_only=True)
+    payload["config"] = {
+        key: value
+        for key, value in payload["config"].items()
+        if key not in {"board_width", "board_height"}
+    }
+    torch.save(payload, latest_path)
+
+    summary = train_model(
+        dataset,
+        output,
+        config=_config(2),
+        model_config=model_config,
+        resume=True,
+    )
+
+    assert summary.completed_epochs == 2
+    assert load_policy_value_checkpoint(latest_path).model.config == model_config
+
+
+def test_resume_rejects_encoding_version_that_disagrees_with_model_config(
+    tmp_path: Path,
+) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    train_model(dataset, output, config=_config(1), model_config=model_config)
+    latest_path = output / "latest.pt"
+    payload = torch.load(latest_path, weights_only=True)
+    payload["encoding_version"] = 2
+    torch.save(payload, latest_path)
+
+    with pytest.raises(ValueError, match="encoding version"):
+        train_model(
+            dataset,
+            output,
+            config=_config(2),
+            model_config=model_config,
+            resume=True,
+        )
 
 
 def test_interruption_before_latest_does_not_commit_new_best(

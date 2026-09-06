@@ -42,18 +42,18 @@ RTX 4060 and PyTorch 2.8.0; PyTorch used one host thread. Selected results are:
 
 | Metric | 22-plane v1 | 10-plane v2 |
 | --- | ---: | ---: |
-| Encoding latency (µs/position) | 86.4 | 69.0 |
+| Encoding latency (µs/position) | 86.3 | 70.6 |
 | Encoded bytes/position | 8,800 | 4,000 |
 | Model parameters | 24,547 | 23,683 |
-| CPU single forward (positions/s) | 7,900 | 8,998 |
-| CPU batch-32 forward (positions/s) | 51,633 | 65,130 |
-| CPU training (positions/s) | 12,956 | 14,370 |
-| CUDA single forward (positions/s) | 4,708 | 4,808 |
-| CUDA batch-32 forward (positions/s) | 152,866 | 150,793 |
-| CUDA training (positions/s) | 29,570 | 29,303 |
+| CPU single forward (positions/s) | 8,011 | 8,939 |
+| CPU batch-32 forward (positions/s) | 51,740 | 66,544 |
+| CPU training (positions/s) | 13,206 | 14,661 |
+| CUDA single forward (positions/s) | 4,758 | 4,778 |
+| CUDA batch-32 forward (positions/s) | 152,502 | 153,150 |
+| CUDA training (positions/s) | 30,469 | 29,154 |
 
 On this run, compact encoding reduced tensor storage by 54.5%, encoding latency
-by 20.0%, and model parameters by 3.5%. CPU forward and training throughput
-improved, while CUDA forward and training were effectively unchanged (within
-2.2%). Timing results are samples of this machine and should
+by 18.2%, and model parameters by 3.5%. CPU forward and training throughput
+improved. CUDA forward throughput was effectively unchanged, while CUDA
+training was 4.3% slower. Timing results are samples of this machine and should
 be rerun when hardware, PyTorch, or workload configuration changes.

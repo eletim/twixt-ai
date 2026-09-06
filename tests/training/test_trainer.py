@@ -199,6 +199,28 @@ def test_resume_accepts_legacy_model_config_without_board_dimensions(
     assert load_policy_value_checkpoint(latest_path).model.config == model_config
 
 
+def test_resume_rejects_encoding_version_that_disagrees_with_model_config(
+    tmp_path: Path,
+) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    train_model(dataset, output, config=_config(1), model_config=model_config)
+    latest_path = output / "latest.pt"
+    payload = torch.load(latest_path, weights_only=True)
+    payload["encoding_version"] = 2
+    torch.save(payload, latest_path)
+
+    with pytest.raises(ValueError, match="encoding version"):
+        train_model(
+            dataset,
+            output,
+            config=_config(2),
+            model_config=model_config,
+            resume=True,
+        )
+
+
 def test_interruption_before_latest_does_not_commit_new_best(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

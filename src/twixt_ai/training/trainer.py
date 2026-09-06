@@ -20,7 +20,6 @@ from twixt_ai.models import (
     ARCHITECTURE_VERSION,
     CHECKPOINT_FORMAT,
     CHECKPOINT_VERSION,
-    ENCODING_VERSION,
     PolicyValueConfig,
     PolicyValueNetwork,
     coordinate_to_action_index,
@@ -341,7 +340,7 @@ def _checkpoint_payload(
         "checkpoint_version": CHECKPOINT_VERSION,
         "architecture": ARCHITECTURE_NAME,
         "architecture_version": ARCHITECTURE_VERSION,
-        "encoding_version": ENCODING_VERSION,
+        "encoding_version": model.config.encoding_version,
         "config": model.config.to_dict(),
         "state_dict": model.state_dict(),
         "metadata": {
@@ -482,6 +481,8 @@ def train_model(
         saved_model_config = PolicyValueConfig.from_dict(
             payload.get("config")  # type: ignore[arg-type]
         )
+        if payload.get("encoding_version") != saved_model_config.encoding_version:
+            raise ValueError("resume checkpoint encoding version does not match model config")
         if saved_model_config != architecture_config:
             raise ValueError("resume model configuration does not match latest.pt")
         model.load_state_dict(payload["state_dict"])  # type: ignore[arg-type]

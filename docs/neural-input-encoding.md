@@ -5,6 +5,13 @@ format remains version 1 and the compact side-to-move normalized format is
 version 2. A checkpoint must record the version it was trained with; callers
 must never select an encoder from tensor dimensions alone.
 
+`PolicyValueConfig` records both `encoding_version` and `input_channels`.
+Version 1 requires 22 channels and version 2 requires 10; mismatched or unknown
+combinations are rejected before a model is built. Checkpoints store the
+selected version both at the top level and in the model config and reject any
+disagreement when loading. Configs from existing v1 checkpoints that predate
+these two fields continue to load as version 1 with 22 channels.
+
 ## Version 1: 22 planes
 
 Learned agents consume a channel-first PyTorch `float32` tensor with shape
@@ -51,6 +58,9 @@ features would increase compatibility surface without adding information.
 The compact Mini encoder is exposed as `encode_mini_position`, with version
 `MINI_ENCODING_VERSION`. On the validated 10-by-10 preset its tensor shape is
 `[10, 10, 10]`. It has no history, last-move, turn, or goal-border planes.
+`MINI_NORMALIZED_POLICY_VALUE_CONFIG` is the matching opt-in network preset;
+the existing `MINI_POLICY_VALUE_CONFIG` remains on v1 pending controlled
+comparison and an explicit default-selection decision.
 
 | Channels | Meaning |
 | --- | --- |

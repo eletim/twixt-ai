@@ -62,6 +62,13 @@ class PolicyValueConfig:
                 f"encoding version {self.encoding_version} requires "
                 f"{expected_channels} input channels"
             )
+        if (
+            self.encoding_version == MINI_ENCODING_VERSION
+            and self.board_width != self.board_height
+        ):
+            raise ValueError(
+                f"encoding version {MINI_ENCODING_VERSION} requires a square board"
+            )
 
     def to_dict(self) -> dict[str, int]:
         return asdict(self)

@@ -131,6 +131,16 @@ def test_encoding_version_and_channel_count_must_match() -> None:
         PolicyValueConfig(input_channels=10, encoding_version=99)
 
 
+def test_normalized_encoding_model_requires_a_square_board() -> None:
+    with pytest.raises(ValueError, match="encoding version 2 requires a square board"):
+        PolicyValueConfig(
+            board_width=8,
+            board_height=5,
+            input_channels=MINI_NUM_CHANNELS,
+            encoding_version=MINI_ENCODING_VERSION,
+        )
+
+
 def test_action_mapping_is_row_major_and_invertible() -> None:
     for index in range(ACTION_COUNT):
         coordinate = action_index_to_coordinate(index)

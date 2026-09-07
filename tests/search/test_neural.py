@@ -10,11 +10,19 @@ from torch import nn
 from twixt_ai.agents import AgentRequest
 from twixt_ai.game import (
     BoardDimensions,
+    Coordinate,
     GameState,
     PegPlacement,
+    Peg,
+    Player,
     legal_peg_placements,
 )
-from twixt_ai.models import PolicyValueConfig, PolicyValueNetwork
+from twixt_ai.models import (
+    MINI_ENCODING_VERSION,
+    MINI_NUM_CHANNELS,
+    PolicyValueConfig,
+    PolicyValueNetwork,
+)
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
 
@@ -82,6 +90,51 @@ def test_neural_inference_masks_policy_and_preserves_mixed_training_modes() -> N
     assert sum(estimate.priors.values()) == pytest.approx(1.0)
     assert all(probability >= 0 for probability in estimate.priors.values())
     assert estimate.value is not None and -1 <= estimate.value <= 1
+
+
+def test_v2_black_inference_uses_normalized_inputs_and_policy_indices() -> None:
+    class IndexedPolicyNetwork(PolicyValueNetwork):
+        captured_inputs: torch.Tensor | None = None
+
+        def forward(
+            self, inputs: torch.Tensor
+        ) -> tuple[torch.Tensor, torch.Tensor]:
+            self.captured_inputs = inputs.detach().clone()
+            logits = torch.arange(
+                self.action_count, dtype=inputs.dtype, device=inputs.device
+            ).expand(len(inputs), -1)
+            return logits, torch.zeros(len(inputs), device=inputs.device)
+
+    model = IndexedPolicyNetwork(
+        PolicyValueConfig(
+            channels=2,
+            residual_blocks=1,
+            value_hidden=4,
+            board_width=10,
+            board_height=10,
+            input_channels=MINI_NUM_CHANNELS,
+            encoding_version=MINI_ENCODING_VERSION,
+        )
+    )
+    state = GameState(
+        board=BoardDimensions(10, 10),
+        pegs=(Peg(Player.BLACK, Coordinate(2, 3)),),
+        side_to_move=Player.BLACK,
+    )
+    moves = (
+        PegPlacement(Player.BLACK, Coordinate(1, 2)),
+        PegPlacement(Player.BLACK, Coordinate(2, 1)),
+    )
+
+    estimate = NeuralPolicyValue(model)(state, moves)
+
+    assert model.captured_inputs is not None
+    assert model.captured_inputs.shape == (1, 10, 10, 10)
+    assert model.captured_inputs[0, 0, 2, 3] == 1
+    # Black transposition maps the actions to indices 12 and 21. An
+    # unnormalized lookup would reverse their order.
+    assert estimate.priors[moves[1]] > estimate.priors[moves[0]]
+    assert sum(estimate.priors.values()) == pytest.approx(1.0)
 
 
 def test_neural_policy_value_plugs_directly_into_mcts() -> None:

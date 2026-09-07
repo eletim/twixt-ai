@@ -15,10 +15,10 @@ import torch
 from twixt_ai.game import GameState, PegPlacement
 from twixt_ai.models import (
     PolicyValueNetwork,
-    encode_position,
-    legal_move_mask,
+    encode_position_for_version,
+    legal_move_mask_for_version,
     mask_policy_logits,
-    move_to_action_index,
+    move_to_action_index_for_version,
 )
 
 from .mcts import PolicyValueEstimate
@@ -78,12 +78,18 @@ class NeuralPolicyValue:
                 "state board dimensions do not match the policy/value model"
             )
         inputs = torch.stack(
-            [encode_position(state, device=device) for state in states]
+            [
+                encode_position_for_version(
+                    state, config.encoding_version, device=device
+                )
+                for state in states
+            ]
         )
         masks = torch.stack(
             [
-                legal_move_mask(
+                legal_move_mask_for_version(
                     moves,
+                    config.encoding_version,
                     board_width=config.board_width,
                     board_height=config.board_height,
                     device=device,
@@ -109,11 +115,17 @@ class NeuralPolicyValue:
         return tuple(
             PolicyValueEstimate(
                 {
-                    move: float(probabilities[index, move_to_action_index(
-                        move,
-                        board_width=config.board_width,
-                        board_height=config.board_height,
-                    )].item())
+                    move: float(
+                        probabilities[
+                            index,
+                            move_to_action_index_for_version(
+                                move,
+                                config.encoding_version,
+                                board_width=config.board_width,
+                                board_height=config.board_height,
+                            ),
+                        ].item()
+                    )
                     for move in moves
                 },
                 float(values[index].item()),

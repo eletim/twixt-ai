@@ -1,0 +1,29 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "fixture": "issue-75-tiny-overfit"
+  },
+  "examples": 1,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 1,
+  "splits": {
+    "train": {
+      "examples": 1,
+      "shards": [
+        {
+          "examples": 1,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "6d56c3fabfb71603ece560d800a785a83edb2aba3ee9968492f6e7f65c7b7f15"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 0,
+      "shards": []
+    }
+  },
+  "version": 1
+}

@@ -114,6 +114,9 @@ def test_trains_fixture_and_identifies_loadable_checkpoints(tmp_path: Path) -> N
     assert metadata["training_config"]["seed"] == 19  # type: ignore[index]
     assert len((output / "metrics.jsonl").read_text().splitlines()) == 2
     assert json.loads((output / "summary.json").read_text()) == summary.to_dict()
+    assert summary.device.requested_device == "cpu"
+    assert summary.device.resolved_device == "cpu"
+    assert metadata["device"]["resolved_device"] == "cpu"  # type: ignore[index]
 
 
 def test_training_infers_mini_model_shape_from_dataset(tmp_path: Path) -> None:

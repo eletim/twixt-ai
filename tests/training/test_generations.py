@@ -49,6 +49,14 @@ def test_runs_two_generations_with_explicit_lineage(
     report = run_mini_training_generations(champion, output, config=config)
 
     assert report["status"] == "completed"
+    assert report["environment"]["device"]["requested_device"] == "auto"
+    assert report["environment"]["device"]["resolved_device"] in {"cpu", "cuda"}
+    expected_worker_mode = (
+        "thread"
+        if report["environment"]["device"]["resolved_device"] == "cuda"
+        else "process"
+    )
+    assert report["generations"][0]["resolved_config"]["worker_mode"] == expected_worker_mode
     assert len(report["generations"]) == 2
     assert [item["status"] for item in report["generations"]] == [
         "completed", "completed"

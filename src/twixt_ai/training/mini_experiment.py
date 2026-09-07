@@ -15,6 +15,7 @@ from typing import Any
 import torch
 
 from twixt_ai.agents import AgentRequest
+from twixt_ai.device import select_device
 from twixt_ai.game import BoardDimensions, GameState, legal_peg_placements
 from twixt_ai.models import MINI_POLICY_VALUE_CONFIG, load_policy_value_checkpoint
 from twixt_ai.search import MCTSAgent
@@ -283,7 +284,7 @@ def run_mini_training_experiment(
             "available_cpus": len(os.sched_getaffinity(0))
             if hasattr(os, "sched_getaffinity") else os.cpu_count() or 1,
             "torch": torch.__version__,
-            "device": "cpu",
+            "device": select_device("cpu").to_dict(),
         },
         "tiny_overfit": {
             "passed": True,

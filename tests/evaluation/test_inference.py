@@ -21,6 +21,8 @@ def test_inference_benchmark_reports_throughput_utilization_and_batching() -> No
     assert report["format"] == INFERENCE_PERFORMANCE_FORMAT
     assert report["config"] == config.to_dict()
     assert report["environment"]["accelerator"]["type"] == "cpu"
+    assert report["environment"]["device"]["requested_device"] == "cpu"
+    assert report["environment"]["device"]["resolved_device"] == "cpu"
     assert report["synchronous"]["positions_per_second"] > 0
     assert report["batched"]["positions_per_second"] > 0
     assert report["batched"]["cpu_utilization_percent"] >= 0

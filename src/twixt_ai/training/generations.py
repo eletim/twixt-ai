@@ -231,7 +231,10 @@ def _run_selfplay(
         batch = run_batch(
             factory, factory, config=batch_config, output_dir=output_dir
         )
-        statistics = inference.statistics.to_dict()
+    # ``close()`` joins the inference worker. Take the snapshot after that
+    # barrier because callers receive their results just before the worker
+    # publishes the corresponding counters.
+    statistics = inference.statistics.to_dict()
     return batch, {
         "mode": (
             "synchronous-serialized"

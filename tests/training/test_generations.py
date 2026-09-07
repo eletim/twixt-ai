@@ -135,6 +135,63 @@ def test_cuda_selfplay_loads_one_shared_model_and_records_batches(
     assert statistics["maximum_batch_size"] == 2
 
 
+def test_cuda_selfplay_snapshots_statistics_after_batcher_shutdown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class DelayedStatistics:
+        def __init__(self, batcher: DelayedStatisticsBatcher) -> None:
+            self.batcher = batcher
+
+        def to_dict(self) -> dict[str, int]:
+            return {"requests": int(self.batcher.closed)}
+
+    class DelayedStatisticsBatcher:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            self.closed = False
+
+        @property
+        def statistics(self) -> DelayedStatistics:
+            return DelayedStatistics(self)
+
+        def __enter__(self) -> DelayedStatisticsBatcher:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            self.closed = True
+
+    champion = tmp_path / "champion.pt"
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    monkeypatch.setattr(
+        generations,
+        "load_policy_value_checkpoint",
+        lambda *args, **kwargs: SimpleNamespace(model=model),
+    )
+    monkeypatch.setattr(
+        generations, "NeuralInferenceBatcher", DelayedStatisticsBatcher
+    )
+    monkeypatch.setattr(
+        generations,
+        "run_batch",
+        lambda *args, **kwargs: SimpleNamespace(completed=1, failed=0),
+    )
+    device = DeviceSelection("cuda", "cuda", True, "fixture GPU", "12.1", "2")
+    config = MiniGenerationConfig(
+        generations=1,
+        games_per_generation=1,
+        selfplay_simulations=1,
+        evaluation_games=2,
+        evaluation_simulations=1,
+        workers=1,
+        epochs=1,
+    )
+
+    _, inference = generations._run_selfplay(
+        champion, tmp_path / "selfplay", config, 86, device
+    )
+
+    assert inference["statistics"] == {"requests": 1}
+
+
 def test_generation_cli_rejects_all_validation_split(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

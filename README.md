@@ -178,6 +178,21 @@ one to two workers. It also projects the measured wall-clock cost of 1,000 and
 checked-in baseline. The existing `twixt-ai-engine-benchmark` command remains
 the independent standard 24×24 engine workload.
 
+Tune end-to-end Mini training and neural self-play on an RTX-class CUDA host:
+
+```bash
+PYTHONHASHSEED=0 twixt-ai-cuda-tuning \
+  --dataset experiments/issue-56/baseline/dataset \
+  --checkpoint experiments/issue-57/baseline/best.pt \
+  --output benchmarks/mini-cuda-tuning.json
+```
+
+The versioned report compares CPU and CUDA training, sweeps synchronous and
+shared-batched CUDA self-play settings, samples GPU utilization and memory during
+each workload, projects 1k/5k/10k game runtimes, and selects measured defaults
+with an explicit CPU/MCTS-versus-GPU bottleneck classification. See
+[`docs/cuda-throughput-tuning.md`](docs/cuda-throughput-tuning.md).
+
 MCTS is the primary non-neural search baseline. It uses a reproducible
 simulation-count budget, seeded random rollouts with a finite default horizon,
 heuristic evaluation at non-terminal cutoffs, and progressive widening so PUCT

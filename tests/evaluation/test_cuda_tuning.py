@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from twixt_ai.evaluation import cuda_tuning
+from twixt_ai.evaluation.cuda_tuning import (
+    CUDA_TUNING_FORMAT,
+    CudaTuningConfig,
+    run_cuda_tuning_benchmark,
+)
+
+
+def test_config_rejects_invalid_sweeps() -> None:
+    with pytest.raises(ValueError, match="worker_counts"):
+        CudaTuningConfig(worker_counts=())
+    with pytest.raises(ValueError, match="flush_latencies"):
+        CudaTuningConfig(flush_latencies_seconds=(-0.1,))
+    with pytest.raises(ValueError, match="gpu_sample_interval"):
+        CudaTuningConfig(gpu_sample_interval_seconds=0)
+
+
+def test_report_selects_measured_settings_and_projects_scale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = CudaTuningConfig(
+        games=1,
+        worker_counts=(1, 2),
+        inference_batch_sizes=(1, 2),
+        flush_latencies_seconds=(0.001,),
+        simulation_budgets=(2,),
+        training_batch_sizes=(8, 16),
+    )
+    observed_selfplay: list[tuple[str, int, int, float, int]] = []
+
+    def training_run(
+        dataset: Path,
+        root: Path,
+        batch_size: int,
+        device: str,
+        config: CudaTuningConfig,
+    ) -> dict[str, object]:
+        rate = float(batch_size * (10 if device == "cuda" else 1))
+        return {
+            "device": device,
+            "batch_size": batch_size,
+            "examples_per_second": rate,
+            "peak_cuda_memory_bytes": 1024 if device == "cuda" else None,
+        }
+
+    def selfplay_run(
+        checkpoint: Path,
+        root: Path,
+        *,
+        device: str,
+        workers: int,
+        batch_size: int,
+        latency: float,
+        simulations: int,
+        config: CudaTuningConfig,
+    ) -> dict[str, object]:
+        observed_selfplay.append((device, workers, batch_size, latency, simulations))
+        rate = float(100 * workers + (50 * batch_size if device == "cuda" else 0))
+        return {
+            "device": device,
+            "workers": workers,
+            "inference_batch_size": batch_size,
+            "flush_latency_seconds": latency,
+            "simulations_per_move": simulations,
+            "games_per_hour": rate,
+            "inference": {"requests": 8, "batches": 4},
+            "gpu": {"average_utilization_percent": 40.0},
+        }
+
+    monkeypatch.setattr(cuda_tuning, "_training_run", training_run)
+    monkeypatch.setattr(cuda_tuning, "_selfplay_run", selfplay_run)
+    monkeypatch.setattr(cuda_tuning, "_sha256", lambda path: "digest")
+    monkeypatch.setattr(cuda_tuning, "_cuda_hardware_available", lambda: True)
+    monkeypatch.setattr(cuda_tuning.torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(cuda_tuning.torch.cuda, "get_device_name", lambda: "RTX test")
+
+    report = run_cuda_tuning_benchmark(
+        tmp_path / "dataset", tmp_path / "model.pt", config
+    )
+
+    assert report["format"] == CUDA_TUNING_FORMAT
+    assert report["recommendation"]["training"]["batch_size"] == 16
+    selected = report["recommendation"]["selfplay"]
+    assert selected["workers"] == 2
+    assert selected["device"] == "cuda"
+    assert selected["inference_batch_size"] == 2
+    assert selected["estimated_runtime"]["5000_games_hours"] == pytest.approx(
+        5000 / 300
+    )
+    assert report["bottleneck"]["classification"] == "cpu_game_and_mcts"
+    assert report["bottleneck"]["evidence"]["average_inference_batch_size"] == 2
+    # Per worker: one CPU run, one synchronous CUDA run, and one batched run.
+    assert len(observed_selfplay) == 6
+    assert [device for device, *_ in observed_selfplay] == [
+        "cpu",
+        "cpu",
+        "cuda",
+        "cuda",
+        "cuda",
+        "cuda",
+    ]
+
+
+def test_cuda_is_required_for_comparison(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cuda_tuning, "_cuda_hardware_available", lambda: False)
+    with pytest.raises(RuntimeError, match="CUDA is required"):
+        run_cuda_tuning_benchmark(tmp_path, tmp_path / "model.pt")

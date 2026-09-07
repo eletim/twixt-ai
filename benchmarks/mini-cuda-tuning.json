@@ -2,11 +2,11 @@
   "bottleneck": {
     "classification": "cpu_game_and_mcts",
     "evidence": {
-      "average_gpu_utilization_percent": 10.904761904761905,
-      "average_inference_batch_size": 2.8820960698689957,
-      "configured_inference_batch_size": 4,
-      "cpu_games_per_hour": 10612.217962119,
-      "cuda_games_per_hour": 6142.043181109231
+      "average_gpu_utilization_percent": 11.7,
+      "average_inference_batch_size": 2.8633405639913234,
+      "configured_inference_batch_size": 8,
+      "cpu_games_per_hour": 10918.979458860218,
+      "cuda_games_per_hour": 6493.100557858208
     },
     "reason": "Average GPU utilization below 70% indicates that CPU game rules and MCTS do not submit inference fast enough to saturate the GPU."
   },
@@ -34,6 +34,7 @@
       128
     ],
     "training_epochs": 1,
+    "warmup_games": 4,
     "worker_counts": [
       1,
       4
@@ -56,130 +57,177 @@
   "recommendation": {
     "cpu_fallback": {
       "estimated_runtime": {
-        "10000_games_hours": 0.9423100840649568,
-        "1000_games_hours": 0.09423100840649568,
-        "5000_games_hours": 0.4711550420324784
+        "10000_games_hours": 0.9163920816005299,
+        "1000_games_hours": 0.09213922592756313,
+        "5000_games_hours": 0.4584738284488817
       },
-      "games_per_hour": 10612.217962119,
+      "games_per_hour": 10918.979458860218,
+      "projection_method": "one setup/warm-up plus steady-state game time",
       "simulations": 4,
       "workers": 1
     },
     "cuda_selfplay": {
       "estimated_runtime": {
-        "10000_games_hours": 1.6281227117967014,
-        "1000_games_hours": 0.16281227117967015,
-        "5000_games_hours": 0.8140613558983507
+        "10000_games_hours": 1.5407358856162239,
+        "1000_games_hours": 0.15464923567086875,
+        "5000_games_hours": 0.7706877467576932
       },
-      "games_per_hour": 6142.043181109231,
-      "inference_batch_size": 4,
+      "games_per_hour": 6493.100557858208,
+      "inference_batch_size": 8,
       "inference_max_wait_seconds": 0.0005,
+      "projection_method": "one setup/warm-up plus steady-state game time",
       "simulations": 4,
       "workers": 4
     },
     "selfplay": {
       "device": "cpu",
       "estimated_runtime": {
-        "10000_games_hours": 0.9423100840649568,
-        "1000_games_hours": 0.09423100840649568,
-        "5000_games_hours": 0.4711550420324784
+        "10000_games_hours": 0.9163920816005299,
+        "1000_games_hours": 0.09213922592756313,
+        "5000_games_hours": 0.4584738284488817
       },
-      "games_per_hour": 10612.217962119,
+      "games_per_hour": 10918.979458860218,
       "inference_batch_size": 1,
       "inference_max_wait_seconds": 0.0,
+      "projection_method": "one setup/warm-up plus steady-state game time",
       "simulations": 4,
       "workers": 1
     },
     "training": {
       "batch_size": 128,
       "device": "cuda",
-      "examples_per_second": 50041.957710904084,
+      "examples_per_second": 49055.61311720527,
       "peak_cuda_memory_bytes": 22699520
     }
   },
   "selfplay_sweep": [
     {
+      "aggregate_moves_per_second": 202.45607746636657,
       "device": "cpu",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 10612.217962119,
       "gpu": null,
       "inference": null,
       "inference_batch_size": 1,
+      "measured_wall_seconds": 1.3188045690767467,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "cpu-process",
-      "move_latency_seconds": 0.0050821218016986434,
       "moves": 267,
       "peak_cuda_memory_bytes": null,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.005280068054359973,
+        "median": 0.004804588082962706,
+        "minimum": 0.004617716979701072,
+        "p95": 0.005280068054359973
+      },
+      "setup_and_warmup_seconds": 2.000071070040576,
       "simulations_per_move": 4,
-      "simulations_per_second": 787.0728321904926,
-      "wall_seconds": 1.3569265210535377,
+      "simulations_per_second": 809.8243098654663,
+      "steady_state_games_per_hour": 10918.979458860218,
       "workers": 1
     },
     {
+      "aggregate_moves_per_second": 8.91122282879205,
       "device": "cpu",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 441.5341866510038,
       "gpu": null,
       "inference": null,
       "inference_batch_size": 1,
+      "measured_wall_seconds": 29.962217882974073,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "cpu-process",
-      "move_latency_seconds": 0.12214815047219019,
       "moves": 267,
       "peak_cuda_memory_bytes": null,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.5814072263007983,
+        "median": 0.48506279136257047,
+        "minimum": 0.32566092877127434,
+        "p95": 0.5814072263007983
+      },
+      "setup_and_warmup_seconds": 24.10463911399711,
       "simulations_per_move": 4,
-      "simulations_per_second": 32.747118843282784,
-      "wall_seconds": 32.61355617607478,
+      "simulations_per_second": 35.6448913151682,
+      "steady_state_games_per_hour": 480.60527615957125,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 53.9751700012458,
       "device": "cpu",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 4822.088371389765,
       "gpu": null,
       "inference": null,
       "inference_batch_size": 1,
+      "measured_wall_seconds": 3.03843415400479,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "cpu-process",
-      "move_latency_seconds": 0.01820889027454186,
       "moves": 164,
       "peak_cuda_memory_bytes": null,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.01879310870038656,
+        "median": 0.018460650319680194,
+        "minimum": 0.018029316165484487,
+        "p95": 0.01879310870038656
+      },
+      "setup_and_warmup_seconds": 3.4320830369833857,
       "simulations_per_move": 20,
-      "simulations_per_second": 1098.3645734832241,
-      "wall_seconds": 2.9862580050248653,
+      "simulations_per_second": 1079.5034000249161,
+      "steady_state_games_per_hour": 4739.283219621582,
       "workers": 1
     },
     {
+      "aggregate_moves_per_second": 2.386080527381383,
       "device": "cpu",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 200.47153766290836,
       "gpu": null,
       "inference": null,
       "inference_batch_size": 1,
+      "measured_wall_seconds": 68.73196361900773,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "cpu-process",
-      "move_latency_seconds": 0.4379917422313777,
       "moves": 164,
       "peak_cuda_memory_bytes": null,
+      "per_game_move_latency_seconds": {
+        "maximum": 2.430102469758131,
+        "median": 1.8292872235772903,
+        "minimum": 1.1455135783840282,
+        "p95": 2.430102469758131
+      },
+      "setup_and_warmup_seconds": 78.2228277149843,
       "simulations_per_move": 20,
-      "simulations_per_second": 45.66296135655135,
-      "wall_seconds": 71.83064572594594,
+      "simulations_per_second": 47.72161054762766,
+      "steady_state_games_per_hour": 209.50950972129218,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 106.82619356923352,
       "device": "cuda",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 5502.416438047877,
       "gpu": {
-        "average_utilization_percent": 11.652173913043478,
+        "average_utilization_percent": 12.636363636363637,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 13.0,
         "sample_interval_seconds": 0.1,
-        "samples": 23
+        "samples": 22
       },
       "inference": {
-        "average_queue_wait_seconds": 9.835915901049068e-06,
+        "average_queue_wait_seconds": 1.0041566124665692e-05,
         "batch_size_distribution": {
           "1": 1320
         },
@@ -189,37 +237,150 @@
           "full_batch": 1320,
           "latency": 0
         },
-        "inference_seconds": 2.1474312813952565,
+        "inference_seconds": 2.1193173362407833,
         "maximum_batch_size": 1,
-        "positions_per_second": 614.6878884721996,
+        "positions_per_second": 622.8420715613067,
         "requests": 1320,
-        "total_queue_wait_seconds": 0.01298340898938477
+        "total_queue_wait_seconds": 0.013254867284558713
       },
       "inference_batch_size": 1,
+      "measured_wall_seconds": 2.4993870049947873,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "synchronous-cuda",
-      "move_latency_seconds": 0.009801618048523584,
       "moves": 267,
       "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.009889261680655181,
+        "median": 0.009272270205997649,
+        "minimum": 0.009010675389112698,
+        "p95": 0.009889261680655181
+      },
+      "setup_and_warmup_seconds": 2.5342349180718884,
       "simulations_per_move": 4,
-      "simulations_per_second": 408.0958858218842,
-      "wall_seconds": 2.617032018955797,
+      "simulations_per_second": 427.3047742769341,
+      "steady_state_games_per_hour": 5761.41268688001,
       "workers": 1
     },
     {
+      "aggregate_moves_per_second": 80.2070844067388,
       "device": "cuda",
       "flush_latency_seconds": 0.0005,
       "games": 4,
-      "games_per_hour": 4378.168157848213,
       "gpu": {
-        "average_utilization_percent": 9.89655172413793,
+        "average_utilization_percent": 9.8,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 13.0,
+        "peak_utilization_percent": 10.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 30
+      },
+      "inference": {
+        "average_queue_wait_seconds": 0.0005671103479637003,
+        "batch_size_distribution": {
+          "1": 1320
+        },
+        "batches": 1320,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 0,
+          "latency": 1320
+        },
+        "inference_seconds": 2.209774467162788,
+        "maximum_batch_size": 1,
+        "positions_per_second": 597.346027667157,
+        "requests": 1320,
+        "total_queue_wait_seconds": 0.7485856593120843
+      },
+      "inference_batch_size": 4,
+      "measured_wall_seconds": 3.3288830029778183,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "shared-batched-cuda",
+      "moves": 267,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.012695102369078719,
+        "median": 0.0125164206711314,
+        "minimum": 0.01187040976015851,
+        "p95": 0.012695102369078719
+      },
+      "setup_and_warmup_seconds": 3.2674775309860706,
+      "simulations_per_move": 4,
+      "simulations_per_second": 320.8283376269552,
+      "steady_state_games_per_hour": 4325.775338790408,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 49.743701316887645,
+      "device": "cuda",
+      "flush_latency_seconds": 0.002,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 6.1063829787234045,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 7.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 47
+      },
+      "inference": {
+        "average_queue_wait_seconds": 0.002067825774252979,
+        "batch_size_distribution": {
+          "1": 1320
+        },
+        "batches": 1320,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 0,
+          "latency": 1320
+        },
+        "inference_seconds": 2.285064088413492,
+        "maximum_batch_size": 1,
+        "positions_per_second": 577.6643231553602,
+        "requests": 1320,
+        "total_queue_wait_seconds": 2.7295300220139325
+      },
+      "inference_batch_size": 4,
+      "measured_wall_seconds": 5.3675137340324,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "shared-batched-cuda",
+      "moves": 267,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.020188874069889878,
+        "median": 0.020061948640353006,
+        "minimum": 0.019919694559648635,
+        "p95": 0.020188874069889878
+      },
+      "setup_and_warmup_seconds": 5.4666731080506,
+      "simulations_per_move": 4,
+      "simulations_per_second": 198.97480526755058,
+      "steady_state_games_per_hour": 2682.8063631579853,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 83.24812936818827,
+      "device": "cuda",
+      "flush_latency_seconds": 0.0005,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 10.0,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 10.0,
         "sample_interval_seconds": 0.1,
         "samples": 29
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0005648115842081042,
+        "average_queue_wait_seconds": 0.0005653205363848952,
         "batch_size_distribution": {
           "1": 1320
         },
@@ -229,37 +390,48 @@
           "full_batch": 0,
           "latency": 1320
         },
-        "inference_seconds": 2.1105753275332972,
+        "inference_seconds": 2.1128963460214436,
         "maximum_batch_size": 1,
-        "positions_per_second": 625.421885104063,
+        "positions_per_second": 624.7348586150679,
         "requests": 1320,
-        "total_queue_wait_seconds": 0.7455512911546975
+        "total_queue_wait_seconds": 0.7462231080280617
       },
-      "inference_batch_size": 4,
+      "inference_batch_size": 8,
+      "measured_wall_seconds": 3.207279274938628,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.012318527366972986,
       "moves": 267,
       "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.012260297010905797,
+        "median": 0.01192172323744676,
+        "minimum": 0.011693238120060415,
+        "p95": 0.012260297010905797
+      },
+      "setup_and_warmup_seconds": 3.309917986043729,
       "simulations_per_move": 4,
-      "simulations_per_second": 324.7141383737425,
-      "wall_seconds": 3.289046806981787,
+      "simulations_per_second": 332.9925174727531,
+      "steady_state_games_per_hour": 4489.786752441615,
       "workers": 1
     },
     {
+      "aggregate_moves_per_second": 48.79164279430433,
       "device": "cuda",
       "flush_latency_seconds": 0.002,
       "games": 4,
-      "games_per_hour": 2590.130050911501,
       "gpu": {
-        "average_utilization_percent": 6.224489795918367,
+        "average_utilization_percent": 6.041666666666667,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 10.0,
+        "peak_utilization_percent": 7.0,
         "sample_interval_seconds": 0.1,
-        "samples": 49
+        "samples": 48
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0020700407657193755,
+        "average_queue_wait_seconds": 0.0020720113334281257,
         "batch_size_distribution": {
           "1": 1320
         },
@@ -269,117 +441,48 @@
           "full_batch": 0,
           "latency": 1320
         },
-        "inference_seconds": 2.2919317252235487,
+        "inference_seconds": 2.3464535314124078,
         "maximum_batch_size": 1,
-        "positions_per_second": 575.9333864411911,
+        "positions_per_second": 562.5510935242977,
         "requests": 1320,
-        "total_queue_wait_seconds": 2.7324538107495755
-      },
-      "inference_batch_size": 4,
-      "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.020822346063543544,
-      "moves": 267,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 4,
-      "simulations_per_second": 192.10131210926963,
-      "wall_seconds": 5.559566398966126,
-      "workers": 1
-    },
-    {
-      "device": "cuda",
-      "flush_latency_seconds": 0.0005,
-      "games": 4,
-      "games_per_hour": 4350.807059666425,
-      "gpu": {
-        "average_utilization_percent": 9.413793103448276,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 10.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 29
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.0005662087692392312,
-        "batch_size_distribution": {
-          "1": 1320
-        },
-        "batches": 1320,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 0,
-          "latency": 1320
-        },
-        "inference_seconds": 2.1057963913772255,
-        "maximum_batch_size": 1,
-        "positions_per_second": 626.8412299522929,
-        "requests": 1320,
-        "total_queue_wait_seconds": 0.7473955753957853
+        "total_queue_wait_seconds": 2.735054960125126
       },
       "inference_batch_size": 8,
+      "measured_wall_seconds": 5.472248621052131,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.012395995393507043,
       "moves": 267,
       "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.021028727014273614,
+        "median": 0.02033830415932709,
+        "minimum": 0.02005271064117551,
+        "p95": 0.021028727014273614
+      },
+      "setup_and_warmup_seconds": 5.438697856967337,
       "simulations_per_move": 4,
-      "simulations_per_second": 322.6848569252598,
-      "wall_seconds": 3.3097307700663805,
+      "simulations_per_second": 195.16657117721732,
+      "steady_state_games_per_hour": 2631.45938665911,
       "workers": 1
     },
     {
-      "device": "cuda",
-      "flush_latency_seconds": 0.002,
-      "games": 4,
-      "games_per_hour": 2607.412391524444,
-      "gpu": {
-        "average_utilization_percent": 6.122448979591836,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 10.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 49
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.0020709511489699116,
-        "batch_size_distribution": {
-          "1": 1320
-        },
-        "batches": 1320,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 0,
-          "latency": 1320
-        },
-        "inference_seconds": 2.3003953373990953,
-        "maximum_batch_size": 1,
-        "positions_per_second": 573.8144129141023,
-        "requests": 1320,
-        "total_queue_wait_seconds": 2.733655516640283
-      },
-      "inference_batch_size": 8,
-      "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.020684332269407836,
-      "moves": 267,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 4,
-      "simulations_per_second": 193.3830857047296,
-      "wall_seconds": 5.522716715931892,
-      "workers": 1
-    },
-    {
+      "aggregate_moves_per_second": 105.39011061979868,
       "device": "cuda",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 5411.578490851176,
       "gpu": {
-        "average_utilization_percent": 11.666666666666666,
+        "average_utilization_percent": 12.5,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 13.0,
         "sample_interval_seconds": 0.1,
-        "samples": 24
+        "samples": 22
       },
       "inference": {
-        "average_queue_wait_seconds": 0.004528532840953575,
+        "average_queue_wait_seconds": 0.004401542711562026,
         "batch_size_distribution": {
           "1": 1320
         },
@@ -389,72 +492,94 @@
           "full_batch": 1320,
           "latency": 0
         },
-        "inference_seconds": 2.5650982160586864,
+        "inference_seconds": 2.4849451611516997,
         "maximum_batch_size": 1,
-        "positions_per_second": 514.6001785569836,
+        "positions_per_second": 531.1988452043821,
         "requests": 1320,
-        "total_queue_wait_seconds": 5.9776633500587195
+        "total_queue_wait_seconds": 5.810036379261874
       },
       "inference_batch_size": 1,
+      "measured_wall_seconds": 2.5334445369662717,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "synchronous-cuda",
-      "move_latency_seconds": 0.009966146543165076,
       "moves": 267,
       "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.037411173000000415,
+        "median": 0.03476510505509832,
+        "minimum": 0.02751630548964781,
+        "p95": 0.037411173000000415
+      },
+      "setup_and_warmup_seconds": 2.4922823439119384,
       "simulations_per_move": 4,
-      "simulations_per_second": 401.3587380714622,
-      "wall_seconds": 2.6609611270250753,
+      "simulations_per_second": 421.5604424791947,
+      "steady_state_games_per_hour": 5683.961022191389,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 118.99945918162322,
       "device": "cuda",
       "flush_latency_seconds": 0.0005,
       "games": 4,
-      "games_per_hour": 6142.043181109231,
       "gpu": {
-        "average_utilization_percent": 10.904761904761905,
+        "average_utilization_percent": 11.65,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 12.0,
         "sample_interval_seconds": 0.1,
-        "samples": 21
+        "samples": 20
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0005019505519709183,
+        "average_queue_wait_seconds": 0.000454584407270886,
         "batch_size_distribution": {
-          "1": 99,
-          "2": 94,
-          "3": 27,
-          "4": 238
+          "1": 101,
+          "2": 92,
+          "3": 29,
+          "4": 237
         },
-        "batches": 458,
+        "batches": 459,
         "flushes": {
           "forced": 0,
-          "full_batch": 238,
-          "latency": 220
+          "full_batch": 237,
+          "latency": 222
         },
-        "inference_seconds": 1.839414275600575,
+        "inference_seconds": 1.8114205367164686,
         "maximum_batch_size": 4,
-        "positions_per_second": 717.6197431484082,
+        "positions_per_second": 728.7098568467936,
         "requests": 1320,
-        "total_queue_wait_seconds": 0.6625747286016122
+        "total_queue_wait_seconds": 0.6000514175975695
       },
       "inference_batch_size": 4,
+      "measured_wall_seconds": 2.2437076759524643,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.008780886535532773,
       "moves": 267,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.02939146724063903,
+        "median": 0.028556857015473606,
+        "minimum": 0.024364294238773215,
+        "p95": 0.02939146724063903
+      },
+      "setup_and_warmup_seconds": 2.2258824720047414,
       "simulations_per_move": 4,
-      "simulations_per_second": 455.5348692656013,
-      "wall_seconds": 2.3444967049872503,
+      "simulations_per_second": 475.9978367264929,
+      "steady_state_games_per_hour": 6417.948360357208,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 105.83268053960137,
       "device": "cuda",
       "flush_latency_seconds": 0.002,
       "games": 4,
-      "games_per_hour": 5496.400532192536,
       "gpu": {
-        "average_utilization_percent": 10.08695652173913,
+        "average_utilization_percent": 10.304347826086957,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 12.0,
@@ -462,7 +587,7 @@
         "samples": 23
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0008345628551482647,
+        "average_queue_wait_seconds": 0.0007917541096861842,
         "batch_size_distribution": {
           "1": 100,
           "2": 86,
@@ -475,115 +600,403 @@
           "full_batch": 247,
           "latency": 206
         },
-        "inference_seconds": 1.7864206338999793,
+        "inference_seconds": 1.7681291067274287,
         "maximum_batch_size": 4,
-        "positions_per_second": 738.9077213681053,
+        "positions_per_second": 746.5518185168864,
         "requests": 1320,
-        "total_queue_wait_seconds": 1.1016229687957093
+        "total_queue_wait_seconds": 1.045115424785763
       },
       "inference_batch_size": 4,
+      "measured_wall_seconds": 2.5228502069367096,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.009812346089732474,
       "moves": 267,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.030189178166134905,
+        "median": 0.0296691832144279,
+        "minimum": 0.027401472716440407,
+        "p95": 0.030189178166134905
+      },
+      "setup_and_warmup_seconds": 2.6781991369789466,
       "simulations_per_move": 4,
-      "simulations_per_second": 407.6497061376131,
-      "wall_seconds": 2.6198964059585705,
+      "simulations_per_second": 423.3307221584055,
+      "steady_state_games_per_hour": 5707.829961686366,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 120.39290617695428,
       "device": "cuda",
       "flush_latency_seconds": 0.0005,
       "games": 4,
-      "games_per_hour": 6053.823172393913,
       "gpu": {
-        "average_utilization_percent": 10.619047619047619,
+        "average_utilization_percent": 11.7,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 12.0,
         "sample_interval_seconds": 0.1,
-        "samples": 21
+        "samples": 20
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0006584277060800091,
+        "average_queue_wait_seconds": 0.0005336081645289211,
         "batch_size_distribution": {
-          "1": 99,
-          "2": 91,
-          "3": 29,
+          "1": 104,
+          "2": 93,
+          "3": 26,
           "4": 238
         },
-        "batches": 457,
+        "batches": 461,
         "flushes": {
           "forced": 0,
           "full_batch": 0,
-          "latency": 457
+          "latency": 461
         },
-        "inference_seconds": 1.787332964828238,
+        "inference_seconds": 1.7426157261943445,
         "maximum_batch_size": 4,
-        "positions_per_second": 738.530551372028,
+        "positions_per_second": 757.4819738845783,
         "requests": 1320,
-        "total_queue_wait_seconds": 0.869124572025612
+        "total_queue_wait_seconds": 0.7043627771781757
       },
       "inference_batch_size": 8,
+      "measured_wall_seconds": 2.217738639912568,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.008908846977163343,
       "moves": 267,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.029910115459933877,
+        "median": 0.028559385867038548,
+        "minimum": 0.02408672002164404,
+        "p95": 0.029910115459933877
+      },
+      "setup_and_warmup_seconds": 2.3025884369853884,
       "simulations_per_move": 4,
-      "simulations_per_second": 448.99188528588195,
-      "wall_seconds": 2.3786621429026127,
+      "simulations_per_second": 481.57162470781714,
+      "steady_state_games_per_hour": 6493.100557858208,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 92.84872334425232,
       "device": "cuda",
       "flush_latency_seconds": 0.002,
       "games": 4,
-      "games_per_hour": 4771.806500238126,
       "gpu": {
-        "average_utilization_percent": 9.0,
+        "average_utilization_percent": 9.26923076923077,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 10.0,
         "sample_interval_seconds": 0.1,
-        "samples": 27
+        "samples": 26
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0018791446206512664,
+        "average_queue_wait_seconds": 0.0018302879582871823,
         "batch_size_distribution": {
-          "1": 102,
-          "2": 85,
+          "1": 100,
+          "2": 86,
           "3": 20,
           "4": 247
         },
-        "batches": 454,
+        "batches": 453,
         "flushes": {
           "forced": 0,
           "full_batch": 0,
-          "latency": 454
+          "latency": 453
         },
-        "inference_seconds": 1.8248228614684194,
+        "inference_seconds": 1.7704720987239853,
         "maximum_batch_size": 4,
-        "positions_per_second": 723.3578819468577,
+        "positions_per_second": 745.5638532521074,
         "requests": 1320,
-        "total_queue_wait_seconds": 2.4804708992596716
+        "total_queue_wait_seconds": 2.4159801049390808
       },
       "inference_batch_size": 8,
+      "measured_wall_seconds": 2.875645354972221,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.011302341003762732,
       "moves": 267,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.036915051038376986,
+        "median": 0.035569230508625004,
+        "minimum": 0.03123387564150819,
+        "p95": 0.036915051038376986
+      },
+      "setup_and_warmup_seconds": 3.014897536020726,
       "simulations_per_move": 4,
-      "simulations_per_second": 353.9089821009944,
-      "wall_seconds": 3.0177250480046496,
+      "simulations_per_second": 371.3948933770093,
+      "steady_state_games_per_hour": 5007.571596094507,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 27.274526526570355,
       "device": "cuda",
       "flush_latency_seconds": 0.0,
       "games": 4,
-      "games_per_hour": 2345.997014960301,
       "gpu": {
-        "average_utilization_percent": 12.555555555555555,
+        "average_utilization_percent": 13.0,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 13.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 53
+      },
+      "inference": {
+        "average_queue_wait_seconds": 9.88309779878321e-06,
+        "batch_size_distribution": {
+          "1": 3379
+        },
+        "batches": 3379,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 3379,
+          "latency": 0
+        },
+        "inference_seconds": 5.348854623152874,
+        "maximum_batch_size": 1,
+        "positions_per_second": 631.7240302949668,
+        "requests": 3379,
+        "total_queue_wait_seconds": 0.033394987462088466
+      },
+      "inference_batch_size": 1,
+      "measured_wall_seconds": 6.012936644023284,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "synchronous-cuda",
+      "moves": 164,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.037126313797578366,
+        "median": 0.036505841975061536,
+        "minimum": 0.035741083640605215,
+        "p95": 0.037126313797578366
+      },
+      "setup_and_warmup_seconds": 5.4644726540427655,
+      "simulations_per_move": 20,
+      "simulations_per_second": 545.4905305314071,
+      "steady_state_games_per_hour": 2394.8364755037383,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 20.35712983067043,
+      "device": "cuda",
+      "flush_latency_seconds": 0.0005,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 9.915492957746478,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 10.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 71
+      },
+      "inference": {
+        "average_queue_wait_seconds": 0.000565980976438092,
+        "batch_size_distribution": {
+          "1": 3379
+        },
+        "batches": 3379,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 0,
+          "latency": 3379
+        },
+        "inference_seconds": 5.357827581698075,
+        "maximum_batch_size": 1,
+        "positions_per_second": 630.6660579266124,
+        "requests": 3379,
+        "total_queue_wait_seconds": 1.9124497193843126
+      },
+      "inference_batch_size": 4,
+      "measured_wall_seconds": 8.056145505979657,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "shared-batched-cuda",
+      "moves": 164,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.05020578515715897,
+        "median": 0.04923134496153196,
+        "minimum": 0.04776558116621648,
+        "p95": 0.05020578515715897
+      },
+      "setup_and_warmup_seconds": 7.099393413052894,
+      "simulations_per_move": 20,
+      "simulations_per_second": 407.1425966134086,
+      "steady_state_games_per_hour": 1787.4553022052085,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 12.04638553279351,
+      "device": "cuda",
+      "flush_latency_seconds": 0.002,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 6.016666666666667,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 7.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 120
+      },
+      "inference": {
+        "average_queue_wait_seconds": 0.0020713097887589413,
+        "batch_size_distribution": {
+          "1": 3379
+        },
+        "batches": 3379,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 0,
+          "latency": 3379
+        },
+        "inference_seconds": 5.874712615273893,
+        "maximum_batch_size": 1,
+        "positions_per_second": 575.1770718477031,
+        "requests": 3379,
+        "total_queue_wait_seconds": 6.998955776216462
+      },
+      "inference_batch_size": 4,
+      "measured_wall_seconds": 13.61404211691115,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "shared-batched-cuda",
+      "moves": 164,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.08384019749153558,
+        "median": 0.08267389161725684,
+        "minimum": 0.08192826284095645,
+        "p95": 0.08384019749153558
+      },
+      "setup_and_warmup_seconds": 12.125275522004813,
+      "simulations_per_move": 20,
+      "simulations_per_second": 240.9277106558702,
+      "steady_state_games_per_hour": 1057.7314126355277,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 20.336302266391943,
+      "device": "cuda",
+      "flush_latency_seconds": 0.0005,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 9.971830985915492,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 10.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 71
+      },
+      "inference": {
+        "average_queue_wait_seconds": 0.0005652566263523834,
+        "batch_size_distribution": {
+          "1": 3379
+        },
+        "batches": 3379,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 0,
+          "latency": 3379
+        },
+        "inference_seconds": 5.3856870491290465,
+        "maximum_batch_size": 1,
+        "positions_per_second": 627.403703404274,
+        "requests": 3379,
+        "total_queue_wait_seconds": 1.9100021404447034
+      },
+      "inference_batch_size": 8,
+      "measured_wall_seconds": 8.064396262983792,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "shared-batched-cuda",
+      "moves": 164,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.049896349699702115,
+        "median": 0.04940664105105046,
+        "minimum": 0.047265438800677656,
+        "p95": 0.049896349699702115
+      },
+      "setup_and_warmup_seconds": 7.126827663043514,
+      "simulations_per_move": 20,
+      "simulations_per_second": 406.72604532783885,
+      "steady_state_games_per_hour": 1785.6265404636827,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 12.040617640935578,
+      "device": "cuda",
+      "flush_latency_seconds": 0.002,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 6.025,
+        "method": "nvidia-smi samples during workload",
+        "peak_memory_mib": 471.0,
+        "peak_utilization_percent": 7.0,
+        "sample_interval_seconds": 0.1,
+        "samples": 120
+      },
+      "inference": {
+        "average_queue_wait_seconds": 0.0020699743704112937,
+        "batch_size_distribution": {
+          "1": 3379
+        },
+        "batches": 3379,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 0,
+          "latency": 3379
+        },
+        "inference_seconds": 5.878429553820752,
+        "maximum_batch_size": 1,
+        "positions_per_second": 574.813386647422,
+        "requests": 3379,
+        "total_queue_wait_seconds": 6.9944433976197615
+      },
+      "inference_batch_size": 8,
+      "measured_wall_seconds": 13.620563736069016,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
+      "mode": "shared-batched-cuda",
+      "moves": 164,
+      "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.08391157901912395,
+        "median": 0.08271605667347709,
+        "minimum": 0.08173717732075601,
+        "p95": 0.08391157901912395
+      },
+      "setup_and_warmup_seconds": 12.275288790930063,
+      "simulations_per_move": 20,
+      "simulations_per_second": 240.81235281871156,
+      "steady_state_games_per_hour": 1057.2249635943433,
+      "workers": 1
+    },
+    {
+      "aggregate_moves_per_second": 27.1010261466752,
+      "device": "cuda",
+      "flush_latency_seconds": 0.0,
+      "games": 4,
+      "gpu": {
+        "average_utilization_percent": 12.962962962962964,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 13.0,
@@ -591,7 +1004,7 @@
         "samples": 54
       },
       "inference": {
-        "average_queue_wait_seconds": 9.967911752565402e-06,
+        "average_queue_wait_seconds": 0.003762266495835326,
         "batch_size_distribution": {
           "1": 3379
         },
@@ -601,229 +1014,40 @@
           "full_batch": 3379,
           "latency": 0
         },
-        "inference_seconds": 5.337347226333804,
+        "inference_seconds": 5.955339984036982,
         "maximum_batch_size": 1,
-        "positions_per_second": 633.086036323145,
+        "positions_per_second": 567.3899406343309,
         "requests": 3379,
-        "total_queue_wait_seconds": 0.0336815738119185
+        "total_queue_wait_seconds": 12.712698489427567
       },
       "inference_batch_size": 1,
+      "measured_wall_seconds": 6.051431378000416,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "synchronous-cuda",
-      "move_latency_seconds": 0.03742753187188788,
       "moves": 164,
       "peak_cuda_memory_bytes": 26737152,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.14345511815976353,
+        "median": 0.1262587373181354,
+        "minimum": 0.10083249933280361,
+        "p95": 0.14345511815976353
+      },
+      "setup_and_warmup_seconds": 5.455719470977783,
       "simulations_per_move": 20,
-      "simulations_per_second": 534.3659867409574,
-      "wall_seconds": 6.138115226989612,
-      "workers": 1
-    },
-    {
-      "device": "cuda",
-      "flush_latency_seconds": 0.0005,
-      "games": 4,
-      "games_per_hour": 1796.2264867099816,
-      "gpu": {
-        "average_utilization_percent": 9.985915492957746,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 12.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 71
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.0005655217297762725,
-        "batch_size_distribution": {
-          "1": 3379
-        },
-        "batches": 3379,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 0,
-          "latency": 3379
-        },
-        "inference_seconds": 5.305799555033445,
-        "maximum_batch_size": 1,
-        "positions_per_second": 636.8502927696258,
-        "requests": 3379,
-        "total_queue_wait_seconds": 1.9108979249140248
-      },
-      "inference_batch_size": 4,
-      "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.04888296587230842,
-      "moves": 164,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 20,
-      "simulations_per_second": 409.1404775283847,
-      "wall_seconds": 8.016806403058581,
-      "workers": 1
-    },
-    {
-      "device": "cuda",
-      "flush_latency_seconds": 0.002,
-      "games": 4,
-      "games_per_hour": 1053.7661514755446,
-      "gpu": {
-        "average_utilization_percent": 6.091666666666667,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 9.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 120
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.002070199842187161,
-        "batch_size_distribution": {
-          "1": 3379
-        },
-        "batches": 3379,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 0,
-          "latency": 3379
-        },
-        "inference_seconds": 5.843744411831722,
-        "maximum_batch_size": 1,
-        "positions_per_second": 578.2251518664302,
-        "requests": 3379,
-        "total_queue_wait_seconds": 6.995205266750418
-      },
-      "inference_batch_size": 4,
-      "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.08332482299401152,
-      "moves": 164,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 20,
-      "simulations_per_second": 240.0245122805407,
-      "wall_seconds": 13.66527097101789,
-      "workers": 1
-    },
-    {
-      "device": "cuda",
-      "flush_latency_seconds": 0.0005,
-      "games": 4,
-      "games_per_hour": 1785.588600766294,
-      "gpu": {
-        "average_utilization_percent": 9.76056338028169,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 10.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 71
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.0005652678187949774,
-        "batch_size_distribution": {
-          "1": 3379
-        },
-        "batches": 3379,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 0,
-          "latency": 3379
-        },
-        "inference_seconds": 5.32705259276554,
-        "maximum_batch_size": 1,
-        "positions_per_second": 634.3094874995014,
-        "requests": 3379,
-        "total_queue_wait_seconds": 1.9100399597082287
-      },
-      "inference_batch_size": 8,
-      "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.04917419276259862,
-      "moves": 164,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 20,
-      "simulations_per_second": 406.71740350787803,
-      "wall_seconds": 8.064567613066174,
-      "workers": 1
-    },
-    {
-      "device": "cuda",
-      "flush_latency_seconds": 0.002,
-      "games": 4,
-      "games_per_hour": 1055.0878282781468,
-      "gpu": {
-        "average_utilization_percent": 6.091666666666667,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 10.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 120
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.002070245699074751,
-        "batch_size_distribution": {
-          "1": 3379
-        },
-        "batches": 3379,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 0,
-          "latency": 3379
-        },
-        "inference_seconds": 5.827968165627681,
-        "maximum_batch_size": 1,
-        "positions_per_second": 579.7904010404073,
-        "requests": 3379,
-        "total_queue_wait_seconds": 6.995360217173584
-      },
-      "inference_batch_size": 8,
-      "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.08322044449330239,
-      "moves": 164,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 20,
-      "simulations_per_second": 240.3255608855779,
-      "wall_seconds": 13.648152896901593,
-      "workers": 1
-    },
-    {
-      "device": "cuda",
-      "flush_latency_seconds": 0.0,
-      "games": 4,
-      "games_per_hour": 2334.4726820744418,
-      "gpu": {
-        "average_utilization_percent": 12.592592592592593,
-        "method": "nvidia-smi samples during workload",
-        "peak_memory_mib": 471.0,
-        "peak_utilization_percent": 14.0,
-        "sample_interval_seconds": 0.1,
-        "samples": 54
-      },
-      "inference": {
-        "average_queue_wait_seconds": 0.0037985207195252897,
-        "batch_size_distribution": {
-          "1": 3379
-        },
-        "batches": 3379,
-        "flushes": {
-          "forced": 0,
-          "full_batch": 3379,
-          "latency": 0
-        },
-        "inference_seconds": 6.037192213349044,
-        "maximum_batch_size": 1,
-        "positions_per_second": 559.6972699541645,
-        "requests": 3379,
-        "total_queue_wait_seconds": 12.835201511275955
-      },
-      "inference_batch_size": 1,
-      "mode": "synchronous-cuda",
-      "move_latency_seconds": 0.037612296225610985,
-      "moves": 164,
-      "peak_cuda_memory_bytes": 26737152,
-      "simulations_per_move": 20,
-      "simulations_per_second": 531.7409998058451,
-      "wall_seconds": 6.168416581000201,
+      "simulations_per_second": 542.020522933504,
+      "steady_state_games_per_hour": 2379.6022958056274,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 30.232711156190202,
       "device": "cuda",
       "flush_latency_seconds": 0.0005,
       "games": 4,
-      "games_per_hour": 2620.0835047979344,
       "gpu": {
-        "average_utilization_percent": 11.958333333333334,
+        "average_utilization_percent": 12.0,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 13.0,
@@ -831,136 +1055,169 @@
         "samples": 48
       },
       "inference": {
-        "average_queue_wait_seconds": 0.00039139430721619225,
+        "average_queue_wait_seconds": 0.00039856013211168927,
         "batch_size_distribution": {
-          "1": 216,
-          "2": 408,
-          "3": 105,
-          "4": 508
+          "1": 221,
+          "2": 411,
+          "3": 104,
+          "4": 506
         },
-        "batches": 1237,
+        "batches": 1242,
         "flushes": {
           "forced": 0,
-          "full_batch": 508,
-          "latency": 729
+          "full_batch": 506,
+          "latency": 736
         },
-        "inference_seconds": 4.429073910228908,
+        "inference_seconds": 4.39897654321976,
         "maximum_batch_size": 4,
-        "positions_per_second": 762.9134370948808,
+        "positions_per_second": 768.1332161700493,
         "requests": 3379,
-        "total_queue_wait_seconds": 1.3225213640835136
+        "total_queue_wait_seconds": 1.346734686405398
       },
       "inference_batch_size": 4,
+      "measured_wall_seconds": 5.424587929039262,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.03351224412809398,
       "moves": 164,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.11721091263927519,
+        "median": 0.10650964435973984,
+        "minimum": 0.09038247056693459,
+        "p95": 0.11721091263927519
+      },
+      "setup_and_warmup_seconds": 4.752827917924151,
       "simulations_per_move": 20,
-      "simulations_per_second": 596.7967983150851,
-      "wall_seconds": 5.496008037007414,
+      "simulations_per_second": 604.6542231238041,
+      "steady_state_games_per_hour": 2654.579516153286,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 24.92023258801335,
       "device": "cuda",
       "flush_latency_seconds": 0.002,
       "games": 4,
-      "games_per_hour": 2148.7993712477055,
       "gpu": {
-        "average_utilization_percent": 9.932203389830509,
+        "average_utilization_percent": 9.844827586206897,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 13.0,
         "sample_interval_seconds": 0.1,
-        "samples": 59
+        "samples": 58
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0010062339945113908,
+        "average_queue_wait_seconds": 0.0009731884968455205,
         "batch_size_distribution": {
-          "1": 218,
-          "2": 407,
-          "3": 101,
-          "4": 511
+          "1": 219,
+          "2": 404,
+          "3": 104,
+          "4": 510
         },
         "batches": 1237,
         "flushes": {
           "forced": 0,
-          "full_batch": 511,
-          "latency": 726
+          "full_batch": 510,
+          "latency": 727
         },
-        "inference_seconds": 4.496481244568713,
+        "inference_seconds": 4.465837731375359,
         "maximum_batch_size": 4,
-        "positions_per_second": 751.4765026722806,
+        "positions_per_second": 756.6329551699492,
         "requests": 3379,
-        "total_queue_wait_seconds": 3.4000646674539894
+        "total_queue_wait_seconds": 3.288403930841014
       },
       "inference_batch_size": 4,
+      "measured_wall_seconds": 6.580997967044823,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.04086229697554145,
       "moves": 164,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.11905531883627797,
+        "median": 0.11637947420708417,
+        "minimum": 0.10965346371716199,
+        "p95": 0.11905531883627797
+      },
+      "setup_and_warmup_seconds": 5.24909839197062,
       "simulations_per_move": 20,
-      "simulations_per_second": 489.44874567308847,
-      "wall_seconds": 6.701416703988798,
+      "simulations_per_second": 498.404651760267,
+      "steady_state_games_per_hour": 2188.1179833377573,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 30.14557084071558,
       "device": "cuda",
       "flush_latency_seconds": 0.0005,
       "games": 4,
-      "games_per_hour": 2587.7295569488624,
       "gpu": {
-        "average_utilization_percent": 11.53061224489796,
+        "average_utilization_percent": 11.979166666666666,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 13.0,
         "sample_interval_seconds": 0.1,
-        "samples": 49
+        "samples": 48
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0004690306140046504,
+        "average_queue_wait_seconds": 0.0004500170582084062,
         "batch_size_distribution": {
-          "1": 219,
-          "2": 410,
-          "3": 104,
+          "1": 218,
+          "2": 415,
+          "3": 101,
           "4": 507
         },
-        "batches": 1240,
+        "batches": 1241,
         "flushes": {
           "forced": 0,
           "full_batch": 0,
-          "latency": 1240
+          "latency": 1241
         },
-        "inference_seconds": 4.433052596170455,
+        "inference_seconds": 4.38544870284386,
         "maximum_batch_size": 4,
-        "positions_per_second": 762.2287186303607,
+        "positions_per_second": 770.5026848926083,
         "requests": 3379,
-        "total_queue_wait_seconds": 1.5848544447217137
+        "total_queue_wait_seconds": 1.5206076396862045
       },
       "inference_batch_size": 8,
+      "measured_wall_seconds": 5.440268517937511,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.03393124208555602,
       "moves": 164,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.11810202428139746,
+        "median": 0.10722289628049891,
+        "minimum": 0.09064904568367638,
+        "p95": 0.11810202428139746
+      },
+      "setup_and_warmup_seconds": 4.816074640024453,
       "simulations_per_move": 20,
-      "simulations_per_second": 589.4272879716854,
-      "wall_seconds": 5.564723702031188,
+      "simulations_per_second": 602.9114168143116,
+      "steady_state_games_per_hour": 2646.9281713799046,
       "workers": 4
     },
     {
+      "aggregate_moves_per_second": 21.987362275396247,
       "device": "cuda",
       "flush_latency_seconds": 0.002,
       "games": 4,
-      "games_per_hour": 1906.6460506242795,
       "gpu": {
-        "average_utilization_percent": 8.787878787878787,
+        "average_utilization_percent": 8.876923076923077,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 471.0,
         "peak_utilization_percent": 10.0,
         "sample_interval_seconds": 0.1,
-        "samples": 66
+        "samples": 65
       },
       "inference": {
-        "average_queue_wait_seconds": 0.0019560418412536956,
+        "average_queue_wait_seconds": 0.0019080709261471336,
         "batch_size_distribution": {
           "1": 219,
           "2": 405,
@@ -973,20 +1230,31 @@
           "full_batch": 0,
           "latency": 1237
         },
-        "inference_seconds": 4.506651209434494,
+        "inference_seconds": 4.495377889485098,
         "maximum_batch_size": 4,
-        "positions_per_second": 749.7806781510401,
+        "positions_per_second": 751.6609466589318,
         "requests": 3379,
-        "total_queue_wait_seconds": 6.609465381596237
+        "total_queue_wait_seconds": 6.447371659451164
       },
       "inference_batch_size": 8,
+      "measured_wall_seconds": 7.458830120041966,
+      "measurement": {
+        "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+        "warmup_games": 4
+      },
       "mode": "shared-batched-cuda",
-      "move_latency_seconds": 0.04605200740852303,
       "moves": 164,
       "peak_cuda_memory_bytes": 26776576,
+      "per_game_move_latency_seconds": {
+        "maximum": 0.15251622916199267,
+        "median": 0.14142580471828353,
+        "minimum": 0.12428437194903381,
+        "p95": 0.15251622916199267
+      },
+      "setup_and_warmup_seconds": 6.268431582953781,
       "simulations_per_move": 20,
-      "simulations_per_second": 434.29160041997477,
-      "wall_seconds": 7.552529214997776,
+      "simulations_per_second": 439.74724550792496,
+      "steady_state_games_per_hour": 1930.5976632055244,
       "workers": 4
     }
   ],
@@ -995,37 +1263,37 @@
       "batch_size": 32,
       "device": "cpu",
       "epochs": 1,
-      "examples_per_second": 14145.58478145422,
+      "examples_per_second": 13933.105216499644,
       "gpu": null,
       "peak_cuda_memory_bytes": null,
-      "training_seconds": 0.13862982904538512,
-      "wall_seconds": 1.2027611640514806
+      "training_seconds": 0.14074393105693161,
+      "wall_seconds": 1.2113399599911645
     },
     {
       "batch_size": 64,
       "device": "cpu",
       "epochs": 1,
-      "examples_per_second": 24863.52573966744,
+      "examples_per_second": 24175.52371515563,
       "gpu": null,
       "peak_cuda_memory_bytes": null,
-      "training_seconds": 0.0788705520099029,
-      "wall_seconds": 0.698628767975606
+      "training_seconds": 0.08111509901937097,
+      "wall_seconds": 0.7678017530124635
     },
     {
       "batch_size": 128,
       "device": "cpu",
       "epochs": 1,
-      "examples_per_second": 36622.97000991137,
+      "examples_per_second": 34883.94822792748,
       "gpu": null,
       "peak_cuda_memory_bytes": null,
-      "training_seconds": 0.05354562995489687,
-      "wall_seconds": 0.6668144130380824
+      "training_seconds": 0.05621496704407036,
+      "wall_seconds": 0.6887824409641325
     },
     {
       "batch_size": 32,
       "device": "cuda",
       "epochs": 1,
-      "examples_per_second": 6006.348204458637,
+      "examples_per_second": 6020.917466946396,
       "gpu": {
         "average_utilization_percent": 3.7777777777777777,
         "method": "nvidia-smi samples during workload",
@@ -1035,16 +1303,16 @@
         "samples": 9
       },
       "peak_cuda_memory_bytes": 19437568,
-      "training_seconds": 0.32648789801169187,
-      "wall_seconds": 1.010513223009184
+      "training_seconds": 0.32569787092506886,
+      "wall_seconds": 1.0094461840344593
     },
     {
       "batch_size": 64,
       "device": "cuda",
       "epochs": 1,
-      "examples_per_second": 36842.74963678536,
+      "examples_per_second": 35579.172653930545,
       "gpu": {
-        "average_utilization_percent": 4.571428571428571,
+        "average_utilization_percent": 4.714285714285714,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 439.0,
         "peak_utilization_percent": 12.0,
@@ -1052,25 +1320,25 @@
         "samples": 7
       },
       "peak_cuda_memory_bytes": 20450816,
-      "training_seconds": 0.05322621192317456,
-      "wall_seconds": 0.700216107070446
+      "training_seconds": 0.05511651490814984,
+      "wall_seconds": 0.7006346329580992
     },
     {
       "batch_size": 128,
       "device": "cuda",
       "epochs": 1,
-      "examples_per_second": 50041.957710904084,
+      "examples_per_second": 49055.61311720527,
       "gpu": {
-        "average_utilization_percent": 2.5,
+        "average_utilization_percent": 2.6666666666666665,
         "method": "nvidia-smi samples during workload",
         "peak_memory_mib": 439.0,
-        "peak_utilization_percent": 6.0,
+        "peak_utilization_percent": 5.0,
         "sample_interval_seconds": 0.1,
         "samples": 6
       },
       "peak_cuda_memory_bytes": 22699520,
-      "training_seconds": 0.03918711596634239,
-      "wall_seconds": 0.6626409629825503
+      "training_seconds": 0.03997503803111613,
+      "wall_seconds": 0.6690315350424498
     }
   ],
   "version": 1

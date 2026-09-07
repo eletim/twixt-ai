@@ -8,11 +8,13 @@ import multiprocessing
 import os
 import platform
 import subprocess
-from concurrent.futures import ProcessPoolExecutor
+from collections.abc import Callable
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
 from random import Random
+from statistics import median
 from tempfile import TemporaryDirectory
 from threading import Event, Thread
 from time import perf_counter
@@ -26,7 +28,6 @@ from twixt_ai.game import experiment_board
 from twixt_ai.models import MINI_POLICY_VALUE_CONFIG, load_policy_value_checkpoint
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
-from twixt_ai.selfplay import BatchConfig, run_batch
 from twixt_ai.training.trainer import TrainingConfig, train_model
 
 CUDA_TUNING_FORMAT = "twixt-ai-mini-cuda-tuning"
@@ -52,6 +53,7 @@ class CudaTuningConfig:
     """A compact, reproducible sweep of the important throughput controls."""
 
     games: int = 4
+    warmup_games: int = 4
     worker_counts: tuple[int, ...] = (1, 4, 8)
     inference_batch_sizes: tuple[int, ...] = (1, 4, 8)
     flush_latencies_seconds: tuple[float, ...] = (0.0005, 0.002)
@@ -63,7 +65,7 @@ class CudaTuningConfig:
     gpu_sample_interval_seconds: float = 0.1
 
     def __post_init__(self) -> None:
-        for name in ("games", "training_epochs", "rollout_limit"):
+        for name in ("games", "warmup_games", "training_epochs", "rollout_limit"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
@@ -72,6 +74,8 @@ class CudaTuningConfig:
         object.__setattr__(
             self, "worker_counts", _positive_tuple(self.worker_counts, "worker_counts")
         )
+        if self.warmup_games < min(max(self.worker_counts), self.games):
+            raise ValueError("warmup_games must start every effective self-play worker")
         object.__setattr__(
             self,
             "inference_batch_sizes",
@@ -266,19 +270,78 @@ def _cpu_agent(checkpoint: str, simulations: int, rollout_limit: int) -> MCTSAge
     )
 
 
-def _cpu_game(arguments: tuple[str, int, int, int]) -> int:
+def _cpu_game(arguments: tuple[str, int, int, int]) -> dict[str, float | int]:
     checkpoint, simulations, rollout_limit, seed = arguments
+    started = perf_counter()
     result = run_match(
         _cpu_agent(checkpoint, simulations, rollout_limit),
         _cpu_agent(checkpoint, simulations, rollout_limit),
         config=MatchConfig(experiment_board("mini"), seed, "neural", "neural"),
     )
-    return len(result.moves)
+    return {"moves": len(result.moves), "elapsed_seconds": perf_counter() - started}
+
+
+def _shared_game(factory: Callable[[], MCTSAgent], seed: int) -> dict[str, float | int]:
+    started = perf_counter()
+    result = run_match(
+        factory(),
+        factory(),
+        config=MatchConfig(experiment_board("mini"), seed, "neural", "neural"),
+    )
+    return {"moves": len(result.moves), "elapsed_seconds": perf_counter() - started}
+
+
+def _seeds(seed: int, games: int) -> list[int]:
+    source = Random(seed)
+    return [source.getrandbits(64) for _ in range(games)]
+
+
+def _cpu_arguments(
+    checkpoint: Path,
+    simulations: int,
+    rollout_limit: int,
+    seeds: list[int],
+) -> list[tuple[str, int, int, int]]:
+    return [(str(checkpoint), simulations, rollout_limit, seed) for seed in seeds]
+
+
+def _latency_summary(
+    games: list[dict[str, float | int]],
+) -> dict[str, float]:
+    values = sorted(
+        float(game["elapsed_seconds"]) / int(game["moves"]) for game in games
+    )
+    p95_index = max(0, math.ceil(len(values) * 0.95) - 1)
+    return {
+        "minimum": values[0],
+        "median": median(values),
+        "p95": values[p95_index],
+        "maximum": values[-1],
+    }
+
+
+def _selfplay_metrics(
+    games: list[dict[str, float | int]],
+    wall_seconds: float,
+    setup_seconds: float,
+    simulations: int,
+) -> dict[str, object]:
+    moves = sum(int(game["moves"]) for game in games)
+    completed = len(games)
+    return {
+        "games": completed,
+        "moves": moves,
+        "setup_and_warmup_seconds": setup_seconds,
+        "measured_wall_seconds": wall_seconds,
+        "steady_state_games_per_hour": completed / wall_seconds * 3600.0,
+        "aggregate_moves_per_second": moves / wall_seconds,
+        "per_game_move_latency_seconds": _latency_summary(games),
+        "simulations_per_second": simulations * moves / wall_seconds,
+    }
 
 
 def _selfplay_run(
     checkpoint: Path,
-    root: Path,
     *,
     device: str,
     workers: int,
@@ -287,66 +350,88 @@ def _selfplay_run(
     simulations: int,
     config: CudaTuningConfig,
 ) -> dict[str, object]:
-    batch_config = BatchConfig(
-        games=config.games,
-        workers=workers,
-        seed=config.seed,
-        board=experiment_board("mini"),
-        red_agent="neural",
-        black_agent="neural",
-        worker_mode="process" if device == "cpu" else "thread",
-    )
     sampler: _GpuSampler | None = None
     inference: dict[str, object] | None = None
-    started = perf_counter()
+    setup_started = perf_counter()
+    measured_seeds = _seeds(config.seed, config.games)
+    warmup_seeds = _seeds(config.seed - 1, config.warmup_games)
     if device == "cpu":
-        seed_source = Random(config.seed)
-        arguments = [
-            (
-                str(checkpoint),
-                simulations,
-                config.rollout_limit,
-                seed_source.getrandbits(64),
+        # Spawn is deliberate: forking after importing PyTorch can inherit
+        # unsafe CPU/CUDA runtime state. Warm-up starts every measured worker
+        # and the same executor is then reused outside the timed interval.
+        with ProcessPoolExecutor(
+            max_workers=min(workers, config.games),
+            mp_context=multiprocessing.get_context("spawn"),
+        ) as pool:
+            list(
+                pool.map(
+                    _cpu_game,
+                    _cpu_arguments(
+                        checkpoint,
+                        simulations,
+                        config.rollout_limit,
+                        warmup_seeds,
+                    ),
+                )
             )
-            for _ in range(config.games)
-        ]
-        if workers == 1:
-            move_counts = [_cpu_game(item) for item in arguments]
-        else:
-            # Spawn is deliberate: forking a process after importing PyTorch
-            # can inherit unsafe CPU/CUDA runtime state and hang the control run.
-            with ProcessPoolExecutor(
-                max_workers=min(workers, config.games),
-                mp_context=multiprocessing.get_context("spawn"),
-            ) as pool:
-                move_counts = list(pool.map(_cpu_game, arguments))
-        completed = len(move_counts)
+            setup_seconds = perf_counter() - setup_started
+            started = perf_counter()
+            games = list(
+                pool.map(
+                    _cpu_game,
+                    _cpu_arguments(
+                        checkpoint,
+                        simulations,
+                        config.rollout_limit,
+                        measured_seeds,
+                    ),
+                )
+            )
+            wall_seconds = perf_counter() - started
     else:
         loaded = load_policy_value_checkpoint(checkpoint, map_location="cuda")
         sampler = _GpuSampler("cuda", config.gpu_sample_interval_seconds)
-        torch.cuda.reset_peak_memory_stats()
-        with (
-            sampler,
-            NeuralInferenceBatcher(
+        policy_value = NeuralPolicyValue(loaded.model)
+        with ThreadPoolExecutor(max_workers=min(workers, config.games)) as pool:
+            with NeuralInferenceBatcher(
+                policy_value,
+                batch_size=batch_size,
+                max_wait_seconds=latency,
+            ) as warmup_batcher:
+                warmup_factory = partial(
+                    MCTSAgent,
+                    simulations=simulations,
+                    rollout_limit=config.rollout_limit,
+                    policy_value=warmup_batcher,
+                )
+                list(
+                    pool.map(
+                        lambda seed: _shared_game(warmup_factory, seed), warmup_seeds
+                    )
+                )
+            torch.cuda.reset_peak_memory_stats()
+            with NeuralInferenceBatcher(
                 NeuralPolicyValue(loaded.model),
                 batch_size=batch_size,
                 max_wait_seconds=latency,
-            ) as batcher,
-        ):
-            factory = partial(
-                MCTSAgent,
-                simulations=simulations,
-                rollout_limit=config.rollout_limit,
-                policy_value=batcher,
-            )
-            batch = run_batch(factory, factory, config=batch_config, output_dir=root)
+            ) as batcher:
+                factory = partial(
+                    MCTSAgent,
+                    simulations=simulations,
+                    rollout_limit=config.rollout_limit,
+                    policy_value=batcher,
+                )
+                with sampler:
+                    setup_seconds = perf_counter() - setup_started
+                    started = perf_counter()
+                    games = list(
+                        pool.map(
+                            lambda seed: _shared_game(factory, seed), measured_seeds
+                        )
+                    )
+                    torch.cuda.synchronize()
+                    wall_seconds = perf_counter() - started
         inference = batcher.statistics.to_dict()
-        if batch.failed:
-            raise RuntimeError(f"self-play benchmark had {batch.failed} failed games")
-        completed = batch.completed
-        move_counts = [game.move_count or 0 for game in batch.games]
-    wall_seconds = perf_counter() - started
-    moves = sum(move_counts)
     return {
         "device": device,
         "mode": "cpu-process"
@@ -356,12 +441,11 @@ def _selfplay_run(
         "inference_batch_size": batch_size if device == "cuda" else 1,
         "flush_latency_seconds": latency if device == "cuda" else 0.0,
         "simulations_per_move": simulations,
-        "games": completed,
-        "moves": moves,
-        "wall_seconds": wall_seconds,
-        "games_per_hour": completed / wall_seconds * 3600.0,
-        "move_latency_seconds": wall_seconds / moves,
-        "simulations_per_second": simulations * moves / wall_seconds,
+        "measurement": {
+            "timing_scope": "in-memory games after executor, model, and inference warm-up; artifact I/O excluded",
+            "warmup_games": config.warmup_games,
+        },
+        **_selfplay_metrics(games, wall_seconds, setup_seconds, simulations),
         "inference": inference,
         "peak_cuda_memory_bytes": torch.cuda.max_memory_allocated()
         if device == "cuda"
@@ -370,10 +454,39 @@ def _selfplay_run(
     }
 
 
-def _projections(games_per_hour: float) -> dict[str, float]:
+def _projections(
+    games_per_hour: float, setup_and_warmup_seconds: float
+) -> dict[str, float]:
+    setup_hours = setup_and_warmup_seconds / 3600.0
     return {
-        f"{games}_games_hours": games / games_per_hour for games in (1000, 5000, 10000)
+        f"{games}_games_hours": setup_hours + games / games_per_hour
+        for games in (1000, 5000, 10000)
     }
+
+
+def _bottleneck_classification(
+    gpu_utilization: object,
+) -> tuple[str, str]:
+    if not isinstance(gpu_utilization, (int, float)):
+        return (
+            "unknown",
+            "GPU utilization could not be sampled, so no limiting resource is inferred.",
+        )
+    if gpu_utilization < 70:
+        return (
+            "cpu_game_and_mcts",
+            (
+                "Average GPU utilization below 70% indicates that CPU game rules "
+                "and MCTS do not submit inference fast enough to saturate the GPU."
+            ),
+        )
+    return (
+        "gpu_inference",
+        (
+            "Sustained GPU utilization of at least 70% indicates GPU inference is "
+            "the limiting resource."
+        ),
+    )
 
 
 def run_cuda_tuning_benchmark(
@@ -399,7 +512,6 @@ def run_cuda_tuning_benchmark(
                 selfplay.append(
                     _selfplay_run(
                         checkpoint,
-                        temporary_root / f"selfplay-cpu-{simulations}-{workers}",
                         device="cpu",
                         workers=workers,
                         batch_size=1,
@@ -443,8 +555,6 @@ def run_cuda_tuning_benchmark(
                         selfplay.append(
                             _selfplay_run(
                                 checkpoint,
-                                temporary_root
-                                / f"selfplay-cuda-{simulations}-{workers}-{batch_size}-{latency}",
                                 device="cuda",
                                 workers=workers,
                                 batch_size=batch_size,
@@ -456,7 +566,7 @@ def run_cuda_tuning_benchmark(
     best_training = max(training, key=lambda item: item["examples_per_second"])
     best_cuda_selfplay = max(
         (item for item in selfplay if item["device"] == "cuda"),
-        key=lambda item: item["games_per_hour"],
+        key=lambda item: item["steady_state_games_per_hour"],
     )
     matching_cpu = max(
         (
@@ -466,11 +576,11 @@ def run_cuda_tuning_benchmark(
             and item["simulations_per_move"]
             == best_cuda_selfplay["simulations_per_move"]
         ),
-        key=lambda item: item["games_per_hour"],
+        key=lambda item: item["steady_state_games_per_hour"],
     )
     best_selfplay = max(
         (best_cuda_selfplay, matching_cpu),
-        key=lambda item: item["games_per_hour"],
+        key=lambda item: item["steady_state_games_per_hour"],
     )
     inference = best_cuda_selfplay.get("inference") or {}
     gpu = best_cuda_selfplay.get("gpu") or {}
@@ -482,11 +592,7 @@ def run_cuda_tuning_benchmark(
         if isinstance(requests, int) and isinstance(batches, int) and batches
         else None
     )
-    bottleneck = (
-        "cpu_game_and_mcts"
-        if isinstance(gpu_utilization, (int, float)) and gpu_utilization < 70
-        else "gpu_inference"
-    )
+    bottleneck, bottleneck_reason = _bottleneck_classification(gpu_utilization)
     return {
         "format": CUDA_TUNING_FORMAT,
         "version": CUDA_TUNING_VERSION,
@@ -521,10 +627,12 @@ def run_cuda_tuning_benchmark(
                 "inference_batch_size": best_selfplay["inference_batch_size"],
                 "inference_max_wait_seconds": best_selfplay["flush_latency_seconds"],
                 "simulations": best_selfplay["simulations_per_move"],
-                "games_per_hour": best_selfplay["games_per_hour"],
+                "games_per_hour": best_selfplay["steady_state_games_per_hour"],
                 "estimated_runtime": _projections(
-                    float(best_selfplay["games_per_hour"])
+                    float(best_selfplay["steady_state_games_per_hour"]),
+                    float(best_selfplay["setup_and_warmup_seconds"]),
                 ),
+                "projection_method": "one setup/warm-up plus steady-state game time",
             },
             "cuda_selfplay": {
                 "workers": best_cuda_selfplay["workers"],
@@ -533,33 +641,37 @@ def run_cuda_tuning_benchmark(
                     "flush_latency_seconds"
                 ],
                 "simulations": best_cuda_selfplay["simulations_per_move"],
-                "games_per_hour": best_cuda_selfplay["games_per_hour"],
+                "games_per_hour": best_cuda_selfplay["steady_state_games_per_hour"],
                 "estimated_runtime": _projections(
-                    float(best_cuda_selfplay["games_per_hour"])
+                    float(best_cuda_selfplay["steady_state_games_per_hour"]),
+                    float(best_cuda_selfplay["setup_and_warmup_seconds"]),
                 ),
+                "projection_method": "one setup/warm-up plus steady-state game time",
             },
             "cpu_fallback": {
                 "workers": matching_cpu["workers"],
                 "simulations": matching_cpu["simulations_per_move"],
-                "games_per_hour": matching_cpu["games_per_hour"],
+                "games_per_hour": matching_cpu["steady_state_games_per_hour"],
                 "estimated_runtime": _projections(
-                    float(matching_cpu["games_per_hour"])
+                    float(matching_cpu["steady_state_games_per_hour"]),
+                    float(matching_cpu["setup_and_warmup_seconds"]),
                 ),
+                "projection_method": "one setup/warm-up plus steady-state game time",
             },
         },
         "bottleneck": {
             "classification": bottleneck,
-            "reason": "Average GPU utilization below 70% indicates that CPU game rules and MCTS do not submit inference fast enough to saturate the GPU."
-            if bottleneck == "cpu_game_and_mcts"
-            else "Sustained GPU utilization of at least 70% indicates GPU inference is the limiting resource.",
+            "reason": bottleneck_reason,
             "evidence": {
                 "average_gpu_utilization_percent": gpu_utilization,
                 "average_inference_batch_size": avg_batch,
                 "configured_inference_batch_size": best_cuda_selfplay[
                     "inference_batch_size"
                 ],
-                "cuda_games_per_hour": best_cuda_selfplay["games_per_hour"],
-                "cpu_games_per_hour": matching_cpu["games_per_hour"],
+                "cuda_games_per_hour": best_cuda_selfplay[
+                    "steady_state_games_per_hour"
+                ],
+                "cpu_games_per_hour": matching_cpu["steady_state_games_per_hour"],
             },
         },
     }

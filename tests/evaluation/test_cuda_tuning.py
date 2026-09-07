@@ -19,6 +19,8 @@ def test_config_rejects_invalid_sweeps() -> None:
         CudaTuningConfig(flush_latencies_seconds=(-0.1,))
     with pytest.raises(ValueError, match="gpu_sample_interval"):
         CudaTuningConfig(gpu_sample_interval_seconds=0)
+    with pytest.raises(ValueError, match="warmup_games"):
+        CudaTuningConfig(games=2, warmup_games=1, worker_counts=(1, 2))
 
 
 def test_report_selects_measured_settings_and_projects_scale(
@@ -51,7 +53,6 @@ def test_report_selects_measured_settings_and_projects_scale(
 
     def selfplay_run(
         checkpoint: Path,
-        root: Path,
         *,
         device: str,
         workers: int,
@@ -68,7 +69,8 @@ def test_report_selects_measured_settings_and_projects_scale(
             "inference_batch_size": batch_size,
             "flush_latency_seconds": latency,
             "simulations_per_move": simulations,
-            "games_per_hour": rate,
+            "steady_state_games_per_hour": rate,
+            "setup_and_warmup_seconds": 10.0,
             "inference": {"requests": 8, "batches": 4},
             "gpu": {"average_utilization_percent": 40.0},
         }
@@ -91,7 +93,7 @@ def test_report_selects_measured_settings_and_projects_scale(
     assert selected["device"] == "cuda"
     assert selected["inference_batch_size"] == 2
     assert selected["estimated_runtime"]["5000_games_hours"] == pytest.approx(
-        5000 / 300
+        10 / 3600 + 5000 / 300
     )
     assert report["bottleneck"]["classification"] == "cpu_game_and_mcts"
     assert report["bottleneck"]["evidence"]["average_inference_batch_size"] == 2
@@ -113,3 +115,31 @@ def test_cuda_is_required_for_comparison(
     monkeypatch.setattr(cuda_tuning, "_cuda_hardware_available", lambda: False)
     with pytest.raises(RuntimeError, match="CUDA is required"):
         run_cuda_tuning_benchmark(tmp_path, tmp_path / "model.pt")
+
+
+def test_missing_gpu_samples_do_not_claim_a_bottleneck() -> None:
+    classification, reason = cuda_tuning._bottleneck_classification(None)
+
+    assert classification == "unknown"
+    assert "could not be sampled" in reason
+
+
+def test_selfplay_metrics_separate_throughput_from_experienced_latency() -> None:
+    metrics = cuda_tuning._selfplay_metrics(
+        [
+            {"moves": 10, "elapsed_seconds": 2.0},
+            {"moves": 20, "elapsed_seconds": 6.0},
+        ],
+        wall_seconds=6.0,
+        setup_seconds=4.0,
+        simulations=8,
+    )
+
+    assert metrics["aggregate_moves_per_second"] == pytest.approx(5.0)
+    assert metrics["per_game_move_latency_seconds"] == {
+        "minimum": pytest.approx(0.2),
+        "median": pytest.approx(0.25),
+        "p95": pytest.approx(0.3),
+        "maximum": pytest.approx(0.3),
+    }
+    assert metrics["setup_and_warmup_seconds"] == 4.0

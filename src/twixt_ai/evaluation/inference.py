@@ -156,7 +156,8 @@ def run_inference_performance_benchmark(
                 list(pool.map(lambda _: batcher(state, moves), range(config.requests)))
 
         batched = _measure(batched_workload, config.requests, resolved_device)
-        batch_statistics = batcher.statistics.to_dict()
+    # Closing joins the worker that publishes counters after fulfilling calls.
+    batch_statistics = batcher.statistics.to_dict()
 
     batched["speedup"] = (
         batched["positions_per_second"] / synchronous["positions_per_second"]

@@ -127,6 +127,50 @@ def test_trains_fixture_and_identifies_loadable_checkpoints(tmp_path: Path) -> N
     assert metadata["device"]["resolved_device"] == "cpu"  # type: ignore[index]
 
 
+def test_value_selection_keeps_lowest_validation_value_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    losses = iter(
+        (
+            (1.0, 0.5, 1.5),
+            (1.0, 0.4, 1.4),
+            (0.5, 0.6, 1.1),
+            (0.5, 0.6, 1.1),
+        )
+    )
+    monkeypatch.setattr(
+        trainer_module, "_epoch", lambda *args, **kwargs: next(losses)
+    )
+    output = tmp_path / "run"
+
+    summary = train_model(
+        _dataset(tmp_path / "dataset"),
+        output,
+        config=TrainingConfig(
+            epochs=2,
+            batch_size=2,
+            learning_rate=0.01,
+            selection_metric="value",
+        ),
+        model_config=PolicyValueConfig(
+            channels=2, residual_blocks=1, value_hidden=4
+        ),
+    )
+
+    assert summary.best_epoch == 1
+    assert summary.best_loss == 0.4
+    assert load_policy_value_checkpoint(output / "best.pt").metadata["epoch"] == 1
+
+
+def test_legacy_training_config_defaults_to_total_selection() -> None:
+    legacy = TrainingConfig().to_dict()
+    legacy.pop("selection_metric")
+
+    restored = TrainingConfig.from_dict(legacy)
+
+    assert restored.selection_metric == "total"
+
+
 def test_training_infers_mini_model_shape_from_dataset(tmp_path: Path) -> None:
     output = tmp_path / "run"
 
@@ -412,8 +456,10 @@ def test_cli_emits_summary(tmp_path: Path, capsys: object) -> None:
         "--dataset", str(dataset), "--output-dir", str(output),
         "--epochs", "1", "--batch-size", "2", "--channels", "2",
         "--residual-blocks", "1", "--value-hidden", "4", "--seed", "7",
+        "--selection-metric", "value",
     ]) == 0
 
     emitted = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert emitted["completed_epochs"] == 1
     assert emitted["config"]["seed"] == 7
+    assert emitted["config"]["selection_metric"] == "value"

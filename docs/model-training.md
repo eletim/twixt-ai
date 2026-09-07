@@ -36,6 +36,9 @@ twixt-ai-train --dataset dataset --output-dir training-run \
 The dataset, model shape, optimizer, scheduler, device, seed, and all other
 settings must match. Only the total epoch target may increase. Available
 optimizers are AdamW and SGD; `--scheduler step` enables a configurable StepLR.
+By default `best.pt` minimizes combined validation loss. Value-focused
+experiments can pass `--selection-metric value` to select the lowest validation
+value loss while leaving the policy-plus-MSE optimization objective unchanged.
 CUDA checkpoints are saved portably: the default checkpoint loader maps model
 weights to CPU for inference, while CUDA resume restores model and optimizer
 state to the selected GPU.

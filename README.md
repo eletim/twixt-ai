@@ -45,6 +45,8 @@ twixt-ai-train --dataset mini-dataset --output-dir mini-training --seed 1234
 The first measured 100-game Mini MCTS dataset and its exact reproduction command
 are documented in
 [`docs/mini-dataset-experiment.md`](docs/mini-dataset-experiment.md).
+The larger staged neural dataset procedure and measured configuration are in
+[`docs/large-mini-dataset.md`](docs/large-mini-dataset.md).
 The first learned Mini model, optimization sanity checks, and measured training
 run are documented in
 [`docs/mini-training-experiment.md`](docs/mini-training-experiment.md).

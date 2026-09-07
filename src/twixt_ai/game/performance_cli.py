@@ -8,15 +8,20 @@ from pathlib import Path
 from typing import Sequence
 
 from .performance import EngineBenchmarkConfig, run_engine_benchmarks
-from .state import BoardDimensions
+from .experiments import EXPERIMENT_PRESETS, resolve_experiment_board
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--width", type=int, default=24)
-    parser.add_argument("--height", type=int, default=24)
+    parser.add_argument("--preset", "--board-preset", choices=EXPERIMENT_PRESETS, default="standard")
+    parser.add_argument("--width", type=int, help="override preset board width")
+    parser.add_argument("--height", type=int, help="override preset board height")
     parser.add_argument("--seed", type=int, default=2401)
-    parser.add_argument("--ply", type=int, default=160)
+    parser.add_argument(
+        "--ply",
+        type=int,
+        help="fixture ply (defaults to 160 scaled by preset board area)",
+    )
     parser.add_argument("--iterations", type=int, default=200)
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--warmups", type=int, default=1)
@@ -26,10 +31,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    board = resolve_experiment_board(args.preset, width=args.width, height=args.height)
+    ply = args.ply
+    if ply is None:
+        ply = max(1, round(160 * board.width * board.height / (24 * 24)))
     config = EngineBenchmarkConfig(
-        board=BoardDimensions(args.width, args.height),
+        board=board,
         seed=args.seed,
-        ply=args.ply,
+        ply=ply,
         iterations=args.iterations,
         repeats=args.repeats,
         warmups=args.warmups,

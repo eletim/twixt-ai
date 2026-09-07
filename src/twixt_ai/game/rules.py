@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 
-from .state import Coordinate, GameState, Link, Peg, Player
+from .state import BoardDimensions, Coordinate, GameState, Link, Peg, Player
 
 
 _KNIGHT_OFFSETS = (
@@ -88,11 +89,32 @@ def check_peg_placement(state: GameState, placement: PegPlacement) -> PlacementL
         return PlacementLegality(IllegalPlacementReason.OUT_OF_BOUNDS)
     if placement.player is not state.side_to_move:
         return PlacementLegality(IllegalPlacementReason.WRONG_TURN)
-    if any(peg.coordinate == coordinate for peg in state.pegs):
+    if coordinate in state._occupied:
         return PlacementLegality(IllegalPlacementReason.OCCUPIED)
     if _is_forbidden_border(state, placement):
         return PlacementLegality(IllegalPlacementReason.FORBIDDEN_BORDER)
     return PlacementLegality()
+
+
+@lru_cache(maxsize=32)
+def _placement_template(
+    board: BoardDimensions, player: Player
+) -> tuple[PegPlacement, ...]:
+    """Return immutable row-major placements shared by equal boards."""
+
+    width = board.width
+    height = board.height
+    if player is Player.RED:
+        x_values = range(1, width - 1)
+        y_values = range(height)
+    else:
+        x_values = range(width)
+        y_values = range(1, height - 1)
+    return tuple(
+        PegPlacement(player, Coordinate(x, y))
+        for y in y_values
+        for x in x_values
+    )
 
 
 def legal_peg_placements(state: GameState) -> tuple[PegPlacement, ...]:
@@ -103,19 +125,11 @@ def legal_peg_placements(state: GameState) -> tuple[PegPlacement, ...]:
     if state.is_terminal:
         return ()
 
-    occupied = {peg.coordinate for peg in state.pegs}
     player = state.side_to_move
-    if player is Player.RED:
-        x_values = range(1, state.board.width - 1)
-        y_values = range(state.board.height)
-    else:
-        x_values = range(state.board.width)
-        y_values = range(1, state.board.height - 1)
     return tuple(
-        PegPlacement(player, coordinate)
-        for y in y_values
-        for x in x_values
-        if (coordinate := Coordinate(x, y)) not in occupied
+        move
+        for move in _placement_template(state.board, player)
+        if move.coordinate not in state._occupied
     )
 
 
@@ -155,14 +169,16 @@ def knight_move_neighbors(state: GameState, peg: Peg) -> tuple[Peg, ...]:
         raise TypeError("peg must be a Peg")
 
     neighbor_coordinates = {
-        Coordinate(peg.coordinate.x + dx, peg.coordinate.y + dy)
+        (peg.coordinate.x + dx, peg.coordinate.y + dy)
         for dx, dy in _KNIGHT_OFFSETS
-        if peg.coordinate.x + dx >= 0 and peg.coordinate.y + dy >= 0
+        if 0 <= peg.coordinate.x + dx < state.board.width
+        and 0 <= peg.coordinate.y + dy < state.board.height
     }
     return tuple(
         candidate
         for candidate in state.pegs
-        if candidate.owner is peg.owner and candidate.coordinate in neighbor_coordinates
+        if candidate.owner is peg.owner
+        and (candidate.coordinate.x, candidate.coordinate.y) in neighbor_coordinates
     )
 
 
@@ -211,7 +227,7 @@ def automatic_links_for_placement(state: GameState, peg: Peg) -> tuple[Link, ...
         raise TypeError("peg must be a Peg")
     if not state.board.contains(peg.coordinate):
         raise ValueError("placed peg is outside the board")
-    if any(existing.coordinate == peg.coordinate for existing in state.pegs):
+    if peg.coordinate in state._occupied:
         raise ValueError("placed peg coordinate is occupied")
 
     generated = (

@@ -11,7 +11,7 @@ from enum import Enum
 import torch
 from torch import Tensor
 
-from twixt_ai.game import BoardDimensions, Coordinate, GameResult, GameState, Link, Peg, Player
+from twixt_ai.game import Coordinate, GameResult, GameState, Link, Peg, Player
 
 
 BOARD_SIZE = 24
@@ -77,18 +77,17 @@ _AXIS_SWAPPING = {
 }
 
 
-def _require_standard_board(state: GameState) -> None:
+def _require_game_state(state: GameState) -> None:
     if not isinstance(state, GameState):
         raise TypeError("state must be a GameState")
-    if state.board != BoardDimensions(BOARD_SIZE, BOARD_SIZE):
-        raise ValueError(f"neural encoding requires a {BOARD_SIZE}x{BOARD_SIZE} board")
 
 
 def encode_position(state: GameState, *, device: torch.device | str | None = None) -> Tensor:
-    """Encode *state* as a deterministic ``float32`` ``[22, 24, 24]`` tensor."""
+    """Encode *state* as a deterministic ``float32`` channels-first tensor."""
 
-    _require_standard_board(state)
-    encoded = torch.zeros(INPUT_SHAPE, dtype=torch.float32, device=device)
+    _require_game_state(state)
+    shape = (NUM_CHANNELS, state.board.height, state.board.width)
+    encoded = torch.zeros(shape, dtype=torch.float32, device=device)
 
     for peg in state.pegs:
         encoded[_PEG_CHANNEL[peg.owner], peg.coordinate.y, peg.coordinate.x] = 1.0
@@ -218,8 +217,10 @@ def transform_encoding(encoded: Tensor, symmetry: BoardSymmetry | str) -> Tensor
 
     if not isinstance(encoded, Tensor):
         raise TypeError("encoded must be a torch.Tensor")
-    if tuple(encoded.shape[-3:]) != INPUT_SHAPE:
-        raise ValueError(f"encoded tensor must end with shape {INPUT_SHAPE}")
+    if encoded.ndim < 3 or encoded.shape[-3] != NUM_CHANNELS:
+        raise ValueError(f"encoded tensor must have {NUM_CHANNELS} channels")
+    if encoded.shape[-2] != encoded.shape[-1]:
+        raise ValueError("encoding symmetries require a square board")
     symmetry = _coerce_symmetry(symmetry)
     spatial = _spatial_transform(encoded, symmetry)
     transformed = torch.empty_like(spatial)

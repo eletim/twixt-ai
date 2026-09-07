@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
 import json
+import pickle
 
 import pytest
 
@@ -104,6 +105,16 @@ def test_peg_owner_lookup_checks_board_bounds() -> None:
     assert state.peg_owner_at(Coordinate(0, 0)) is None
     with pytest.raises(ValueError, match="outside"):
         state.peg_owner_at(Coordinate(8, 0))
+
+
+def test_derived_occupancy_does_not_change_state_value_semantics() -> None:
+    state = populated_state()
+    restored = GameState.from_json(state.to_json())
+
+    assert state == restored
+    assert hash(state) == hash(restored)
+    assert isinstance(state._occupied, frozenset)
+    assert pickle.loads(pickle.dumps(state)) == state
 
 
 def test_deserialization_rejects_unknown_fields_and_invalid_ownership() -> None:

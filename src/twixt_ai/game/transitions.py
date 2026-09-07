@@ -57,11 +57,33 @@ def apply_move(state: GameState, move: PegPlacement) -> GameState:
 
     peg = Peg(move.player, move.coordinate)
     next_side = move.player.opponent
-    position = GameState(
-        board=state.board,
-        pegs=(*state.pegs, peg),
-        links=(*state.links, *automatic_links_for_placement(state, peg)),
-        side_to_move=next_side,
+    pegs = tuple(
+        sorted(
+            (*state.pegs, peg),
+            key=lambda item: (
+                item.coordinate.x,
+                item.coordinate.y,
+                item.owner.value,
+            ),
+        )
+    )
+    links = tuple(
+        sorted(
+            (*state.links, *automatic_links_for_placement(state, peg)),
+            key=lambda item: (
+                item.start.x,
+                item.start.y,
+                item.end.x,
+                item.end.y,
+                item.owner.value,
+            ),
+        )
+    )
+    position = GameState._from_canonical(
+        state.board,
+        pegs,
+        links,
+        next_side,
     )
 
     if has_winning_path(position, move.player):
@@ -77,12 +99,12 @@ def apply_move(state: GameState, move: PegPlacement) -> GameState:
 
     if result is GameResult.IN_PROGRESS:
         return position
-    return GameState(
-        board=position.board,
-        pegs=position.pegs,
-        links=position.links,
-        side_to_move=position.side_to_move,
-        result=result,
+    return GameState._from_canonical(
+        position.board,
+        position.pegs,
+        position.links,
+        position.side_to_move,
+        result,
     )
 
 

@@ -1,0 +1,47 @@
+{
+  "batch_statistics": {
+    "batches": 16,
+    "maximum_batch_size": 16,
+    "requests": 256
+  },
+  "batched": {
+    "available_cpu_percent": 4.184954665853352,
+    "cpu_seconds": 0.319473055,
+    "cpu_utilization_percent": 100.43891198048046,
+    "gpu_utilization_percent": 13.0,
+    "positions_per_second": 804.8366228257653,
+    "speedup": 1.2001652446433633,
+    "wall_seconds": 0.31807697704061866
+  },
+  "config": {
+    "batch_size": 16,
+    "device": "cuda",
+    "max_wait_seconds": 0.002,
+    "requests": 256,
+    "seed": 54,
+    "warmups": 2
+  },
+  "environment": {
+    "accelerator": {
+      "cuda_available": true,
+      "name": "NVIDIA GeForce RTX 4060",
+      "peak_memory_bytes": 18416128,
+      "type": "cuda",
+      "utilization_measurement": "nvidia-smi post-workload sample"
+    },
+    "available_cpus": 24,
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "torch": "2.8.0+cu128"
+  },
+  "format": "twixt-ai-inference-performance",
+  "synchronous": {
+    "available_cpu_percent": 4.168584024954179,
+    "cpu_seconds": 0.3819205990000003,
+    "cpu_utilization_percent": 100.0460165989003,
+    "gpu_utilization_percent": 15.0,
+    "positions_per_second": 670.6048408066738,
+    "wall_seconds": 0.3817449329653755
+  },
+  "version": 1
+}

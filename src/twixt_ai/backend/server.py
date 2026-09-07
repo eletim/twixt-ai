@@ -12,6 +12,7 @@ from wsgiref.simple_server import make_server
 
 from twixt_ai.agents import Agent, AgentContractError, RandomAgent, select_agent_move
 from twixt_ai.game import (
+    EXPERIMENT_PRESETS,
     Coordinate,
     GameState,
     IllegalMoveError,
@@ -19,6 +20,7 @@ from twixt_ai.game import (
     Player,
     apply_move,
     create_game,
+    experiment_board,
     reset_game,
 )
 from twixt_ai.search import MCTSAgent, SearchAgent
@@ -89,12 +91,20 @@ class GameSession:
     def _view_unlocked(
         self, thinking: Mapping[str, object] | None = None
     ) -> dict[str, object]:
+        preset = next(
+            (name for name, board in EXPERIMENT_PRESETS.items() if board == self._state.board),
+            "custom",
+        )
         return {
             "state": self._state.to_dict(),
             "revision": self._revision,
             "human_side": self._human_side.value,
             "agent": self._agent_name,
             "available_agents": list(self._agents),
+            "preset": preset,
+            "available_presets": {
+                name: board.to_dict() for name, board in EXPERIMENT_PRESETS.items()
+            },
             "thinking": dict(self._thinking if thinking is None else thinking),
         }
 
@@ -140,7 +150,12 @@ class GameSession:
         if expected != self._revision:
             raise SessionConflictError("stale_state", "the game has changed")
 
-    def configure(self, human_side: object, agent_name: object) -> dict[str, object]:
+    def configure(
+        self,
+        human_side: object,
+        agent_name: object,
+        preset: object | None = None,
+    ) -> dict[str, object]:
         """Start a new game with validated human and agent choices."""
 
         try:
@@ -149,10 +164,16 @@ class GameSession:
             raise ValueError("human_side must be red or black") from exc
         if not isinstance(agent_name, str) or agent_name not in self._agents:
             raise ValueError("unknown agent")
+        if preset is None:
+            board = self._state.board
+        elif isinstance(preset, str):
+            board = experiment_board(preset)
+        else:
+            raise TypeError("experiment preset must be a string")
         with self._lock:
             self._human_side = side
             self._agent_name = agent_name
-            self._state = reset_game(self._state)
+            self._state = create_game(board)
             self._revision += 1
             self._thinking = {}
             return self._view_unlocked()
@@ -277,9 +298,16 @@ class GameApplication:
         if method == "POST" and path == "/api/session/reset":
             try:
                 payload = self._read_json(environ)
-                if not isinstance(payload, dict) or set(payload) != {"human_side", "agent"}:
-                    raise ValueError("reset must contain exactly human_side and agent")
-                view = self.session.configure(payload["human_side"], payload["agent"])
+                allowed = {"human_side", "agent", "preset"}
+                if (
+                    not isinstance(payload, dict)
+                    or not {"human_side", "agent"} <= set(payload)
+                    or not set(payload) <= allowed
+                ):
+                    raise ValueError("reset must contain human_side and agent, with optional preset")
+                view = self.session.configure(
+                    payload["human_side"], payload["agent"], payload.get("preset")
+                )
             except (KeyError, TypeError, ValueError) as exc:
                 return self._json(
                     start_response,

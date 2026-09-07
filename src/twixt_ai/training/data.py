@@ -18,7 +18,6 @@ from twixt_ai.game import (
     GameRecord,
     GameState,
     PegPlacement,
-    Player,
     apply_move,
     legal_peg_placements,
 )
@@ -101,6 +100,7 @@ class DatasetSummary:
     """Manifest returned after a complete dataset build."""
 
     config: DatasetConfig
+    board: BoardDimensions
     source_games: int
     train_examples: int
     validation_examples: int
@@ -126,6 +126,7 @@ class DatasetSummary:
                 "version": EXAMPLE_VERSION,
             },
             "config": self.config.to_dict(),
+            "board": self.board.to_dict(),
             "source_games": self.source_games,
             "examples": self.examples,
             "splits": {
@@ -338,7 +339,9 @@ def _policy_target(
     ]
 
 
-def _examples(value: dict[str, Any], path: Path) -> tuple[str, list[dict[str, object]]]:
+def _examples(
+    value: dict[str, Any], path: Path
+) -> tuple[str, BoardDimensions, list[dict[str, object]]]:
     record, decisions = _validated_match(value, path)
     game_id = _digest(value)
     winner = record.final_state.winner
@@ -369,7 +372,7 @@ def _examples(value: dict[str, Any], path: Path) -> tuple[str, list[dict[str, ob
             example["policy"] = policy
         examples.append(example)
         state = apply_move(state, move)
-    return game_id, examples
+    return game_id, record.initial_state.board, examples
 
 
 def _split(game_id: str, config: DatasetConfig) -> str:
@@ -431,11 +434,15 @@ def build_dataset(
         raise ValueError("source contains no completed match artifacts")
 
     by_id: dict[str, tuple[str, list[dict[str, object]]]] = {}
+    boards: set[BoardDimensions] = set()
     for path in paths:
-        game_id, examples = _examples(_load_object(path), path)
+        game_id, board, examples = _examples(_load_object(path), path)
         if game_id in by_id:
             raise ValueError(f"duplicate source game: {path}")
         by_id[game_id] = (_split(game_id, dataset_config), examples)
+        boards.add(board)
+    if len(boards) != 1:
+        raise ValueError("source games must all use the same board dimensions")
 
     split_examples = {"train": [], "validation": []}
     for game_id in sorted(by_id):
@@ -455,6 +462,7 @@ def build_dataset(
     )
     summary = DatasetSummary(
         dataset_config,
+        next(iter(boards)),
         len(by_id),
         len(split_examples["train"]),
         len(split_examples["validation"]),

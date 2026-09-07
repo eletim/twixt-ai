@@ -9,7 +9,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from twixt_ai.agents import RandomAgent
-from twixt_ai.game import BoardDimensions
+from twixt_ai.game import EXPERIMENT_PRESETS, resolve_experiment_board
 from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, HeuristicSearchAgent, MCTSAgent
 
 from .benchmark import AgentConfig, AgentFactory, BenchmarkConfig, run_benchmark
@@ -28,8 +28,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--games-per-pair", type=int, default=2)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--width", type=int, default=24)
-    parser.add_argument("--height", type=int, default=24)
+    parser.add_argument("--preset", "--board-preset", choices=EXPERIMENT_PRESETS, default="standard")
+    parser.add_argument("--width", type=int, help="override preset board width")
+    parser.add_argument("--height", type=int, help="override preset board height")
     parser.add_argument("--confidence", type=float, default=0.95)
     parser.add_argument("--elo", action="store_true", help="include Elo-style ratings")
     parser.add_argument("--search-depth", type=int, default=1)
@@ -106,7 +107,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         config = BenchmarkConfig(
             agents=agents,
             games_per_pair=args.games_per_pair,
-            board=BoardDimensions(args.width, args.height),
+            board=resolve_experiment_board(args.preset, width=args.width, height=args.height),
             seed=args.seed,
             confidence_level=args.confidence,
             include_elo=args.elo,

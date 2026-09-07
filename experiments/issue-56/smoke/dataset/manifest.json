@@ -1,0 +1,45 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "experiment": "twixt-ai-mini-dataset-experiment",
+      "experiment_version": 1,
+      "mcts": {
+        "policy_value_network": false,
+        "rollout_limit": 4,
+        "simulations": 100
+      },
+      "stage": "smoke"
+    },
+    "shard_size": 10000,
+    "split_seed": "issue-56-smoke",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 33,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 2,
+  "splits": {
+    "train": {
+      "examples": 33,
+      "shards": [
+        {
+          "examples": 33,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "31ba063129af2bd99cdd6bd66252d43b1bd02c7fc831806cac5d76e4cece9e19"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 0,
+      "shards": []
+    }
+  },
+  "version": 1
+}

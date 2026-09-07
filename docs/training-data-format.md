@@ -8,6 +8,8 @@ UI. A build writes `manifest.json` plus deterministic JSON Lines shards under
 ## Dataset manifest, version 1
 
 The manifest uses `format: "twixt-ai-training-dataset"` and `version: 1`. It
+records the common source-game board dimensions in `board`; mixed-size sources
+are rejected. It
 records the shard size, validation fraction, split seed, caller metadata,
 source-game and example counts, and each shard's relative path, row count, and
 SHA-256 digest. Shard digests allow consumers to detect incomplete or modified

@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    Future,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    wait,
+)
 from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass
 import json
@@ -42,6 +48,7 @@ class BatchConfig:
     board: BoardDimensions = BoardDimensions()
     red_agent: str = "red"
     black_agent: str = "black"
+    worker_mode: str = "process"
 
     def __post_init__(self) -> None:
         _positive_integer(self.games, "games")
@@ -53,6 +60,8 @@ class BatchConfig:
             value = getattr(self, name)
             if not isinstance(value, str) or not value:
                 raise ValueError(f"{name} must be a non-empty string")
+        if self.worker_mode not in ("process", "thread"):
+            raise ValueError("worker_mode must be process or thread")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -64,6 +73,7 @@ class BatchConfig:
                 Player.RED.value: self.red_agent,
                 Player.BLACK.value: self.black_agent,
             },
+            "worker_mode": self.worker_mode,
         }
 
 
@@ -211,7 +221,9 @@ def run_batch(
 ) -> BatchSummary:
     """Generate games, persist every outcome, and return an aggregate manifest.
 
-    Agent factories must be pickleable when more than one worker is requested.
+    Agent factories must be pickleable when more than one process worker is
+    requested. Thread workers allow agents from separate games to share an
+    in-process inference batcher.
     A failure in an agent, match, or worker becomes that game's failure artifact;
     other scheduled games continue. Seeded batches produce the same per-game
     seeds and ordered manifest regardless of worker count.
@@ -279,6 +291,26 @@ def run_batch(
                 )
             except Exception as exc:  # one broken game must not stop the batch
                 capture_failure(index, seed, exc)
+    elif config.worker_mode == "thread":
+        max_workers = min(config.workers, config.games)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {
+                pool.submit(
+                    _play_game,
+                    red_factory,
+                    black_factory,
+                    config.board,
+                    seed,
+                    config.red_agent,
+                    config.black_agent,
+                ): (index, seed)
+                for index, seed in enumerate(seeds)
+            }
+            for future, (index, seed) in futures.items():
+                try:
+                    capture(index, seed, future.result())
+                except Exception as exc:
+                    capture_failure(index, seed, exc)
     else:
         max_workers = min(config.workers, config.games)
         next_index = 0

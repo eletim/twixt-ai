@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
+import json
 from pathlib import Path
 
+from twixt_ai.game import BoardDimensions
 from twixt_ai.models import PolicyValueConfig
 
 from .trainer import TrainingConfig, train_model
@@ -36,6 +38,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
+        manifest = json.loads((args.dataset / "manifest.json").read_text(encoding="utf-8"))
+        raw_board = manifest.get("board", {"width": 24, "height": 24})
+        if not isinstance(raw_board, dict) or set(raw_board) != {"width", "height"}:
+            raise ValueError("dataset board must contain exactly width and height")
+        board = BoardDimensions(raw_board["width"], raw_board["height"])
         summary = train_model(
             args.dataset,
             args.output_dir,
@@ -55,6 +62,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 channels=args.channels,
                 residual_blocks=args.residual_blocks,
                 value_hidden=args.value_hidden,
+                board_width=board.width,
+                board_height=board.height,
             ),
             resume=args.resume,
         )

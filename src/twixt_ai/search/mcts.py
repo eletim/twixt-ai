@@ -178,8 +178,13 @@ class MCTSAgent:
         self._rollout_moves = 0
         self._maximum_depth = 0
 
-    def _initialize(self, node: _Node) -> None:
-        moves = legal_peg_placements(node.state)
+    def _initialize(
+        self,
+        node: _Node,
+        moves: tuple[PegPlacement, ...] | None = None,
+    ) -> None:
+        if moves is None:
+            moves = legal_peg_placements(node.state)
         node.unexpanded = list(moves)
         node.priors = _uniform_priors(moves)
         if self.policy_value is None or node.state.is_terminal:
@@ -329,7 +334,7 @@ class MCTSAgent:
         self._rollout_moves = 0
         self._maximum_depth = 0
         root = _Node(request.state)
-        self._initialize(root)
+        self._initialize(root, request.legal_moves)
 
         for _ in range(self.simulations):
             node = root

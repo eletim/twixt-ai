@@ -22,8 +22,8 @@ from twixt_ai.models import (
     load_policy_value_checkpoint,
 )
 from twixt_ai.search import MCTSAgent
-from twixt_ai.search.neural import NeuralPolicyValue
-from twixt_ai.selfplay import BatchConfig, run_batch
+from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
+from twixt_ai.selfplay import BatchConfig, BatchSummary, run_batch
 
 from .data import DatasetConfig, build_dataset
 from .trainer import TrainingConfig, train_model
@@ -50,6 +50,8 @@ class MiniGenerationConfig:
     evaluation_simulations: int = 20
     rollout_limit: int = 4
     workers: int = 2
+    inference_batch_size: int = 16
+    inference_max_wait_seconds: float = 0.002
     epochs: int = 20
     batch_size: int = 64
     learning_rate: float = 1e-3
@@ -70,6 +72,7 @@ class MiniGenerationConfig:
             "evaluation_simulations",
             "rollout_limit",
             "workers",
+            "inference_batch_size",
             "epochs",
             "batch_size",
             "shard_size",
@@ -77,6 +80,15 @@ class MiniGenerationConfig:
             _positive_integer(getattr(self, name), name)
         if self.evaluation_games % 2:
             raise ValueError("evaluation_games must be even for paired role swaps")
+        if (
+            isinstance(self.inference_max_wait_seconds, bool)
+            or not isinstance(self.inference_max_wait_seconds, (int, float))
+            or not math.isfinite(self.inference_max_wait_seconds)
+            or self.inference_max_wait_seconds < 0
+        ):
+            raise ValueError(
+                "inference_max_wait_seconds must be a finite non-negative number"
+            )
         if isinstance(self.seed, bool) or not isinstance(self.seed, int):
             raise TypeError("seed must be an integer")
         if not isinstance(self.device, str):
@@ -163,6 +175,78 @@ def _game_paths(selfplay_roots: list[Path]) -> tuple[Path, ...]:
             if game["status"] == "completed":
                 paths.append(root / game["artifact"])
     return tuple(paths)
+
+
+def _run_selfplay(
+    champion: Path,
+    output_dir: Path,
+    config: MiniGenerationConfig,
+    seed: int,
+    device: DeviceSelection,
+) -> tuple[BatchSummary, dict[str, object]]:
+    """Run CPU orchestration with either synchronous or one shared model."""
+
+    batch_config = BatchConfig(
+        games=config.games_per_generation,
+        workers=config.workers,
+        seed=seed,
+        board=experiment_board("mini"),
+        red_agent="champion",
+        black_agent="champion",
+        worker_mode="thread" if device.resolved_device == "cuda" else "process",
+    )
+    if device.resolved_device == "cpu":
+        factory = partial(
+            _agent,
+            str(champion),
+            config.selfplay_simulations,
+            config.rollout_limit,
+            device.resolved_device,
+        )
+        batch = run_batch(
+            factory, factory, config=batch_config, output_dir=output_dir
+        )
+        return batch, {
+            "mode": "synchronous",
+            "model_instances": "one per active game agent",
+            "device": device.to_dict(),
+        }
+
+    # Load and place exactly one model before game threads start. Both colors in
+    # every game retain CPU MCTS state and submit leaf positions to this queue.
+    loaded = load_policy_value_checkpoint(
+        champion, map_location=device.resolved_device
+    )
+    with NeuralInferenceBatcher(
+        NeuralPolicyValue(loaded.model),
+        batch_size=config.inference_batch_size,
+        max_wait_seconds=config.inference_max_wait_seconds,
+    ) as inference:
+        factory = partial(
+            MCTSAgent,
+            simulations=config.selfplay_simulations,
+            rollout_limit=config.rollout_limit,
+            policy_value=inference,
+        )
+        batch = run_batch(
+            factory, factory, config=batch_config, output_dir=output_dir
+        )
+    # ``close()`` joins the inference worker. Take the snapshot after that
+    # barrier because callers receive their results just before the worker
+    # publishes the corresponding counters.
+    statistics = inference.statistics.to_dict()
+    return batch, {
+        "mode": (
+            "synchronous-serialized"
+            if config.inference_batch_size == 1
+            else "shared-batched"
+        ),
+        "model_instances": 1,
+        "device": device.to_dict(),
+        "batch_size": config.inference_batch_size,
+        "max_wait_seconds": config.inference_max_wait_seconds,
+        "statistics": statistics,
+    }
 
 
 def _evaluate(
@@ -286,6 +370,8 @@ def run_mini_training_generations(
                 "evaluation_simulations": config.evaluation_simulations,
                 "rollout_limit": config.rollout_limit,
                 "workers": config.workers,
+                "inference_batch_size": config.inference_batch_size,
+                "inference_max_wait_seconds": config.inference_max_wait_seconds,
                 "epochs": config.epochs,
                 "batch_size": config.batch_size,
                 "learning_rate": config.learning_rate,
@@ -310,37 +396,25 @@ def run_mini_training_generations(
         try:
             selfplay_root = generation_root / "selfplay"
             stage_started = perf_counter()
-            factory = partial(
-                _agent,
-                str(champion_before),
-                config.selfplay_simulations,
-                config.rollout_limit,
-                device.resolved_device,
-            )
-            batch = run_batch(
-                factory,
-                factory,
-                config=BatchConfig(
-                    games=config.games_per_generation,
-                    workers=config.workers,
-                    seed=config.seed + number * 10,
-                    board=experiment_board("mini"),
-                    red_agent="champion",
-                    black_agent="champion",
-                    # Forked CUDA subprocesses cannot safely initialize a CUDA
-                    # context inherited from the parent process.
-                    worker_mode=(
-                        "thread" if device.resolved_device == "cuda" else "process"
-                    ),
-                ),
-                output_dir=selfplay_root,
+            batch, inference = _run_selfplay(
+                champion_before,
+                selfplay_root,
+                config,
+                config.seed + number * 10,
+                device,
             )
             if batch.failed:
                 raise RuntimeError(f"self-play had {batch.failed} failed games")
             selfplay_roots.append(selfplay_root)
+            runtime_seconds = perf_counter() - stage_started
+            completed_games = getattr(
+                batch, "completed", config.games_per_generation - batch.failed
+            )
             generation["selfplay"] = {
-                "runtime_seconds": perf_counter() - stage_started,
+                "runtime_seconds": runtime_seconds,
+                "games_per_hour": completed_games / runtime_seconds * 3600.0,
                 "device": device.to_dict(),
+                "inference": inference,
                 "summary": batch.to_dict(),
             }
             _write_json(generation_root / "report.json", generation)

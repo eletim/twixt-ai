@@ -22,6 +22,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--evaluation-simulations", type=int, default=20)
     parser.add_argument("--rollout-limit", type=int, default=4)
     parser.add_argument("--workers", type=int, default=2)
+    parser.add_argument("--inference-batch-size", type=int, default=16)
+    parser.add_argument("--inference-max-wait-seconds", type=float, default=0.002)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--learning-rate", type=float, default=1e-3)

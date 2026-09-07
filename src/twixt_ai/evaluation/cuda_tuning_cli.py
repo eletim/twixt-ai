@@ -17,7 +17,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--games", type=int, default=4)
     parser.add_argument("--warmup-games", type=int, default=4)
-    parser.add_argument("--workers", type=int, nargs="+", default=[1, 4, 8])
+    parser.add_argument("--workers", type=int, nargs="+", default=[1, 4])
     parser.add_argument(
         "--inference-batch-sizes", type=int, nargs="+", default=[1, 4, 8]
     )

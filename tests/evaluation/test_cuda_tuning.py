@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -21,13 +22,59 @@ def test_config_rejects_invalid_sweeps() -> None:
         CudaTuningConfig(gpu_sample_interval_seconds=0)
     with pytest.raises(ValueError, match="warmup_games"):
         CudaTuningConfig(games=2, warmup_games=1, worker_counts=(1, 2))
+    with pytest.raises(ValueError, match="must not exceed games"):
+        CudaTuningConfig(games=4, warmup_games=8, worker_counts=(1, 8))
+
+
+def test_default_workers_are_all_exercised_by_default_games() -> None:
+    config = CudaTuningConfig()
+
+    assert config.worker_counts == (1, 4)
+    assert max(config.worker_counts) <= config.games
+
+
+def test_gpu_sampler_uses_physical_uuid_for_logical_device(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+    sampler: cuda_tuning._GpuSampler
+
+    class Uuid:
+        def __str__(self) -> str:
+            return "01234567-89ab-cdef-0123-456789abcdef"
+
+    def run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        sampler._stop.set()
+        return SimpleNamespace(stdout="17, 256\n")
+
+    monkeypatch.setattr(
+        cuda_tuning.torch.cuda,
+        "get_device_properties",
+        lambda _: SimpleNamespace(uuid=Uuid()),
+    )
+    monkeypatch.setattr(cuda_tuning.subprocess, "run", run)
+    sampler = cuda_tuning._GpuSampler("cuda:0", 0.1)
+
+    sampler._poll()
+
+    assert calls == [
+        [
+            "nvidia-smi",
+            "--id=GPU-01234567-89ab-cdef-0123-456789abcdef",
+            "--query-gpu=utilization.gpu,memory.used",
+            "--format=csv,noheader,nounits",
+        ]
+    ]
+    assert sampler.samples == [(17.0, 256.0)]
 
 
 def test_report_selects_measured_settings_and_projects_scale(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config = CudaTuningConfig(
-        games=1,
+        games=2,
+        warmup_games=2,
         worker_counts=(1, 2),
         inference_batch_sizes=(1, 2),
         flush_latencies_seconds=(0.001,),

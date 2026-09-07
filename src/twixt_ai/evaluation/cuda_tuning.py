@@ -54,7 +54,7 @@ class CudaTuningConfig:
 
     games: int = 4
     warmup_games: int = 4
-    worker_counts: tuple[int, ...] = (1, 4, 8)
+    worker_counts: tuple[int, ...] = (1, 4)
     inference_batch_sizes: tuple[int, ...] = (1, 4, 8)
     flush_latencies_seconds: tuple[float, ...] = (0.0005, 0.002)
     simulation_budgets: tuple[int, ...] = (4, 20)
@@ -74,7 +74,9 @@ class CudaTuningConfig:
         object.__setattr__(
             self, "worker_counts", _positive_tuple(self.worker_counts, "worker_counts")
         )
-        if self.warmup_games < min(max(self.worker_counts), self.games):
+        if max(self.worker_counts) > self.games:
+            raise ValueError("worker_counts must not exceed games")
+        if self.warmup_games < max(self.worker_counts):
             raise ValueError("warmup_games must start every effective self-play worker")
         object.__setattr__(
             self,
@@ -131,11 +133,14 @@ class _GpuSampler:
 
     def __init__(self, device: str, interval: float) -> None:
         resolved = torch.device(device)
-        self.index = (
+        logical_index = (
             resolved.index
             if resolved.index is not None
             else torch.cuda.current_device()
         )
+        properties = torch.cuda.get_device_properties(logical_index)
+        uuid = str(properties.uuid)
+        self.gpu_id = uuid if uuid.startswith(("GPU-", "MIG-")) else f"GPU-{uuid}"
         self.interval = interval
         self.samples: list[tuple[float, float]] = []
         self._stop = Event()
@@ -152,7 +157,7 @@ class _GpuSampler:
                 result = subprocess.run(
                     [
                         "nvidia-smi",
-                        f"--id={self.index}",
+                        f"--id={self.gpu_id}",
                         "--query-gpu=utilization.gpu,memory.used",
                         "--format=csv,noheader,nounits",
                     ],
@@ -360,7 +365,7 @@ def _selfplay_run(
         # unsafe CPU/CUDA runtime state. Warm-up starts every measured worker
         # and the same executor is then reused outside the timed interval.
         with ProcessPoolExecutor(
-            max_workers=min(workers, config.games),
+            max_workers=workers,
             mp_context=multiprocessing.get_context("spawn"),
         ) as pool:
             list(
@@ -392,7 +397,7 @@ def _selfplay_run(
         loaded = load_policy_value_checkpoint(checkpoint, map_location="cuda")
         sampler = _GpuSampler("cuda", config.gpu_sample_interval_seconds)
         policy_value = NeuralPolicyValue(loaded.model)
-        with ThreadPoolExecutor(max_workers=min(workers, config.games)) as pool:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
             with NeuralInferenceBatcher(
                 policy_value,
                 batch_size=batch_size,

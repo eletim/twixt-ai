@@ -36,6 +36,8 @@ examples/s and peak memory. The generated recommendation always selects the
 highest measured throughput rather than encoding a hardware guess. Runtime
 estimates for 1,000, 5,000, and 10,000 games are straight-line steady-state
 capacity projections; longer runs can vary with thermals and machine contention.
+The sampler resolves PyTorch's logical CUDA device to its physical GPU UUID, so
+`CUDA_VISIBLE_DEVICES` remapping cannot redirect metrics to another GPU.
 
 ## Recorded result
 

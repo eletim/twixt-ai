@@ -239,7 +239,9 @@ def test_cuda_training_resume_and_cpu_checkpoint_load(
         board_width=10, board_height=10,
     )
     observed_devices: list[tuple[str, str]] = []
+    resumed_optimizer_devices: list[tuple[set[str], set[str]]] = []
     original_forward = PolicyValueNetwork.forward
+    original_step = torch.optim.AdamW.step
 
     def observed_forward(
         model: PolicyValueNetwork, inputs: torch.Tensor
@@ -249,6 +251,19 @@ def test_cuda_training_resume_and_cpu_checkpoint_load(
         return original_forward(model, inputs)
 
     monkeypatch.setattr(PolicyValueNetwork, "forward", observed_forward)
+
+    def observed_step(
+        optimizer: torch.optim.AdamW, closure: object = None
+    ) -> object:
+        populated = [state for state in optimizer.state.values() if state]
+        if populated:
+            resumed_optimizer_devices.append((
+                {state["step"].device.type for state in populated},
+                {state["exp_avg"].device.type for state in populated},
+            ))
+        return original_step(optimizer, closure=closure)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(torch.optim.AdamW, "step", observed_step)
     first = train_model(
         dataset,
         output,
@@ -268,6 +283,7 @@ def test_cuda_training_resume_and_cpu_checkpoint_load(
     )
 
     assert observed_devices and set(observed_devices) == {("cuda", "cuda")}
+    assert resumed_optimizer_devices == [({"cpu"}, {"cuda"})]
     assert first.device.resolved_device == resumed.device.resolved_device == "cuda"
     assert first.peak_cuda_memory_bytes is not None
     assert first.peak_cuda_memory_bytes > 0

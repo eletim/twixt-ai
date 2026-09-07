@@ -305,27 +305,6 @@ def _optimizer(model: PolicyValueNetwork, config: TrainingConfig) -> torch.optim
     )
 
 
-def _move_optimizer_state(
-    optimizer: torch.optim.Optimizer, device: torch.device
-) -> None:
-    """Put every restored optimizer tensor beside the model parameters."""
-
-    def move(value: Any) -> Any:
-        if isinstance(value, Tensor):
-            return value.to(device)
-        if isinstance(value, dict):
-            return {key: move(item) for key, item in value.items()}
-        if isinstance(value, list):
-            return [move(item) for item in value]
-        if isinstance(value, tuple):
-            return tuple(move(item) for item in value)
-        return value
-
-    for state in optimizer.state.values():
-        for key, value in state.items():
-            state[key] = move(value)
-
-
 def _synchronize(device: torch.device) -> None:
     if device.type == "cuda":
         torch.cuda.synchronize(device)
@@ -530,7 +509,10 @@ def train_model(
     if resume:
         if not latest_path.is_file():
             raise ValueError("cannot resume without latest.pt")
-        payload = torch.load(latest_path, map_location=device, weights_only=True)
+        # Loading on CPU preserves non-capturable optimizer step counters on
+        # CPU. Optimizer.load_state_dict moves parameter-associated state to
+        # each parameter's device according to the optimizer's own policy.
+        payload = torch.load(latest_path, map_location="cpu", weights_only=True)
         if not isinstance(payload, Mapping) or not isinstance(payload.get("training_state"), Mapping):
             raise ValueError("latest.pt is not a resumable training checkpoint")
         state = payload["training_state"]
@@ -558,7 +540,6 @@ def train_model(
             raise ValueError("resume model configuration does not match latest.pt")
         model.load_state_dict(payload["state_dict"])  # type: ignore[arg-type]
         optimizer.load_state_dict(state["optimizer"])  # type: ignore[arg-type]
-        _move_optimizer_state(optimizer, device)
         if scheduler is not None:
             if state.get("scheduler") is None:
                 raise ValueError("resume checkpoint has no scheduler state")

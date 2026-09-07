@@ -26,7 +26,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--scheduler-step-size", type=int, default=1)
     parser.add_argument("--scheduler-gamma", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
     parser.add_argument("--channels", type=int, default=32)
     parser.add_argument("--residual-blocks", type=int, default=3)
     parser.add_argument("--value-hidden", type=int, default=64)

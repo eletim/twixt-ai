@@ -14,6 +14,7 @@ from time import perf_counter
 from typing import Any
 
 from twixt_ai import __version__
+from twixt_ai.device import DeviceSelection, select_device
 from twixt_ai.evaluation import AgentConfig, BenchmarkConfig, run_benchmark
 from twixt_ai.game import experiment_board
 from twixt_ai.models import (
@@ -57,6 +58,7 @@ class MiniGenerationConfig:
     shard_size: int = 10_000
     promotion_win_rate: float = 0.55
     seed: int = 590_100
+    device: str = "auto"
 
     def __post_init__(self) -> None:
         for name in (
@@ -77,6 +79,10 @@ class MiniGenerationConfig:
             raise ValueError("evaluation_games must be even for paired role swaps")
         if isinstance(self.seed, bool) or not isinstance(self.seed, int):
             raise TypeError("seed must be an integer")
+        if not isinstance(self.device, str):
+            raise TypeError("device must be a string")
+        if self.device not in {"cpu", "cuda", "auto"}:
+            raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
         for name in ("learning_rate", "weight_decay"):
             value = getattr(self, name)
             if (
@@ -135,8 +141,13 @@ def _checkpoint(path: Path) -> dict[str, object]:
     }
 
 
-def _agent(checkpoint: str, simulations: int, rollout_limit: int) -> MCTSAgent:
-    loaded = load_policy_value_checkpoint(checkpoint)
+def _agent(
+    checkpoint: str,
+    simulations: int,
+    rollout_limit: int,
+    device: str,
+) -> MCTSAgent:
+    loaded = load_policy_value_checkpoint(checkpoint, map_location=device)
     return MCTSAgent(
         simulations=simulations,
         rollout_limit=rollout_limit,
@@ -159,6 +170,7 @@ def _evaluate(
     candidate: Path,
     config: MiniGenerationConfig,
     seed: int,
+    device: DeviceSelection,
 ) -> dict[str, Any]:
     settings = {
         "type": "mcts",
@@ -187,12 +199,14 @@ def _evaluate(
                 str(champion),
                 config.evaluation_simulations,
                 config.rollout_limit,
+                device.resolved_device,
             ),
             "candidate": partial(
                 _agent,
                 str(candidate),
                 config.evaluation_simulations,
                 config.rollout_limit,
+                device.resolved_device,
             ),
         },
         config=benchmark_config,
@@ -223,6 +237,7 @@ def run_mini_training_generations(
         raise TypeError("config must be a MiniGenerationConfig")
     if os.environ.get("PYTHONHASHSEED") != "0":
         raise ValueError("PYTHONHASHSEED must be 0")
+    device = select_device(config.device)
     champion = Path(initial_champion)
     initial = _checkpoint(champion)
     if initial["model_config"] != MINI_POLICY_VALUE_CONFIG.to_dict():
@@ -246,6 +261,7 @@ def run_mini_training_generations(
             "implementation": platform.python_implementation(),
             "python": platform.python_version(),
             "platform": platform.platform(),
+            "device": device.to_dict(),
         },
         "initial_champion": initial,
         "generations": generations,
@@ -275,6 +291,10 @@ def run_mini_training_generations(
                 "learning_rate": config.learning_rate,
                 "weight_decay": config.weight_decay,
                 "promotion_win_rate": config.promotion_win_rate,
+                "device": device.to_dict(),
+                "worker_mode": (
+                    "thread" if device.resolved_device == "cuda" else "process"
+                ),
             },
             "seeds": {
                 "selfplay": config.seed + number * 10,
@@ -295,6 +315,7 @@ def run_mini_training_generations(
                 str(champion_before),
                 config.selfplay_simulations,
                 config.rollout_limit,
+                device.resolved_device,
             )
             batch = run_batch(
                 factory,
@@ -306,7 +327,11 @@ def run_mini_training_generations(
                     board=experiment_board("mini"),
                     red_agent="champion",
                     black_agent="champion",
-                    worker_mode="process",
+                    # Forked CUDA subprocesses cannot safely initialize a CUDA
+                    # context inherited from the parent process.
+                    worker_mode=(
+                        "thread" if device.resolved_device == "cuda" else "process"
+                    ),
                 ),
                 output_dir=selfplay_root,
             )
@@ -315,6 +340,7 @@ def run_mini_training_generations(
             selfplay_roots.append(selfplay_root)
             generation["selfplay"] = {
                 "runtime_seconds": perf_counter() - stage_started,
+                "device": device.to_dict(),
                 "summary": batch.to_dict(),
             }
             _write_json(generation_root / "report.json", generation)
@@ -363,6 +389,7 @@ def run_mini_training_generations(
                     learning_rate=config.learning_rate,
                     weight_decay=config.weight_decay,
                     seed=config.seed + number * 10 + 1,
+                    device=config.device,
                 ),
                 model_config=MINI_POLICY_VALUE_CONFIG,
                 initial_checkpoint=champion_before,
@@ -383,6 +410,7 @@ def run_mini_training_generations(
                 candidate,
                 config,
                 config.seed + number * 10 + 2,
+                device,
             )
             evaluation["runtime_seconds"] = perf_counter() - stage_started
             _write_json(generation_root / "evaluation.json", evaluation)

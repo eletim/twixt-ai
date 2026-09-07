@@ -120,7 +120,18 @@ and scheduler settings, and resumable best/latest checkpoints:
 
 ```bash
 twixt-ai-train --dataset dataset --output-dir training-run \
-  --epochs 20 --batch-size 64 --learning-rate 0.001 --seed 1234
+  --epochs 20 --batch-size 64 --learning-rate 0.001 --seed 1234 \
+  --device auto
+```
+
+Neural commands accept exactly `cpu`, `cuda`, or `auto`. `auto` deterministically
+uses CUDA when PyTorch reports it available and CPU otherwise; an explicit
+`cuda` request fails instead of falling back. Training, learned self-play, and
+inference reports record the request, resolved device, CUDA availability, GPU
+name, CUDA runtime, and PyTorch version. Check a machine without starting a run:
+
+```bash
+twixt-ai-device --device auto
 ```
 
 Compare two agents head-to-head, or repeat `--agent` three or more times for a

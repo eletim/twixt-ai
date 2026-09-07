@@ -14,6 +14,7 @@ from typing import Any
 
 import torch
 
+from twixt_ai.device import select_device
 from twixt_ai.models import (
     ENCODING_VERSION,
     MINI_ENCODING_VERSION,
@@ -280,6 +281,7 @@ def run_matched_encoding_training(
     """Train v1 and v2 under matched conditions and write a comparison report."""
 
     dataset = Path(dataset_dir)
+    device = select_device(config.device)
     root = Path(output_dir)
     if root.exists() and any(root.iterdir()):
         raise ValueError("output directory must be empty or not exist")
@@ -341,7 +343,7 @@ def run_matched_encoding_training(
             "available_cpus": len(os.sched_getaffinity(0))
             if hasattr(os, "sched_getaffinity") else os.cpu_count() or 1,
             "torch": torch.__version__,
-            "device": config.device,
+            "device": device.to_dict(),
             "torch_threads": config.torch_threads,
         },
         "results": results,

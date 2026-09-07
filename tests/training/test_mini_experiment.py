@@ -92,6 +92,8 @@ def test_experiment_overfits_resumes_and_loads_for_mcts(tmp_path: Path) -> None:
     assert training["examples_per_second"] > 0
     assert len(training["summary"]["history"]) == 4
     assert len(training["checkpoint_history"]) == 4
+    assert report["environment"]["device"] == training["summary"]["device"]
+    assert report["environment"]["device"]["resolved_device"] == "cpu"
     assert report["sanity_checks"]["inference"]["prior_total"] == pytest.approx(1)
     best = tmp_path / "experiment" / "baseline" / "best.pt"
     assert load_policy_value_checkpoint(best).model.config.board_width == 10

@@ -19,7 +19,9 @@ The CLI defaults to `auto`, which selects CUDA exactly when PyTorch reports it
 available. Use `--device cpu` for a forced CPU run or `--device cuda` for a
 strict GPU run that fails when CUDA is unavailable. The summary and checkpoints
 record both the request and resolved device along with CUDA/PyTorch runtime
-details. Run `twixt-ai-device --device auto` for a lightweight local probe.
+details. The summary's `performance` object records optimization throughput and
+elapsed time, plus peak allocated CUDA memory for GPU runs. Run
+`twixt-ai-device --device auto` for a lightweight local probe.
 
 Both checkpoints can be loaded for inference with
 `load_policy_value_checkpoint`. They also contain optimizer and scheduler state
@@ -34,3 +36,11 @@ twixt-ai-train --dataset dataset --output-dir training-run \
 The dataset, model shape, optimizer, scheduler, device, seed, and all other
 settings must match. Only the total epoch target may increase. Available
 optimizers are AdamW and SGD; `--scheduler step` enables a configurable StepLR.
+CUDA checkpoints are saved portably: the default checkpoint loader maps model
+weights to CPU for inference, while CUDA resume restores model and optimizer
+state to the selected GPU.
+
+The Mini experiment command accepts the same device contract, for example
+`twixt-ai-mini-training-experiment --dataset dataset --output-dir experiment
+--device cuda`. Its environment record reflects the device used by training,
+and its checkpoint validation still loads the resulting model on CPU.

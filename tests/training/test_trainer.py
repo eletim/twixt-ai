@@ -116,6 +116,14 @@ def test_trains_fixture_and_identifies_loadable_checkpoints(tmp_path: Path) -> N
     assert json.loads((output / "summary.json").read_text()) == summary.to_dict()
     assert summary.device.requested_device == "cpu"
     assert summary.device.resolved_device == "cpu"
+    assert summary.training_seconds > 0
+    assert summary.examples_per_second > 0
+    assert summary.peak_cuda_memory_bytes is None
+    assert summary.to_dict()["performance"] == {
+        "training_seconds": summary.training_seconds,
+        "examples_per_second": summary.examples_per_second,
+        "peak_cuda_memory_bytes": None,
+    }
     assert metadata["device"]["resolved_device"] == "cpu"  # type: ignore[index]
 
 
@@ -218,6 +226,57 @@ def test_resume_matches_uninterrupted_training(tmp_path: Path) -> None:
         resumed_model.state_dict().values(), direct_model.state_dict().values()
     ):
         assert torch.equal(resumed_weight, direct_weight)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is unavailable")
+def test_cuda_training_resume_and_cpu_checkpoint_load(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dataset = _dataset(tmp_path / "dataset", BoardDimensions(10, 10))
+    output = tmp_path / "run"
+    model_config = PolicyValueConfig(
+        channels=2, residual_blocks=1, value_hidden=4,
+        board_width=10, board_height=10,
+    )
+    observed_devices: list[tuple[str, str]] = []
+    original_forward = PolicyValueNetwork.forward
+
+    def observed_forward(
+        model: PolicyValueNetwork, inputs: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        parameter_device = next(model.parameters()).device.type
+        observed_devices.append((parameter_device, inputs.device.type))
+        return original_forward(model, inputs)
+
+    monkeypatch.setattr(PolicyValueNetwork, "forward", observed_forward)
+    first = train_model(
+        dataset,
+        output,
+        config=TrainingConfig(
+            epochs=1, batch_size=2, learning_rate=0.01, device="cuda"
+        ),
+        model_config=model_config,
+    )
+    resumed = train_model(
+        dataset,
+        output,
+        config=TrainingConfig(
+            epochs=2, batch_size=2, learning_rate=0.01, device="cuda"
+        ),
+        model_config=model_config,
+        resume=True,
+    )
+
+    assert observed_devices and set(observed_devices) == {("cuda", "cuda")}
+    assert first.device.resolved_device == resumed.device.resolved_device == "cuda"
+    assert first.peak_cuda_memory_bytes is not None
+    assert first.peak_cuda_memory_bytes > 0
+    assert first.examples_per_second > 0
+    assert resumed.completed_epochs == 2
+    assert all(
+        value.device.type == "cpu"
+        for value in load_policy_value_checkpoint(output / "latest.pt").model.parameters()
+    )
 
 
 def test_resume_accepts_legacy_model_config_without_board_dimensions(

@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 import torch
@@ -127,6 +128,9 @@ class TrainingSummary:
     metrics_path: str
     history: tuple[EpochMetrics, ...]
     device: DeviceSelection
+    training_seconds: float
+    examples_per_second: float
+    peak_cuda_memory_bytes: int | None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -149,6 +153,11 @@ class TrainingSummary:
             "metrics": self.metrics_path,
             "history": [item.to_dict() for item in self.history],
             "device": self.device.to_dict(),
+            "performance": {
+                "training_seconds": self.training_seconds,
+                "examples_per_second": self.examples_per_second,
+                "peak_cuda_memory_bytes": self.peak_cuda_memory_bytes,
+            },
         }
 
     def to_json(self, *, indent: int | None = None) -> str:
@@ -294,6 +303,32 @@ def _optimizer(model: PolicyValueNetwork, config: TrainingConfig) -> torch.optim
     return torch.optim.SGD(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
     )
+
+
+def _move_optimizer_state(
+    optimizer: torch.optim.Optimizer, device: torch.device
+) -> None:
+    """Put every restored optimizer tensor beside the model parameters."""
+
+    def move(value: Any) -> Any:
+        if isinstance(value, Tensor):
+            return value.to(device)
+        if isinstance(value, dict):
+            return {key: move(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [move(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(move(item) for item in value)
+        return value
+
+    for state in optimizer.state.values():
+        for key, value in state.items():
+            state[key] = move(value)
+
+
+def _synchronize(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
 
 
 def _batches(examples: _Examples, batch_size: int, order: Tensor) -> list[tuple[Tensor, Tensor, Tensor]]:
@@ -477,6 +512,12 @@ def train_model(
     best_epoch = 0
     best_loss = math.inf
     history: list[EpochMetrics] = []
+    training_seconds = 0.0
+    trained_examples = 0
+    previous_performance: Mapping[str, object] = {}
+
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
 
     if initial_checkpoint is not None:
         initialized = load_policy_value_checkpoint(
@@ -517,6 +558,7 @@ def train_model(
             raise ValueError("resume model configuration does not match latest.pt")
         model.load_state_dict(payload["state_dict"])  # type: ignore[arg-type]
         optimizer.load_state_dict(state["optimizer"])  # type: ignore[arg-type]
+        _move_optimizer_state(optimizer, device)
         if scheduler is not None:
             if state.get("scheduler") is None:
                 raise ValueError("resume checkpoint has no scheduler state")
@@ -528,6 +570,15 @@ def train_model(
         if not isinstance(raw_history, list):
             raise ValueError("resume checkpoint has invalid metric history")
         history = [EpochMetrics(**item) for item in raw_history]
+        if summary_path.is_file():
+            try:
+                prior_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                prior_summary = {}
+            if isinstance(prior_summary, Mapping) and isinstance(
+                prior_summary.get("performance"), Mapping
+            ):
+                previous_performance = prior_summary["performance"]
         # The checkpoint is the resume source of truth. This also repairs a
         # metrics file left stale by a process interrupted after an older
         # version of the trainer saved latest.pt.
@@ -540,6 +591,8 @@ def train_model(
 
     for epoch in range(start_epoch, training_config.epochs + 1):
         learning_rate = float(optimizer.param_groups[0]["lr"])
+        _synchronize(device)
+        training_started = perf_counter()
         train_values = _epoch(
             model,
             train,
@@ -548,6 +601,9 @@ def train_model(
             order=torch.randperm(len(train), generator=generator),
             device=device,
         )
+        _synchronize(device)
+        training_seconds += perf_counter() - training_started
+        trained_examples += len(train)
         validation_values = (
             _epoch(
                 model,
@@ -586,6 +642,20 @@ def train_model(
 
     if not history:
         raise ValueError("training target is already complete; increase config.epochs")
+    if trained_examples:
+        examples_per_second = trained_examples / training_seconds
+        peak_cuda_memory_bytes = (
+            torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None
+        )
+    else:
+        training_seconds = float(previous_performance.get("training_seconds", 0.0))
+        examples_per_second = float(
+            previous_performance.get("examples_per_second", 0.0)
+        )
+        raw_peak_memory = previous_performance.get("peak_cuda_memory_bytes")
+        peak_cuda_memory_bytes = (
+            int(raw_peak_memory) if isinstance(raw_peak_memory, int) else None
+        )
     summary = TrainingSummary(
         training_config,
         architecture_config,
@@ -598,6 +668,9 @@ def train_model(
         metrics_path.name,
         tuple(history),
         device_selection,
+        training_seconds,
+        examples_per_second,
+        peak_cuda_memory_bytes,
     )
     _write_text(summary_path, summary.to_json(indent=2) + "\n")
     return summary

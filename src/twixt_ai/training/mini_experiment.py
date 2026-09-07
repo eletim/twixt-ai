@@ -15,7 +15,6 @@ from typing import Any
 import torch
 
 from twixt_ai.agents import AgentRequest
-from twixt_ai.device import select_device
 from twixt_ai.game import BoardDimensions, GameState, legal_peg_placements
 from twixt_ai.models import MINI_POLICY_VALUE_CONFIG, load_policy_value_checkpoint
 from twixt_ai.search import MCTSAgent
@@ -41,12 +40,17 @@ class MiniTrainingExperimentConfig:
     tiny_epochs: int = 100
     tiny_learning_rate: float = 1e-2
     tiny_max_loss_ratio: float = 0.25
+    device: str = "cpu"
 
     def __post_init__(self) -> None:
         if not 1 <= self.resume_after_epochs < self.epochs:
             raise ValueError("resume_after_epochs must be between 1 and epochs")
         if not 0 < self.tiny_max_loss_ratio < 1:
             raise ValueError("tiny_max_loss_ratio must be between zero and one")
+        if not isinstance(self.device, str):
+            raise TypeError("device must be a string")
+        if self.device not in {"cpu", "cuda", "auto"}:
+            raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -110,6 +114,7 @@ def _training_config(
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
         seed=config.seed,
+        device=config.device,
     )
 
 
@@ -226,6 +231,7 @@ def run_mini_training_experiment(
         learning_rate=config.tiny_learning_rate,
         weight_decay=0,
         seed=config.seed,
+        device=config.device,
     )
     tiny, tiny_seconds = _measured_train(
         tiny_dataset, root / "tiny" / "training", tiny_config
@@ -284,7 +290,7 @@ def run_mini_training_experiment(
             "available_cpus": len(os.sched_getaffinity(0))
             if hasattr(os, "sched_getaffinity") else os.cpu_count() or 1,
             "torch": torch.__version__,
-            "device": select_device("cpu").to_dict(),
+            "device": completed.device.to_dict(),
         },
         "tiny_overfit": {
             "passed": True,

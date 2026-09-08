@@ -23,6 +23,9 @@ The versioned, reproducible training shard schema is defined in
 [docs/training-data-format.md](docs/training-data-format.md).
 The model training, metrics, and resume workflow is documented in
 [docs/model-training.md](docs/model-training.md).
+The larger-data value-target audit, calibration results, and learned-MCTS
+ablations are documented in
+[docs/mini-value-diagnostics.md](docs/mini-value-diagnostics.md).
 
 ## Experiment presets
 
@@ -116,6 +119,15 @@ twixt-ai-dataset --input selfplay-run --output-dir dataset \
 Splits are assigned at game granularity, and examples retain match
 configuration, decision seeds, and agent metadata. MCTS visit counts are
 normalized into policy targets when present.
+
+Audit value-target balance by game phase and, optionally, measure a checkpoint's
+train/validation calibration and error without loading the full dataset into
+memory:
+
+```bash
+twixt-ai-value-diagnostics --dataset dataset --checkpoint model.pt \
+  --output value-diagnostics.json --device auto
+```
 
 Train the policy/value network with reproducible shuffling, recorded optimizer
 and scheduler settings, and resumable best/latest checkpoints:

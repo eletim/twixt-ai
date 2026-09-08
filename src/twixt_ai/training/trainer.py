@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import asdict, dataclass
 import hashlib
 import json
 import math
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -32,7 +32,6 @@ from twixt_ai.models import (
 
 from .data import DATASET_FORMAT, DATASET_VERSION, EXAMPLE_FORMAT, EXAMPLE_VERSION
 
-
 TRAINING_FORMAT = "twixt-ai-training-checkpoint"
 TRAINING_VERSION = 1
 
@@ -51,6 +50,7 @@ class TrainingConfig:
     scheduler_gamma: float = 0.1
     seed: int = 0
     device: str = "cpu"
+    selection_metric: str = "total"
 
     def __post_init__(self) -> None:
         for name in ("epochs", "batch_size", "scheduler_step_size"):
@@ -83,6 +83,10 @@ class TrainingConfig:
             raise TypeError("device must be a string")
         if self.device not in {"cpu", "cuda", "auto"}:
             raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
+        if not isinstance(self.selection_metric, str):
+            raise TypeError("selection_metric must be a string")
+        if self.selection_metric not in {"total", "value"}:
+            raise ValueError("selection_metric must be 'total' or 'value'")
         object.__setattr__(self, "learning_rate", float(self.learning_rate))
         object.__setattr__(self, "weight_decay", float(self.weight_decay))
         object.__setattr__(self, "scheduler_gamma", float(self.scheduler_gamma))
@@ -95,9 +99,16 @@ class TrainingConfig:
         if not isinstance(value, Mapping):
             raise TypeError("training config must be a mapping")
         expected = set(cls.__dataclass_fields__)
-        if set(value) != expected:
-            raise ValueError(f"training config must contain exactly {sorted(expected)}")
-        return cls(**dict(value))  # type: ignore[arg-type]
+        legacy = expected - {"selection_metric"}
+        keys = set(value)
+        if keys != expected and keys != legacy:
+            raise ValueError(
+                "training config must contain exactly "
+                f"{sorted(expected)} (selection_metric may be omitted by legacy checkpoints)"
+            )
+        restored = dict(value)
+        restored.setdefault("selection_metric", "total")
+        return cls(**restored)  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True, slots=True)
@@ -597,7 +608,12 @@ def train_model(
             if len(validation)
             else (None, None, None)
         )
-        selection_loss = validation_values[2] if validation_values[2] is not None else train_values[2]
+        metric_index = 1 if training_config.selection_metric == "value" else 2
+        selection_loss = (
+            validation_values[metric_index]
+            if validation_values[metric_index] is not None
+            else train_values[metric_index]
+        )
         improved = selection_loss < best_loss
         if improved:
             best_epoch, best_loss = epoch, selection_loss

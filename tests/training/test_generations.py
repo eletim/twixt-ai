@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from twixt_ai.device import DeviceSelection
 from twixt_ai.models import (
     MINI_POLICY_VALUE_CONFIG,
     PolicyValueNetwork,
@@ -49,6 +50,14 @@ def test_runs_two_generations_with_explicit_lineage(
     report = run_mini_training_generations(champion, output, config=config)
 
     assert report["status"] == "completed"
+    assert report["environment"]["device"]["requested_device"] == "auto"
+    assert report["environment"]["device"]["resolved_device"] in {"cpu", "cuda"}
+    expected_worker_mode = (
+        "thread"
+        if report["environment"]["device"]["resolved_device"] == "cuda"
+        else "process"
+    )
+    assert report["generations"][0]["resolved_config"]["worker_mode"] == expected_worker_mode
     assert len(report["generations"]) == 2
     assert [item["status"] for item in report["generations"]] == [
         "completed", "completed"
@@ -73,11 +82,114 @@ def test_runs_two_generations_with_explicit_lineage(
         {"evaluation_games": 3},
         {"promotion_win_rate": 1.1},
         {"validation_fraction": 1},
+        {"inference_batch_size": 0},
+        {"inference_max_wait_seconds": -0.1},
     ],
 )
 def test_generation_config_rejects_invalid_values(kwargs: dict[str, object]) -> None:
     with pytest.raises((TypeError, ValueError)):
         MiniGenerationConfig(**kwargs)  # type: ignore[arg-type]
+
+
+def test_cuda_selfplay_loads_one_shared_model_and_records_batches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    champion = tmp_path / "champion.pt"
+    save_policy_value_checkpoint(
+        champion, PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    )
+    original_load = generations.load_policy_value_checkpoint
+    loads: list[object] = []
+
+    def load_once(path: object, **kwargs: object) -> object:
+        loads.append(path)
+        # Exercise shared-path orchestration on CPU-only CI while presenting
+        # the same DeviceSelection contract as a CUDA host.
+        return original_load(path, map_location="cpu")
+
+    monkeypatch.setattr(generations, "load_policy_value_checkpoint", load_once)
+    device = DeviceSelection("cuda", "cuda", True, "fixture GPU", "12.1", "2")
+    config = MiniGenerationConfig(
+        generations=1,
+        games_per_generation=2,
+        selfplay_simulations=1,
+        evaluation_games=2,
+        evaluation_simulations=1,
+        workers=2,
+        inference_batch_size=2,
+        inference_max_wait_seconds=0.05,
+        epochs=1,
+    )
+
+    batch, inference = generations._run_selfplay(
+        champion, tmp_path / "selfplay", config, 86, device
+    )
+
+    assert batch.completed == 2
+    assert loads == [champion]
+    assert inference["mode"] == "shared-batched"
+    assert inference["model_instances"] == 1
+    assert inference["device"]["resolved_device"] == "cuda"
+    statistics = inference["statistics"]
+    assert statistics["requests"] > 0
+    assert statistics["maximum_batch_size"] == 2
+
+
+def test_cuda_selfplay_snapshots_statistics_after_batcher_shutdown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class DelayedStatistics:
+        def __init__(self, batcher: DelayedStatisticsBatcher) -> None:
+            self.batcher = batcher
+
+        def to_dict(self) -> dict[str, int]:
+            return {"requests": int(self.batcher.closed)}
+
+    class DelayedStatisticsBatcher:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            self.closed = False
+
+        @property
+        def statistics(self) -> DelayedStatistics:
+            return DelayedStatistics(self)
+
+        def __enter__(self) -> DelayedStatisticsBatcher:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            self.closed = True
+
+    champion = tmp_path / "champion.pt"
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    monkeypatch.setattr(
+        generations,
+        "load_policy_value_checkpoint",
+        lambda *args, **kwargs: SimpleNamespace(model=model),
+    )
+    monkeypatch.setattr(
+        generations, "NeuralInferenceBatcher", DelayedStatisticsBatcher
+    )
+    monkeypatch.setattr(
+        generations,
+        "run_batch",
+        lambda *args, **kwargs: SimpleNamespace(completed=1, failed=0),
+    )
+    device = DeviceSelection("cuda", "cuda", True, "fixture GPU", "12.1", "2")
+    config = MiniGenerationConfig(
+        generations=1,
+        games_per_generation=1,
+        selfplay_simulations=1,
+        evaluation_games=2,
+        evaluation_simulations=1,
+        workers=1,
+        epochs=1,
+    )
+
+    _, inference = generations._run_selfplay(
+        champion, tmp_path / "selfplay", config, 86, device
+    )
+
+    assert inference["statistics"] == {"requests": 1}
 
 
 def test_generation_cli_rejects_all_validation_split(

@@ -17,6 +17,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--resume-after-epochs", type=int, default=5)
     parser.add_argument("--tiny-epochs", type=int, default=100)
+    parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
     return parser
 
 
@@ -31,6 +32,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 epochs=args.epochs,
                 resume_after_epochs=args.resume_after_epochs,
                 tiny_epochs=args.tiny_epochs,
+                device=args.device,
             ),
         )
     except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:

@@ -176,6 +176,15 @@ def test_batched_inference_matches_synchronous_semantics() -> None:
     assert statistics.requests == 4
     assert statistics.batches == 1
     assert statistics.maximum_batch_size == 4
+    assert statistics.batch_size_distribution == {4: 1}
+    assert statistics.full_batch_flushes == 1
+    assert statistics.latency_flushes == 0
+    assert statistics.requests == sum(
+        size * count for size, count in statistics.batch_size_distribution.items()
+    )
+    persisted = statistics.to_dict()
+    assert persisted["batch_size_distribution"] == {"4": 1}
+    assert persisted["positions_per_second"] > 0
     for synchronous, batched in zip(expected, actual):
         assert batched.value == pytest.approx(synchronous.value, abs=1e-6)
         assert batched.priors == pytest.approx(synchronous.priors, abs=1e-7)

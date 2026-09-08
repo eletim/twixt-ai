@@ -1,0 +1,77 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+      "experiment": "twixt-ai-large-mini-dataset-experiment",
+      "experiment_version": 1,
+      "mcts": {
+        "guidance": "policy-value",
+        "rollout_limit": 4,
+        "simulations": 4
+      },
+      "stage": "1k"
+    },
+    "shard_size": 10000,
+    "split_seed": "issue-88-1k",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 60984,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 1000,
+  "splits": {
+    "train": {
+      "examples": 54396,
+      "shards": [
+        {
+          "examples": 10000,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "7de19a8372439401900f589877dcc3143302fbe0c32f22bffa0b5bba559ef0c8"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00001.jsonl",
+          "sha256": "61922d8bacdb862dd2ea280c7dbd88ea6ed5c4f8651e6ebe151eaf4405fe9fe7"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00002.jsonl",
+          "sha256": "321cebaf3d91fa4be5c2ec5886683c1d0344d2e734768bd86837963a97f3cb53"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00003.jsonl",
+          "sha256": "4d144cd0b79524884f3bc268b64b628eb8d6a8d75762cba6262455954b7c94d5"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00004.jsonl",
+          "sha256": "93abc09eb53d7fa149a90a8e08266c8d55077b473e0774c4311d87f6ca3d56f1"
+        },
+        {
+          "examples": 4396,
+          "path": "train/shard-00005.jsonl",
+          "sha256": "df8f4915a8f64845bca9df7be2a9d7533a5d51d79a7b6dcce1ceb0adee1fb739"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 6588,
+      "shards": [
+        {
+          "examples": 6588,
+          "path": "validation/shard-00000.jsonl",
+          "sha256": "a478ae40fdafa542d1d6bfb4ad64495cf0d43f2ab4c18acd47af62d9933993b3"
+        }
+      ]
+    }
+  },
+  "version": 1
+}

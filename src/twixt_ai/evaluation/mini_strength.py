@@ -16,6 +16,7 @@ from typing import Any, Literal
 import torch
 
 from twixt_ai import __version__
+from twixt_ai.device import select_device
 from twixt_ai.agents import RandomAgent
 from twixt_ai.game import BoardDimensions, GameState, PegPlacement
 from twixt_ai.models import load_policy_value_checkpoint
@@ -58,6 +59,7 @@ class MiniStrengthConfig:
     rollout_limit: int = DEFAULT_ROLLOUT_LIMIT
     search_depth: int = 1
     search_node_budget: int = 10_000
+    device: str = "auto"
 
     def __post_init__(self) -> None:
         if not isinstance(self.board, BoardDimensions):
@@ -74,6 +76,10 @@ class MiniStrengthConfig:
             raise ValueError("games_per_matchup must be even so player roles can be swapped")
         if isinstance(self.seed, bool) or not isinstance(self.seed, int):
             raise TypeError("seed must be an integer")
+        if not isinstance(self.device, str):
+            raise TypeError("device must be a string")
+        if self.device not in {"cpu", "cuda", "auto"}:
+            raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
         if (
             isinstance(self.confidence_level, bool)
             or not isinstance(self.confidence_level, (int, float))
@@ -159,7 +165,10 @@ def run_mini_strength_evaluation(
     if not isinstance(config, MiniStrengthConfig):
         raise TypeError("config must be a MiniStrengthConfig")
     checkpoint = Path(checkpoint_path)
-    loaded = load_policy_value_checkpoint(checkpoint)
+    device = select_device(config.device)
+    loaded = load_policy_value_checkpoint(
+        checkpoint, map_location=device.resolved_device
+    )
     model_board = BoardDimensions(
         loaded.model.config.board_width, loaded.model.config.board_height
     )
@@ -266,7 +275,7 @@ def run_mini_strength_evaluation(
             "python": platform.python_version(),
             "platform": platform.platform(),
             "torch": torch.__version__,
-            "device": str(next(loaded.model.parameters()).device),
+            "device": device.to_dict(),
             "available_cpus": _available_cpus(),
         },
         "methodology": {

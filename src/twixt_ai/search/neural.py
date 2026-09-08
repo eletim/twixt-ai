@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Sequence
 from concurrent.futures import Future
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 from threading import Condition, Thread
-from time import monotonic
+from time import monotonic, perf_counter
 
 import torch
 
@@ -141,6 +141,46 @@ class InferenceBatchStatistics:
     requests: int
     batches: int
     maximum_batch_size: int
+    batch_size_distribution: dict[int, int] = field(default_factory=dict)
+    full_batch_flushes: int = 0
+    latency_flushes: int = 0
+    forced_flushes: int = 0
+    total_queue_wait_seconds: float = 0.0
+    inference_seconds: float = 0.0
+
+    @property
+    def positions_per_second(self) -> float:
+        """Model throughput, excluding time spent waiting to form a batch."""
+
+        return (
+            self.requests / self.inference_seconds
+            if self.inference_seconds
+            else 0.0
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-native metrics artifact."""
+
+        return {
+            "requests": self.requests,
+            "batches": self.batches,
+            "maximum_batch_size": self.maximum_batch_size,
+            "batch_size_distribution": {
+                str(size): count
+                for size, count in sorted(self.batch_size_distribution.items())
+            },
+            "flushes": {
+                "full_batch": self.full_batch_flushes,
+                "latency": self.latency_flushes,
+                "forced": self.forced_flushes,
+            },
+            "total_queue_wait_seconds": self.total_queue_wait_seconds,
+            "average_queue_wait_seconds": (
+                self.total_queue_wait_seconds / self.requests if self.requests else 0.0
+            ),
+            "inference_seconds": self.inference_seconds,
+            "positions_per_second": self.positions_per_second,
+        }
 
 
 class NeuralInferenceBatcher:
@@ -180,7 +220,12 @@ class NeuralInferenceBatcher:
         self.max_wait_seconds = float(max_wait_seconds)
         self._condition = Condition()
         self._queue: deque[
-            tuple[GameState, tuple[PegPlacement, ...], Future[PolicyValueEstimate]]
+            tuple[
+                GameState,
+                tuple[PegPlacement, ...],
+                Future[PolicyValueEstimate],
+                float,
+            ]
         ] = deque()
         self._closed = False
         self._flushing = False
@@ -188,6 +233,12 @@ class NeuralInferenceBatcher:
         self._requests = 0
         self._batches = 0
         self._maximum_batch_size = 0
+        self._batch_size_distribution: dict[int, int] = {}
+        self._full_batch_flushes = 0
+        self._latency_flushes = 0
+        self._forced_flushes = 0
+        self._total_queue_wait_seconds = 0.0
+        self._inference_seconds = 0.0
         self._worker = Thread(
             target=self._run,
             name="twixt-neural-inference",
@@ -199,7 +250,15 @@ class NeuralInferenceBatcher:
     def statistics(self) -> InferenceBatchStatistics:
         with self._condition:
             return InferenceBatchStatistics(
-                self._requests, self._batches, self._maximum_batch_size
+                self._requests,
+                self._batches,
+                self._maximum_batch_size,
+                dict(self._batch_size_distribution),
+                self._full_batch_flushes,
+                self._latency_flushes,
+                self._forced_flushes,
+                self._total_queue_wait_seconds,
+                self._inference_seconds,
             )
 
     def __enter__(self) -> NeuralInferenceBatcher:
@@ -215,7 +274,7 @@ class NeuralInferenceBatcher:
         with self._condition:
             if self._closed:
                 raise RuntimeError("inference batcher is closed")
-            self._queue.append((state, moves, future))
+            self._queue.append((state, moves, future, monotonic()))
             self._condition.notify_all()
         return future.result()
 
@@ -256,27 +315,37 @@ class NeuralInferenceBatcher:
                     if remaining <= 0:
                         break
                     self._condition.wait(remaining)
+                if len(self._queue) >= self.batch_size:
+                    flush_reason = "full_batch"
+                elif self._flushing or self._closed:
+                    flush_reason = "forced"
+                else:
+                    flush_reason = "latency"
                 batch = [
                     self._queue.popleft()
                     for _ in range(min(self.batch_size, len(self._queue)))
                 ]
+                dispatched_at = monotonic()
                 if not self._queue:
                     self._flushing = False
                 self._active = True
 
             try:
+                inference_started = perf_counter()
                 estimates = self.policy_value.evaluate_batch(
-                    tuple((state, moves) for state, moves, _ in batch)
+                    tuple((state, moves) for state, moves, _, _ in batch)
                 )
+                inference_seconds = perf_counter() - inference_started
                 if len(estimates) != len(batch):
                     raise RuntimeError(
                         "batch inference returned the wrong result count"
                     )
             except BaseException as exc:
-                for _, _, future in batch:
+                inference_seconds = perf_counter() - inference_started
+                for _, _, future, _ in batch:
                     future.set_exception(exc)
             else:
-                for estimate, (_, _, future) in zip(estimates, batch):
+                for estimate, (_, _, future, _) in zip(estimates, batch):
                     future.set_result(estimate)
             finally:
                 with self._condition:
@@ -284,6 +353,19 @@ class NeuralInferenceBatcher:
                     self._requests += size
                     self._batches += 1
                     self._maximum_batch_size = max(self._maximum_batch_size, size)
+                    self._batch_size_distribution[size] = (
+                        self._batch_size_distribution.get(size, 0) + 1
+                    )
+                    if flush_reason == "full_batch":
+                        self._full_batch_flushes += 1
+                    elif flush_reason == "forced":
+                        self._forced_flushes += 1
+                    else:
+                        self._latency_flushes += 1
+                    self._total_queue_wait_seconds += sum(
+                        dispatched_at - queued_at for _, _, _, queued_at in batch
+                    )
+                    self._inference_seconds += inference_seconds
                     self._active = False
                     self._condition.notify_all()
 

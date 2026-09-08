@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Sequence
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 from twixt_ai.game import BoardDimensions
@@ -26,7 +26,13 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--scheduler-step-size", type=int, default=1)
     parser.add_argument("--scheduler-gamma", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
+    parser.add_argument(
+        "--selection-metric",
+        choices=("total", "value"),
+        default="total",
+        help="validation metric used to select best.pt",
+    )
     parser.add_argument("--channels", type=int, default=32)
     parser.add_argument("--residual-blocks", type=int, default=3)
     parser.add_argument("--value-hidden", type=int, default=64)
@@ -57,6 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 scheduler_gamma=args.scheduler_gamma,
                 seed=args.seed,
                 device=args.device,
+                selection_metric=args.selection_metric,
             ),
             model_config=PolicyValueConfig(
                 channels=args.channels,

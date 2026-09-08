@@ -13,6 +13,7 @@ from time import perf_counter, process_time
 
 import torch
 
+from twixt_ai.device import select_device
 from twixt_ai.game import BoardDimensions, GameState, legal_peg_placements
 from twixt_ai.models import MINI_POLICY_VALUE_CONFIG, PolicyValueNetwork
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
@@ -31,7 +32,7 @@ class InferencePerformanceConfig:
     warmups: int = 2
     seed: int = 54
     max_wait_seconds: float = 0.002
-    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    device: str = "auto"
 
     def __post_init__(self) -> None:
         for name in ("requests", "batch_size"):
@@ -55,10 +56,8 @@ class InferencePerformanceConfig:
             raise ValueError("max_wait_seconds must be a finite non-negative number")
         if not isinstance(self.device, str):
             raise TypeError("device must be a string")
-        try:
-            torch.empty(0, device=self.device)
-        except (RuntimeError, TypeError) as exc:
-            raise ValueError(f"device is unavailable: {self.device}") from exc
+        if self.device not in {"cpu", "cuda", "auto"}:
+            raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -130,8 +129,10 @@ def run_inference_performance_benchmark(
     config = config or InferencePerformanceConfig()
     if not isinstance(config, InferencePerformanceConfig):
         raise TypeError("config must be an InferencePerformanceConfig")
+    selection = select_device(config.device)
+    resolved_device = selection.resolved_device
     torch.manual_seed(config.seed)
-    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG).to(config.device)
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG).to(resolved_device)
     policy_value = NeuralPolicyValue(model)
     state = GameState.initial(BoardDimensions(10, 10))
     moves = legal_peg_placements(state)
@@ -142,7 +143,7 @@ def run_inference_performance_benchmark(
     synchronous = _measure(
         lambda: [policy_value(state, moves) for _ in range(config.requests)],
         config.requests,
-        config.device,
+        resolved_device,
     )
     with NeuralInferenceBatcher(
         policy_value,
@@ -154,13 +155,14 @@ def run_inference_performance_benchmark(
             with ThreadPoolExecutor(max_workers=config.batch_size) as pool:
                 list(pool.map(lambda _: batcher(state, moves), range(config.requests)))
 
-        batched = _measure(batched_workload, config.requests, config.device)
-        batch_statistics = asdict(batcher.statistics)
+        batched = _measure(batched_workload, config.requests, resolved_device)
+    # Closing joins the worker that publishes counters after fulfilling calls.
+    batch_statistics = batcher.statistics.to_dict()
 
     batched["speedup"] = (
         batched["positions_per_second"] / synchronous["positions_per_second"]
     )
-    device = torch.device(config.device)
+    device = torch.device(resolved_device)
     accelerator: dict[str, object] = {
         "type": device.type,
         "cuda_available": torch.cuda.is_available(),
@@ -183,6 +185,7 @@ def run_inference_performance_benchmark(
             "torch": torch.__version__,
             "available_cpus": _cpu_count(),
             "accelerator": accelerator,
+            "device": selection.to_dict(),
         },
         "synchronous": synchronous,
         "batched": batched,

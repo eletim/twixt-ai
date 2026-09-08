@@ -43,3 +43,18 @@ an `nvidia-smi` GPU-utilization sample, peak CUDA allocation, and environment
 details. The GPU sample is an instantaneous post-workload reading rather than a
 time-weighted hardware trace; the throughput timings synchronize CUDA before
 and after each workload.
+
+Mini training generations use this batching path automatically when their
+resolved device is CUDA. One checkpoint is loaded onto the GPU, all game rules
+and MCTS trees remain in the worker threads on CPU, and both players in every
+game submit leaf positions to that single model. Tune the independent
+concurrency controls with `--workers`, `--inference-batch-size`, and
+`--inference-max-wait-seconds`. Selecting `--device cpu` retains the
+synchronous process-worker path; an inference batch size of one provides the
+serialized CUDA baseline.
+
+Each generation report records the resolved GPU, the single-model invariant,
+actual batch-size distribution, full/latency/forced flush counts, queue wait,
+model throughput, total self-play time, and games/hour. The Issue 86 comparison
+is checked in at
+[`benchmarks/mini-neural-selfplay-performance.json`](../benchmarks/mini-neural-selfplay-performance.json).

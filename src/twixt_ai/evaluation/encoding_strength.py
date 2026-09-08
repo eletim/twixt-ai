@@ -14,6 +14,7 @@ from typing import Any
 
 import torch
 
+from twixt_ai.device import select_device
 from twixt_ai.game import BoardDimensions
 from twixt_ai.models import load_policy_value_checkpoint
 from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, MCTSAgent
@@ -42,6 +43,7 @@ class EncodingStrengthConfig:
     confidence_level: float = 0.95
     simulations: int = 20
     rollout_limit: int = DEFAULT_ROLLOUT_LIMIT
+    device: str = "auto"
 
     def __post_init__(self) -> None:
         if not isinstance(self.board, BoardDimensions):
@@ -52,6 +54,10 @@ class EncodingStrengthConfig:
             raise ValueError("games_per_matchup must be even so player roles can be swapped")
         if isinstance(self.seed, bool) or not isinstance(self.seed, int):
             raise TypeError("seed must be an integer")
+        if not isinstance(self.device, str):
+            raise TypeError("device must be a string")
+        if self.device not in {"cpu", "cuda", "auto"}:
+            raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
         if (
             isinstance(self.confidence_level, bool)
             or not isinstance(self.confidence_level, (int, float))
@@ -136,7 +142,11 @@ def run_encoding_strength_comparison(
         "10-plane": Path(ten_plane_checkpoint),
         "22-plane": Path(twenty_two_plane_checkpoint),
     }
-    loaded = {name: load_policy_value_checkpoint(path) for name, path in paths.items()}
+    device = select_device(config.device)
+    loaded = {
+        name: load_policy_value_checkpoint(path, map_location=device.resolved_device)
+        for name, path in paths.items()
+    }
     _validate_checkpoints(loaded["10-plane"], loaded["22-plane"], config.board)
 
     neural = {
@@ -222,7 +232,6 @@ def run_encoding_strength_comparison(
                 }
             )
 
-    first_parameter = next(loaded["10-plane"].model.parameters())
     return {
         "format": ENCODING_STRENGTH_FORMAT,
         "version": ENCODING_STRENGTH_VERSION,
@@ -233,7 +242,7 @@ def run_encoding_strength_comparison(
             "python": platform.python_version(),
             "platform": platform.platform(),
             "torch": torch.__version__,
-            "device": str(first_parameter.device),
+            "device": device.to_dict(),
             "available_cpus": _available_cpus(),
         },
         "methodology": {

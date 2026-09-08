@@ -191,6 +191,7 @@ def diagnose_value_model(
         raise TypeError("config must be a ValueDiagnosticsConfig or None")
     root = Path(dataset_dir)
     manifest, manifest_content, board = _manifest(root)
+    manifest_sha256 = _sha256(manifest_content)
     device = select_device(diagnostics_config.device)
     loaded = None
     model = None
@@ -206,6 +207,12 @@ def diagnose_value_model(
             or model.config.board_height != board.height
         ):
             raise ValueError("checkpoint board dimensions do not match the dataset")
+        checkpoint_dataset = loaded.metadata.get("dataset_sha256")
+        if (
+            checkpoint_dataset is not None
+            and checkpoint_dataset != manifest_sha256
+        ):
+            raise ValueError("checkpoint was trained on a different dataset")
 
     split_reports: dict[str, Any] = {}
     for split in ("train", "validation"):
@@ -317,7 +324,7 @@ def diagnose_value_model(
         "config": diagnostics_config.to_dict(),
         "dataset": {
             "path": str(root),
-            "manifest_sha256": _sha256(manifest_content),
+            "manifest_sha256": manifest_sha256,
             "board": board.to_dict(),
             "source_games": manifest.get("source_games"),
         },

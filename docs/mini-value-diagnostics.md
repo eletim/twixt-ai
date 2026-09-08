@@ -44,6 +44,9 @@ Validation MSE falls steadily by phase: 0.683 for plies 0-15, 0.560 for
 are substantially more learnable. The train/validation MSE gap is 0.0318.
 Full calibration bins and phase distributions are preserved in
 [`value-diagnostics.json`](../experiments/issue-89/value-diagnostics.json).
+The diagnostics command rejects a checkpoint whose recorded dataset digest
+does not match the supplied manifest, preventing stale small-data results from
+being attributed to this experiment.
 
 MSE remains the appropriate baseline: it directly estimates expected outcome,
 the decisive signs are balanced, and diagnostics do not support class

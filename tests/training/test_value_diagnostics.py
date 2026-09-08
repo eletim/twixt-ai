@@ -119,6 +119,26 @@ def test_target_only_diagnostics_use_default_config(tmp_path: Path) -> None:
     assert "checkpoint" not in report
 
 
+def test_diagnostics_reject_checkpoint_from_another_dataset(tmp_path: Path) -> None:
+    dataset, _ = _decisive_dataset(tmp_path)
+    config = PolicyValueConfig(
+        channels=2,
+        residual_blocks=1,
+        value_hidden=2,
+        board_width=6,
+        board_height=6,
+    )
+    checkpoint = tmp_path / "other-dataset.pt"
+    save_policy_value_checkpoint(
+        checkpoint,
+        PolicyValueNetwork(config),
+        metadata={"dataset_sha256": "not-this-dataset"},
+    )
+
+    with pytest.raises(ValueError, match="different dataset"):
+        diagnose_value_model(dataset, checkpoint)
+
+
 def test_mcts_converts_child_side_value_to_root_perspective() -> None:
     def certain_for_side_to_move(
         state: GameState, moves: tuple[PegPlacement, ...]

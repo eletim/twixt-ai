@@ -11,10 +11,11 @@ from pathlib import Path
 from .cuda_selfplay_512 import (
     BenchmarkOptions,
     BenchmarkTuning,
+    CANONICAL_CONTRACT_PATH,
     run_cuda_selfplay_512_benchmark,
 )
 
-_DEFAULT_CONTRACT = Path("benchmarks/mini-cuda-selfplay-512-v006-contract.json")
+_DEFAULT_CONTRACT = CANONICAL_CONTRACT_PATH
 
 
 def _git_commit(repo_root: Path) -> str | None:
@@ -49,7 +50,12 @@ def _git_branch(repo_root: Path) -> str | None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--contract", type=Path, default=_DEFAULT_CONTRACT)
+    parser.add_argument(
+        "--contract",
+        type=Path,
+        default=_DEFAULT_CONTRACT,
+        help="canonical v0.0.6 contract or a JSON-identical copy",
+    )
     parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument(

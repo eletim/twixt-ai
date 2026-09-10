@@ -12,7 +12,11 @@ from twixt_ai.agents import AgentRequest, AgentResult, RandomAgent
 from twixt_ai.evaluation import MatchConfig, run_match
 from twixt_ai.game import BoardDimensions
 from twixt_ai.selfplay import BatchConfig, run_batch
-from twixt_ai.training import DatasetConfig, build_dataset
+from twixt_ai.training import (
+    DatasetConfig,
+    build_dataset,
+    training_examples_from_match,
+)
 from twixt_ai.training.cli import main
 
 
@@ -89,6 +93,26 @@ def test_build_dataset_retains_targets_and_provenance(tmp_path: Path) -> None:
     assert json.loads((output / "manifest.json").read_text()) == summary.to_dict()
     assert summary.config.metadata == {"run": 4}
     assert summary.board == BoardDimensions(4, 4)
+
+
+def test_match_validation_exposes_canonical_training_targets() -> None:
+    match = run_match(
+        FirstWithPolicy(),
+        FirstWithPolicy(),
+        config=MatchConfig(BoardDimensions(4, 4), 17),
+    )
+
+    game_id, board, examples = training_examples_from_match(
+        match.to_dict(), "in-memory-match"
+    )
+
+    assert len(game_id) == 64
+    assert board == BoardDimensions(4, 4)
+    assert len(examples) == len(match.moves)
+    assert examples[0]["outcome"] in (-1, 0, 1)
+    assert sum(
+        item["probability"] for item in examples[0]["policy"]  # type: ignore[index]
+    ) == pytest.approx(1)
 
 
 def test_split_is_by_game_and_reproducible_across_input_order(tmp_path: Path) -> None:

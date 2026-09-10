@@ -11,7 +11,9 @@ Exactly three settings are optimization variables because they affect how
 fixed requests are scheduled, not what any game or training target means:
 `worker_concurrency`, `inference_batch_size`, and
 `queue_flush_max_wait_seconds`. No other contract field may vary between
-comparable v0.0.6 runs. The older
+comparable v0.0.6 runs. `--contract` may select another path for portability,
+but the runner compares its full JSON content with the committed canonical
+contract and rejects any fixed-field or declaration change. The older
 `mini-cuda-selfplay-512-contract.json` remains the immutable v0.0.5 contract
 referenced by the recorded baseline and optimized result files below.
 
@@ -33,9 +35,10 @@ measurement/report metadata.
 `twixt_ai.evaluation.cuda_selfplay_512.run_cuda_selfplay_512_benchmark` is the
 underlying implementation. It:
 
-- loads the contract file unmodified, verifies the checkpoint's SHA-256 and
-  `PYTHONHASHSEED`, and resolves only its three declared optimization
-  variables before running anything;
+- requires every field in the supplied v2 contract to equal the committed
+  canonical contract, verifies the checkpoint's SHA-256 and
+  `PYTHONHASHSEED`, and resolves only its three declared optimization variables
+  from explicit runner inputs before running anything;
 - builds the shared-model inference path with the contract's exact
   `NeuralInferenceBatcher`/`MCTSAgent` settings and runs `selfplay.batch.run_batch`
   with the contract's worker count, seed, and board — the same primitives
@@ -49,7 +52,9 @@ underlying implementation. It:
   derivations, recorded decisions matching the replay, unchanged simulation
   and rollout budgets, a complete legal root-move set whose visits sum to the
   fixed budget, normalized policy targets, and terminal side-to-move value
-  targets in `{-1, 0, 1}`;
+  targets in `{-1, 0, 1}`. Match/replay/decision and policy/value validation
+  uses `training.data.training_examples_from_match`, the same conversion used
+  to build training datasets, rather than defining benchmark-local targets;
 - reports GPU utilization/memory (`nvidia-smi` sampling, reusing
   `cuda_tuning._GpuSampler`), effective inference batch-size distribution
   (`NeuralInferenceBatcher.statistics`), throughput rates, an approximate

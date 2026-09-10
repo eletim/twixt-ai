@@ -87,6 +87,17 @@ def _write_contract_and_checkpoint(
         checkpoint, PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
     )
     contract = _tiny_contract(games)
+    variables = contract.pop("optimization_variables")
+    contract["version"] = 1
+    contract["config"]["workers"]["count"] = variables[
+        "worker_concurrency"
+    ]["default"]
+    contract["config"]["shared_inference"]["batch_size"] = variables[
+        "inference_batch_size"
+    ]["default"]
+    contract["config"]["shared_inference"]["max_wait_seconds"] = variables[
+        "queue_flush_max_wait_seconds"
+    ]["default"]
     import hashlib
 
     contract["checkpoint"]["sha256"] = hashlib.sha256(
@@ -164,6 +175,27 @@ def test_v006_contract_rejects_an_extra_optimization_variable() -> None:
         _resolved_config(contract, BenchmarkTuning())
 
 
+@pytest.mark.parametrize("fixed_field", ["games", "checkpoint", "seeds", "mcts"])
+def test_runner_rejects_modified_fixed_v006_contract(
+    tmp_path: Path, fixed_field: str
+) -> None:
+    canonical_path = Path("benchmarks/mini-cuda-selfplay-512-v006-contract.json")
+    contract = json.loads(canonical_path.read_text(encoding="utf-8"))
+    if fixed_field == "games":
+        contract["config"]["games"] = 1
+    elif fixed_field == "checkpoint":
+        contract["checkpoint"]["sha256"] = "0" * 64
+    elif fixed_field == "seeds":
+        contract["config"]["seeds"]["batch_seed"] += 1
+    else:
+        contract["config"]["mcts"]["simulations"] -= 1
+    modified = tmp_path / "modified-contract.json"
+    modified.write_text(json.dumps(contract), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="canonical contract"):
+        run_cuda_selfplay_512_benchmark(modified, tmp_path / "out")
+
+
 def test_canonical_v006_contract_fixes_semantics() -> None:
     path = Path("benchmarks/mini-cuda-selfplay-512-v006-contract.json")
     contract = json.loads(path.read_text(encoding="utf-8"))
@@ -230,7 +262,6 @@ def test_end_to_end_tiny_workload_validates(
             phase_sample_interval_seconds=0.005,
             implementation_label="test",
         ),
-        tuning=BenchmarkTuning(worker_concurrency=1),
     )
     assert report["workload"]["games"] == 2
     assert report["workload"]["completed"] == 2

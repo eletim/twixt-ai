@@ -1,12 +1,12 @@
 """Reproducible runner for the canonical 512-game CUDA self-play benchmark.
 
 This module is the committed implementation backing
-``benchmarks/mini-cuda-selfplay-512-contract.json``. It loads that contract
-unmodified, runs the exact fixed self-play workload it describes, validates
-the resulting artifacts against the contract's output and target semantics,
-and reports timing, GPU utilization, effective inference batching, and an
-approximate phase breakdown so later optimizations can be measured against a
-trustworthy, reproducible baseline.
+``benchmarks/mini-cuda-selfplay-512-v006-contract.json``. It requires that
+contract's exact fixed semantics, runs the self-play workload it describes,
+validates the resulting artifacts against the contract's output and target
+semantics, and reports timing, GPU utilization, effective inference batching,
+and an approximate phase breakdown so later optimizations can be measured
+against a trustworthy, reproducible baseline.
 
 No production self-play or search code is modified to support profiling:
 the phase breakdown is a lightweight stack-sampling profiler that inspects
@@ -34,24 +34,20 @@ import torch
 
 from twixt_ai.device import select_device
 from twixt_ai.evaluation.cuda_tuning import _GpuSampler
-from twixt_ai.game import (
-    Coordinate,
-    GameRecord,
-    PegPlacement,
-    apply_move,
-    experiment_board,
-    legal_peg_placements,
-)
+from twixt_ai.game import GameState, experiment_board, legal_peg_placements
 from twixt_ai.models import load_policy_value_checkpoint
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
-
 from twixt_ai.selfplay.batch import BatchConfig, run_batch
+from twixt_ai.training.data import training_examples_from_match
 
 RESULT_FORMAT = "twixt-ai-mini-cuda-selfplay-benchmark-result"
 RESULT_VERSION = 2
 CONTRACT_FORMAT = "twixt-ai-mini-cuda-selfplay-benchmark-contract"
 CONTRACT_VERSION = 2
+CANONICAL_CONTRACT_PATH = Path(
+    "benchmarks/mini-cuda-selfplay-512-v006-contract.json"
+)
 
 _OPTIMIZATION_VARIABLES = {
     "worker_concurrency",
@@ -71,6 +67,20 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"{path} must contain a JSON object")
     return value
+
+
+def _require_canonical_v2_contract(
+    contract: dict[str, Any], repo_root: Path
+) -> None:
+    """Require every fixed v2 field to equal the committed canonical contract."""
+
+    canonical_path = repo_root / CANONICAL_CONTRACT_PATH
+    canonical = _load_json(canonical_path)
+    if contract != canonical:
+        raise ValueError(
+            "version 2 benchmark contract does not exactly match the committed "
+            f"canonical contract at {canonical_path}"
+        )
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -208,7 +218,7 @@ def _validate_outputs(
     contract_config: dict[str, Any],
     expected_batch_config: dict[str, object],
 ) -> dict[str, object]:
-    """Validate required artifacts and policy/value target semantics."""
+    """Validate benchmark artifacts through canonical training conversion."""
 
     if summary.get("format") != "twixt-ai-selfplay-batch":
         raise ValueError("summary.json has an unexpected format")
@@ -254,8 +264,6 @@ def _validate_outputs(
             raise ValueError(f"game {index} artifact path does not match the contract")
         artifact_path = root / game["artifact"]
         payload = _load_json(artifact_path)
-        if payload.get("format") != "twixt-ai-match" or payload.get("version") != 1:
-            raise ValueError(f"game {index} artifact has an unexpected format/version")
         expected_match_config = {
             "board": expected_batch_config["board"],
             "seed": expected_seeds[index],
@@ -263,100 +271,47 @@ def _validate_outputs(
         }
         if payload.get("config") != expected_match_config:
             raise ValueError(f"game {index} match configuration changed semantics")
-        record_value = payload.get("record")
-        if not isinstance(record_value, dict):
-            raise ValueError(f"game {index} record must be an object")
-        record = GameRecord.from_dict(record_value)
-        if not record.final_state.is_terminal:
-            raise ValueError(f"game {index} record is not terminal")
-        expected_result = {
-            "status": record.final_state.result.value,
-            "winner": (
-                record.final_state.winner.value
-                if record.final_state.winner is not None
-                else None
-            ),
-            "move_count": len(record.moves),
-        }
-        if payload.get("result") != expected_result:
-            raise ValueError(f"game {index} result does not match its replayed record")
-        if game.get("winner") != expected_result["winner"] or game.get(
+        _, board, examples = training_examples_from_match(payload, artifact_path)
+        if board.to_dict() != expected_batch_config["board"]:
+            raise ValueError(f"game {index} board changed semantics")
+        result = payload["result"]
+        if game.get("winner") != result["winner"] or game.get(
             "move_count"
-        ) != expected_result["move_count"]:
+        ) != result["move_count"]:
             raise ValueError(f"game {index} summary does not match its artifact")
-        decisions = payload.get("decisions")
-        if not isinstance(decisions, list) or any(
-            not isinstance(decision, dict) for decision in decisions
-        ):
-            raise ValueError(f"game {index} decisions must be an array of objects")
-        if len(decisions) != game["move_count"]:
+        if len(examples) != game["move_count"]:
             raise ValueError(f"game {index} artifact move count mismatch")
-        total_moves += len(decisions)
-        state = record.initial_state
-        decision_seeds = Random(expected_seeds[index])
-        for ply, (decision, played_move) in enumerate(zip(decisions, record.moves)):
-            if decision.get("seed") != decision_seeds.randrange(2**64):
-                raise ValueError(f"game {index} decision {ply} seed changed semantics")
-            if decision.get("player") != played_move.player.value or decision.get(
-                "coordinate"
-            ) != played_move.coordinate.to_dict():
-                raise ValueError(f"game {index} decision {ply} does not match the record")
-            metadata = decision.get("metadata")
-            if not isinstance(metadata, dict):
-                raise ValueError(f"game {index} decision {ply} metadata is missing")
+        total_moves += len(examples)
+        for ply, example in enumerate(examples):
+            source = example["source"]
+            assert isinstance(source, dict)
+            decision = source["decision"]
+            assert isinstance(decision, dict)
+            metadata = decision["metadata"]
+            assert isinstance(metadata, dict)
             if metadata.get("simulations") != simulations:
                 raise ValueError(f"game {index} decision search budget changed")
             if metadata.get("rollout_limit") != rollout_limit:
                 raise ValueError(f"game {index} decision rollout limit changed")
+            position = example["position"]
+            assert isinstance(position, dict)
+            state = GameState.from_dict(position)
             root_moves = metadata.get("root_moves")
-            if not isinstance(root_moves, list):
-                raise ValueError(f"game {index} decision root moves are missing")
-            legal_moves = set(legal_peg_placements(state))
-            recorded_moves: set[PegPlacement] = set()
-            for item in root_moves:
-                if not isinstance(item, dict):
-                    raise ValueError(f"game {index} decision root move is invalid")
-                try:
-                    move = PegPlacement(
-                        state.side_to_move,
-                        Coordinate(item["x"], item["y"]),
-                    )
-                except (KeyError, TypeError, ValueError) as exc:
-                    raise ValueError(
-                        f"game {index} decision root move is invalid"
-                    ) from exc
-                visits = item.get("visits")
-                if (
-                    move not in legal_moves
-                    or move in recorded_moves
-                    or isinstance(visits, bool)
-                    or not isinstance(visits, int)
-                    or visits < 0
-                ):
-                    raise ValueError(f"game {index} decision root move is invalid")
-                recorded_moves.add(move)
-            if recorded_moves != legal_moves:
-                raise ValueError(f"game {index} decision does not record every legal move")
-            visit_sum = sum(item["visits"] for item in root_moves)
-            if visit_sum != simulations:
+            if not isinstance(root_moves, list) or len(root_moves) != len(
+                legal_peg_placements(state)
+            ):
                 raise ValueError(
-                    f"game {index} decision root visit sum {visit_sum} != "
-                    f"{simulations} simulations"
+                    f"game {index} decision root-move coverage changed semantics"
                 )
-            probability_sum = sum(item["visits"] / simulations for item in root_moves)
+            policy = example.get("policy")
+            if not isinstance(policy, list):
+                raise ValueError(f"game {index} decision policy target is missing")
+            probability_sum = sum(item["probability"] for item in policy)
             if abs(probability_sum - 1.0) > 1e-9:
                 raise ValueError(f"game {index} decision policy target does not sum to 1")
-            validated_decisions += 1
-            # Reconstructing every state and terminal winner proves the documented
-            # side-to-move value target is well-defined as exactly -1, 0, or 1.
-            expected_value = (
-                0
-                if record.final_state.winner is None
-                else (1 if record.final_state.winner is state.side_to_move else -1)
-            )
-            if expected_value not in (-1, 0, 1):  # pragma: no cover - defensive
+            if example.get("outcome") not in (-1, 0, 1):
                 raise ValueError(f"game {index} decision value target is invalid")
-            state = apply_move(state, played_move)
+            validated_decisions += 1
     return {
         "all_required_artifacts_valid": True,
         "all_match_records_replay_valid": True,
@@ -524,12 +479,14 @@ def run_cuda_selfplay_512_benchmark(
     contract = _load_json(contract_path)
     if contract.get("format") != CONTRACT_FORMAT:
         raise ValueError("contract has an unexpected format")
+    root = Path(repo_root) if repo_root is not None else Path.cwd()
+    if contract.get("version") == CONTRACT_VERSION:
+        _require_canonical_v2_contract(contract, root)
     tuning = tuning or BenchmarkTuning()
     config, tuning_values = _resolved_config(contract, tuning)
     _validate_supported_semantics(contract, config)
     games = config["games"]
 
-    root = Path(repo_root) if repo_root is not None else Path.cwd()
     resolved_checkpoint = (
         Path(checkpoint_path)
         if checkpoint_path is not None
@@ -693,6 +650,7 @@ def run_cuda_selfplay_512_benchmark(
 __all__ = [
     "BenchmarkOptions",
     "BenchmarkTuning",
+    "CANONICAL_CONTRACT_PATH",
     "CONTRACT_FORMAT",
     "CONTRACT_VERSION",
     "RESULT_FORMAT",

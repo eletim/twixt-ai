@@ -339,9 +339,16 @@ def _policy_target(
     ]
 
 
-def _examples(
-    value: dict[str, Any], path: Path
+def training_examples_from_match(
+    value: dict[str, Any], source: str | Path
 ) -> tuple[str, BoardDimensions, list[dict[str, object]]]:
+    """Validate one match and derive its canonical policy/value examples.
+
+    This is the shared validation boundary for consumers that need to verify
+    persisted match semantics without writing a complete dataset.
+    """
+
+    path = Path(source)
     record, decisions = _validated_match(value, path)
     game_id = _digest(value)
     winner = record.final_state.winner
@@ -436,7 +443,9 @@ def build_dataset(
     by_id: dict[str, tuple[str, list[dict[str, object]]]] = {}
     boards: set[BoardDimensions] = set()
     for path in paths:
-        game_id, board, examples = _examples(_load_object(path), path)
+        game_id, board, examples = training_examples_from_match(
+            _load_object(path), path
+        )
         if game_id in by_id:
             raise ValueError(f"duplicate source game: {path}")
         by_id[game_id] = (_split(game_id, dataset_config), examples)
@@ -484,4 +493,5 @@ __all__ = [
     "DatasetSummary",
     "Shard",
     "build_dataset",
+    "training_examples_from_match",
 ]

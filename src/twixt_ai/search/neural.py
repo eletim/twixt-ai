@@ -7,7 +7,8 @@ from collections.abc import Sequence
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 import math
-from threading import Condition, Thread
+import sys
+from threading import Condition, Lock, Thread
 from time import monotonic, perf_counter
 from typing import Protocol
 
@@ -22,6 +23,38 @@ from twixt_ai.models import (
 )
 
 from .mcts import PolicyValueEstimate
+
+
+_BATCHER_SWITCH_INTERVAL_SECONDS = 0.001
+_switch_interval_lock = Lock()
+_switch_interval_users = 0
+_saved_switch_interval_seconds = 0.0
+
+
+def _acquire_batcher_switch_interval() -> None:
+    """Bound GIL scheduling latency while a timed batch worker is active."""
+
+    global _saved_switch_interval_seconds, _switch_interval_users
+    with _switch_interval_lock:
+        if not _switch_interval_users:
+            _saved_switch_interval_seconds = sys.getswitchinterval()
+            sys.setswitchinterval(
+                min(
+                    _saved_switch_interval_seconds,
+                    _BATCHER_SWITCH_INTERVAL_SECONDS,
+                )
+            )
+        _switch_interval_users += 1
+
+
+def _release_batcher_switch_interval() -> None:
+    """Restore the process setting after the final timed batcher closes."""
+
+    global _switch_interval_users
+    with _switch_interval_lock:
+        _switch_interval_users -= 1
+        if not _switch_interval_users:
+            sys.setswitchinterval(_saved_switch_interval_seconds)
 
 
 class NeuralInferenceObserver(Protocol):
@@ -337,6 +370,9 @@ class NeuralInferenceBatcher:
         self.batch_size = batch_size
         self.max_wait_seconds = float(max_wait_seconds)
         self.observer = observer
+        self._uses_short_switch_interval = batch_size > 1 and max_wait_seconds > 0
+        if self._uses_short_switch_interval:
+            _acquire_batcher_switch_interval()
         self._condition = Condition()
         self._queue: deque[
             tuple[
@@ -363,7 +399,12 @@ class NeuralInferenceBatcher:
             name="twixt-neural-inference",
             daemon=True,
         )
-        self._worker.start()
+        try:
+            self._worker.start()
+        except BaseException:
+            if self._uses_short_switch_interval:
+                _release_batcher_switch_interval()
+            raise
 
     @property
     def statistics(self) -> InferenceBatchStatistics:
@@ -426,6 +467,8 @@ class NeuralInferenceBatcher:
             self._flushing = True
             self._condition.notify_all()
         self._worker.join()
+        if self._uses_short_switch_interval:
+            _release_batcher_switch_interval()
 
     def _run(self) -> None:
         while True:

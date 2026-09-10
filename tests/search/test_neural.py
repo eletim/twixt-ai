@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import sys
 from threading import Event, Lock
 
 import pytest
@@ -278,6 +279,41 @@ def test_batch_size_one_is_a_synchronous_debugging_path() -> None:
     assert batcher.statistics.requests == 1
     with pytest.raises(RuntimeError, match="closed"):
         batcher(state, moves)
+
+
+def test_timed_batchers_bound_and_restore_the_thread_switch_interval() -> None:
+    original_interval = sys.getswitchinterval()
+    first = second = synchronous = None
+    try:
+        sys.setswitchinterval(0.005)
+        policy_value = NeuralPolicyValue(
+            PolicyValueNetwork(
+                PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+            )
+        )
+
+        first = NeuralInferenceBatcher(
+            policy_value, batch_size=2, max_wait_seconds=0.002
+        )
+        second = NeuralInferenceBatcher(
+            policy_value, batch_size=2, max_wait_seconds=0.002
+        )
+        assert sys.getswitchinterval() == pytest.approx(0.001)
+
+        first.close()
+        assert sys.getswitchinterval() == pytest.approx(0.001)
+        second.close()
+        assert sys.getswitchinterval() == pytest.approx(0.005)
+
+        synchronous = NeuralInferenceBatcher(
+            policy_value, batch_size=1, max_wait_seconds=0.002
+        )
+        assert sys.getswitchinterval() == pytest.approx(0.005)
+    finally:
+        for batcher in (first, second, synchronous):
+            if batcher is not None:
+                batcher.close()
+        sys.setswitchinterval(original_interval)
 
 
 def test_batch_size_one_serializes_callers_and_close_waits_for_inference() -> None:

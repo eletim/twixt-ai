@@ -1,0 +1,123 @@
+{
+  "format": "twixt-ai-mini-inference-batcher-scheduling-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "91101a1cdae2a7851565dfcdaf4c5161d6eaa5c9",
+    "implementation_git_commit": "f9764e00b2f195a91db545dd02785f8ebe213551",
+    "branch": "feature/work-item-optimize-inference-batcher-scheduling",
+    "candidate": "scoped 1 ms CPython thread switch interval for timed dynamic batchers"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "method": "Two unprofiled runs per implementation, interleaved with scheduling trials; arithmetic means are used only to summarize the recorded runs.",
+    "baseline": {
+      "thread_switch_interval_seconds": 0.005,
+      "end_to_end_wall_seconds": [
+        82.15252011991106,
+        82.72381614218466
+      ],
+      "games_per_hour": [
+        22436.3171976908,
+        22281.370540642503
+      ],
+      "total_queue_wait_seconds": [
+        183.99995973543264,
+        183.7797165075317
+      ],
+      "mean_end_to_end_wall_seconds": 82.43816813104786,
+      "mean_games_per_hour": 22358.843869166652,
+      "mean_total_queue_wait_seconds": 183.88983812148217
+    },
+    "optimized": {
+      "thread_switch_interval_seconds": 0.001,
+      "end_to_end_wall_seconds": [
+        81.35434772609733,
+        81.92588732298464
+      ],
+      "games_per_hour": [
+        22656.441253830217,
+        22498.383114648095
+      ],
+      "total_queue_wait_seconds": [
+        163.86885565519333,
+        168.50229302351363
+      ],
+      "mean_end_to_end_wall_seconds": 81.64011752454098,
+      "mean_games_per_hour": 22577.412184239154,
+      "mean_total_queue_wait_seconds": 166.18557433935348
+    },
+    "result": {
+      "wall_time_reduction_percent": 0.968059607096382,
+      "games_per_hour_increase_percent": 0.9775474812179906,
+      "aggregate_queue_wait_reduction_percent": 9.627646618750525,
+      "retained": true
+    }
+  },
+  "detailed_source_observer": {
+    "method": "One canonical diagnostic run per interval with the source-of-truth inference and batcher observers enabled.",
+    "baseline": {
+      "thread_switch_interval_seconds": 0.005,
+      "end_to_end_wall_seconds": 85.54586531105451,
+      "deadline_overshoot_total_seconds": 8.371017016703263,
+      "deadline_overshoot_p95_milliseconds": 0.47463085502386093,
+      "deadline_overshoot_p99_milliseconds": 7.386106066405773
+    },
+    "optimized": {
+      "thread_switch_interval_seconds": 0.001,
+      "end_to_end_wall_seconds": 84.79691044497304,
+      "deadline_overshoot_total_seconds": 6.46464100247249,
+      "deadline_overshoot_p95_milliseconds": 0.2882906701415777,
+      "deadline_overshoot_p99_milliseconds": 2.1471770014613867
+    },
+    "deadline_overshoot_total_reduction_percent": 22.77352931462032,
+    "deadline_overshoot_p99_reduction_percent": 70.92951303221339,
+    "note": "Observer overhead makes these diagnostic scheduling measurements rather than the primary throughput claim."
+  },
+  "equivalence": {
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "matching_runs": 9,
+    "games_completed_per_run": 512,
+    "games_failed_per_run": 0,
+    "validated_decisions_per_run": 30929,
+    "checks": [
+      "all match records replay",
+      "game and decision seeds match the contract",
+      "search parameters match the contract",
+      "policy root visits and value targets are valid",
+      "synchronous and zero-wait batchers retain the existing process switch interval",
+      "overlapping timed batchers restore the process switch interval only after the final close"
+    ]
+  },
+  "rejected_attempts": [
+    {
+      "implementation": "producer-assisted immediate full-batch dispatch with first-request deadline accounting",
+      "end_to_end_wall_seconds": 82.8976303669624,
+      "change_vs_adjacent_baseline_percent": -0.907,
+      "reason_rejected": "Regressed end-to-end time and reduced effective batch size by making more batches reach the latency path."
+    },
+    {
+      "implementation": "0.5 ms thread switch interval",
+      "end_to_end_wall_seconds": 81.6731794429943,
+      "reason_rejected": "Improved on baseline but was weaker than 1 ms and caused more latency flushes, so the extra switching pressure was not justified."
+    },
+    {
+      "implementation": "2 ms thread switch interval",
+      "end_to_end_wall_seconds": 82.14267489290796,
+      "reason_rejected": "Was effectively tied with the adjacent 82.153 s baseline and did not establish an end-to-end gain."
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "format": "twixt-ai-mini-cpu-mcts-hot-path-profile",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8",
+    "profiler": "py-spy 0.4.1"
+  },
+  "source": {
+    "git_commit": "09c09c0a9bb3927ec75c6930d8b8e30a1a5a0d3c",
+    "branch": "feature/work-item-profile-cpu-mcts-hot-paths",
+    "production_changes": false
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "thread_switch_interval_seconds": 0.001,
+    "encoding_version": 1
+  },
+  "method": {
+    "command": "PYTHONHASHSEED=0 PYTHONPATH=src py-spy record --format raw --rate 100 --gil --threads --full-filenames -- python3 -m twixt_ai.evaluation.cuda_selfplay_512_cli --output-dir /path/to/scratch/selfplay-out --report /path/to/scratch/report.json --implementation-label post-scheduling-gil-profile --worker-concurrency 8 --inference-batch-size 8 --queue-flush-max-wait-seconds 0.002",
+    "sampling": "External 100 Hz stack sampling restricted to the Python thread holding the GIL. MCTS samples contain a ThreadPoolExecutor worker and MCTSAgent.choose_move, which excludes main-thread post-run replay validation.",
+    "classification": "Exclusive deepest-stack/source-line classification. Nested win and legal-move functions take precedence; automatic-link rules are state transitions; direct tuple sorting and GameState._from_canonical are allocation/copy; choose_move lines 371-373 are backup and lines 375-461 are metadata construction.",
+    "limitations": [
+      "Sampling percentages are relative evidence, not exact function timers.",
+      "The --gil view ranks executable Python work and intentionally omits native CUDA time and time workers spend waiting for inference or the GIL.",
+      "The profiled wall time is diagnostic; retained unprofiled runs remain the throughput source of truth."
+    ]
+  },
+  "profiled_canonical_run": {
+    "end_to_end_wall_seconds": 84.85132600809447,
+    "difference_from_retained_unprofiled_mean_percent": 3.933370726209695,
+    "games_per_hour": 21722.701184707075,
+    "completed_games": 512,
+    "failed_games": 0,
+    "validated_decisions": 30929,
+    "total_simulations": 123716,
+    "total_inference_positions": 152674,
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "average_gpu_utilization_percent": 2.43491124260355,
+    "effective_inference_batch_size_average": 7.804222256300158,
+    "phase_breakdown": [
+      {
+        "rank": 1,
+        "phase": "gpu_inference",
+        "samples": 6280,
+        "percent": 48.255724604272324
+      },
+      {
+        "rank": 2,
+        "phase": "cpu_mcts",
+        "samples": 6234,
+        "percent": 47.90225910557861
+      },
+      {
+        "rank": 3,
+        "phase": "serialization_io",
+        "samples": 494,
+        "percent": 3.7959120946672815
+      },
+      {
+        "rank": 4,
+        "phase": "batching_queueing",
+        "samples": 6,
+        "percent": 0.04610419548178884
+      }
+    ]
+  },
+  "retained_unprofiled_reference": {
+    "source": "benchmarks/mini-inference-batcher-scheduling.json optimized canonical throughput",
+    "runs": 2,
+    "end_to_end_wall_seconds": [
+      81.35434772609733,
+      81.92588732298464
+    ],
+    "mean_end_to_end_wall_seconds": 81.64011752454098,
+    "mean_games_per_hour": 22577.412184239154
+  },
+  "mcts_gil_profile": {
+    "samples": 2733,
+    "ranked_categories": [
+      {
+        "rank": 1,
+        "category": "expansion_and_initialization",
+        "samples": 1149,
+        "percent": 42.041712403951706,
+        "source_evidence": [
+          "src/twixt_ai/search/mcts.py:208-246 initializes uniform priors, validates returned policy keys, rebuilds weights, and normalizes priors",
+          "src/twixt_ai/search/mcts.py:256-271 chooses an unexpanded move, creates a child node, initializes it, and appends it",
+          "PegPlacement/Coordinate hashing beneath mcts.py:124, 219, 235, and 257 accounts for 411 samples (35.77% of this category)"
+        ]
+      },
+      {
+        "rank": 2,
+        "category": "metadata_construction",
+        "samples": 508,
+        "percent": 18.5876326381266,
+        "source_evidence": [
+          "src/twixt_ai/search/mcts.py:385-400 constructs and then reconstructs root move statistics for every legal move",
+          "src/twixt_ai/search/mcts.py:419-460 constructs root_moves and a second inspection.candidates representation",
+          "mcts.py:385 and mcts.py:444 contribute 137 and 140 samples respectively (54.53% of this category)"
+        ]
+      },
+      {
+        "rank": 3,
+        "category": "state_transitions",
+        "samples": 430,
+        "percent": 15.733626051957556,
+        "source_evidence": [
+          "src/twixt_ai/game/transitions.py:44-108 validates and applies each expanded move",
+          "src/twixt_ai/game/rules.py:185-212 link-intersection orientation and tests contribute 135 samples (31.40% of this category)",
+          "src/twixt_ai/game/rules.py:215-241 creates and crossing-filters automatic links"
+        ]
+      },
+      {
+        "rank": 4,
+        "category": "allocation_and_copy",
+        "samples": 244,
+        "percent": 8.927918038785219,
+        "source_evidence": [
+          "src/twixt_ai/game/transitions.py:60-87 copies, extends, and sorts peg/link tuples for each expanded state",
+          "src/twixt_ai/game/state.py:246-269 constructs the canonical state and occupied frozenset"
+        ]
+      },
+      {
+        "rank": 5,
+        "category": "legal_move_generation",
+        "samples": 173,
+        "percent": 6.330040248810831,
+        "source_evidence": [
+          "src/twixt_ai/game/rules.py:120-133 filters the cached placement template against occupied coordinates",
+          "rules.py:132 plus PegPlacement/Coordinate hashing contribute 92 samples (53.18% of this category)"
+        ]
+      },
+      {
+        "rank": 6,
+        "category": "win_checks",
+        "samples": 150,
+        "percent": 5.488474204171241,
+        "source_evidence": [
+          "src/twixt_ai/game/win.py:100-128 rebuilds owned-coordinate sets and adjacency before traversal",
+          "coordinate hashing and win.py:100-116 set/dict construction contribute 70 samples (46.67% of this category)"
+        ]
+      },
+      {
+        "rank": 7,
+        "category": "mcts_orchestration",
+        "samples": 69,
+        "percent": 2.5246981339187706,
+        "source_evidence": [
+          "src/twixt_ai/search/mcts.py:342-370 initializes and walks simulation paths outside the classified phases"
+        ]
+      },
+      {
+        "rank": 8,
+        "category": "selection",
+        "samples": 6,
+        "percent": 0.21953896816684962,
+        "source_evidence": [
+          "src/twixt_ai/search/mcts.py:273-291 computes PUCT child scores and selects max"
+        ]
+      },
+      {
+        "rank": 9,
+        "category": "backup",
+        "samples": 4,
+        "percent": 0.14635931211123307,
+        "source_evidence": [
+          "src/twixt_ai/search/mcts.py:371-373 increments visits and value sums"
+        ]
+      }
+    ],
+    "thread_and_gil": {
+      "interpretation": "All eight game workers contributed GIL-held MCTS samples, but CPython permits only one of them to execute Python bytecode at a time. Threads overlap inference/native work and waits; they do not parallelize these ranked MCTS/game-tree paths.",
+      "samples_by_worker": [
+        357,
+        349,
+        383,
+        328,
+        373,
+        300,
+        312,
+        331
+      ],
+      "minimum_worker_share_percent": 10.976948408342481,
+      "maximum_worker_share_percent": 14.013904134650568,
+      "measurement_boundary": "This establishes balanced participation and serialized GIL ownership; it does not estimate per-worker GIL wait duration."
+    }
+  },
+  "conclusion": {
+    "remaining_end_to_end_bottleneck": "The workload is on an overlapped inference/serialized-CPU plateau: inference and CPU/MCTS account for 48.26% and 47.90% of sampled wall state, while 2.43% average GPU utilization rules out saturated device compute. CPU MCTS/game-tree work is therefore a co-dominant end-to-end limiter, not background noise.",
+    "ranked_next_target": "Target expansion/initialization first. It is 42.04% of GIL-held MCTS samples; together with transition and state-copy work reached from expansion it accounts for 66.70%. Preserve selection and backup, which together are only 0.37%.",
+    "production_optimization_performed": false
+  }
+}

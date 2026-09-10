@@ -382,3 +382,70 @@ improved wall time but was weaker than 1 ms and produced more latency flushes;
 a 2 ms interval was effectively tied with its adjacent baseline.
 Machine-readable results and negative-trial reasons are in
 [`benchmarks/mini-inference-batcher-scheduling.json`](../benchmarks/mini-inference-batcher-scheduling.json).
+
+## CPU MCTS and game-tree hot paths
+
+The unchanged post-encoding, post-scheduling implementation was profiled on
+the exact contract with the retained eight workers, inference batch eight,
+and 2 ms flush wait. An external 100 Hz `py-spy --gil --threads` run captured
+only the Python thread holding the GIL. MCTS attribution additionally requires
+a game-worker stack containing `MCTSAgent.choose_move`, so post-timing replay
+validation is excluded. The profiled run completed and validated all 512 games
+and 30,929 decisions with the canonical output SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+Its 84.851 s wall time is 3.93% above the retained 81.640 s two-run unprofiled
+mean and is diagnostic, not a replacement throughput claim.
+
+The 2,733 GIL-held samples inside `choose_move` rank as follows. Categories
+are exclusive: nested win and legal-move functions take precedence,
+automatic-link rules are transitions, direct tuple sorting and
+`GameState._from_canonical` are allocation/copy, and source lines 371-373 and
+375-461 in `search/mcts.py` identify backup and metadata respectively.
+
+| Rank | CPU/game-tree category | GIL samples | Share |
+| ---: | --- | ---: | ---: |
+| 1 | Expansion and initialization | 1,149 | **42.04%** |
+| 2 | Metadata construction | 508 | **18.59%** |
+| 3 | State transitions | 430 | **15.73%** |
+| 4 | Allocation and copy | 244 | **8.93%** |
+| 5 | Legal-move generation | 173 | **6.33%** |
+| 6 | Win checks | 150 | **5.49%** |
+| 7 | Other MCTS orchestration | 69 | 2.52% |
+| 8 | Selection | 6 | 0.22% |
+| 9 | Backup | 4 | 0.15% |
+
+Expansion is concentrated in `mcts.py:208-271`: uniform-prior creation,
+policy-key validation and normalization, unexpanded-move selection, child
+allocation, and child initialization. Peg-placement/coordinate hashing below
+lines 124, 219, 235, and 257 alone contributed 411 samples. Metadata is not a
+rounding error: `mcts.py:385-400` constructs then reconstructs statistics for
+every legal root move, and lines 419-460 build both `root_moves` and the second
+`inspection.candidates` representation. The comprehensions beginning at
+lines 385 and 444 contributed 277 samples, 54.53% of metadata construction.
+
+Within transitions, link-intersection orientation/tests in
+`game/rules.py:185-212` contributed 135 samples, while
+`rules.py:215-241` creates and crossing-filters automatic links. Direct peg
+and link tuple extension/sorting in `game/transitions.py:60-87` plus canonical
+state construction in `game/state.py:246-269` form the separate 8.93%
+allocation/copy category. Legal-move filtering is at `game/rules.py:120-133`;
+win checks rebuild owned-coordinate and adjacency collections at
+`game/win.py:100-128`. Selection and backup together are only 0.37%, so
+neither is a credible next target under this workload.
+
+All eight game workers contributed between 10.98% and 14.01% of MCTS GIL
+samples, confirming balanced participation. They nevertheless take turns:
+CPython allows only one worker to execute these Python game-tree paths at a
+time. Threads overlap native inference and waits but do not parallelize MCTS
+bytecode. This profile does not estimate each worker's GIL-wait duration.
+
+The end-to-end phase sampler was almost evenly split between inference
+(48.26%) and CPU/MCTS (47.90%), with serialization at 3.80%; average GPU
+utilization was only 2.43%. The remaining bottleneck is therefore an
+overlapped inference/serialized-CPU plateau rather than saturated device
+compute. The ranked next CPU target is expansion/initialization: it is 42.04%
+of GIL-held MCTS samples, and expansion plus its transition and state-copy
+work totals 66.70%. No production optimization was made in this work item.
+Full source anchors, methodology, worker distribution, validation evidence,
+and limitations are recorded in
+[`benchmarks/mini-cpu-mcts-hot-paths.json`](../benchmarks/mini-cpu-mcts-hot-paths.json).

@@ -69,3 +69,66 @@ optimization report for the identified cause and any resulting change.
 Do not regenerate this baseline file to reflect a new implementation; it is
 the fixed pre-optimization reference every later measurement is compared
 against.
+
+## Optimization: batch tensors on the CPU, not the CUDA device
+
+`NeuralPolicyValue.evaluate_batch` (`src/twixt_ai/search/neural.py`) built
+every position's encoding and legal-move mask by passing `device=<cuda>`
+into `encode_position_for_version`/`legal_move_mask_for_version`, which
+populate those tensors with a Python loop of individual element writes (one
+per peg, link, and legal move). On a CUDA tensor, each write is its own
+host/device kernel launch. Extracting results then called `.item()` on the
+softmax output once per legal move per position — another synchronization
+each. With up to roughly 100 legal moves on the 10x10 Mini board and 152,674
+total inference requests in the fixed benchmark, this was thousands of tiny
+synchronous CUDA calls per shared batch — enough to dominate wall time while
+using very little actual GPU compute, which is why GPU utilization measured
+so low even though the phase breakdown attributed most of the wall time to
+"GPU inference." CPU/MCTS game-tree work was not the bottleneck (0.01% of
+sampled baseline wall time).
+
+The fix builds those tensors on the CPU (the encoding/masking functions'
+existing default) and moves each stacked batch to the model's device in one
+transfer each way, then extracts the whole probabilities/values batch to
+Python once with `.tolist()` instead of per-element `.item()`. A follow-up
+fix in the same change removed a second, smaller redundancy: each legal
+move's action index was computed once to build the mask and recomputed again
+on extraction; it is now computed once per move and reused for both. No
+model, encoding, search, worker-count, or batch-size setting changed.
+
+[`benchmarks/mini-cuda-selfplay-512-optimized.json`](../benchmarks/mini-cuda-selfplay-512-optimized.json)
+records the result of re-running the exact same committed contract after
+these changes: 116.031 s wall time for 512 games — a **2.29x** speedup over
+the 265.357 s baseline — at 15,885.4 games/hour, 1,315.8 positions/s, and
+1,066.2 simulations/s. `output_summary_sha256` for this run is bit-identical
+to the recorded baseline's, confirming every game's winner, move count, and
+derived seed reproduce exactly; the per-decision policy training target
+(root-move visit counts, validated to sum to the contract's 4-simulation
+budget) also matched in every one of the 30,929 recorded decisions.
+
+The phase breakdown shifted accordingly: `gpu_inference` dropped from 82.3%
+of baseline wall time to 68.2% of (a much smaller) total, while `cpu_mcts`
+rose from 0.01% (baseline) to 29.4% — its *absolute* time (~29-42 s across
+these runs) did not grow with the optimization, so the shift is proportional
+to the smaller total, not a regression. GPU utilization fell further, to
+3.4% average, because each shared batch now completes so much faster that
+`nvidia-smi`'s 100 ms sampling interval rarely catches a GPU active moment;
+this is expected, not evidence of a new inefficiency, given the model's
+total compute cost for this workload.
+
+With the CUDA-call-overhead bottleneck resolved, GPU inference (now mostly
+genuine batched model calls, still capped at an effective batch size of 4 by
+the contract's 4-worker concurrency) is still the largest remaining cost,
+with CPU-side MCTS/game-tree Python work next. Increasing effective GPU
+batch size further would require more concurrent self-play workers than the
+committed contract's 4, which this work deliberately left unchanged rather
+than reinterpret the frozen contract; CPU-side MCTS hot-path optimization is
+a separate, larger body of work touching code shared by every self-play use
+of this engine, not just this benchmark, and was left for future work rather
+than attempted without dedicated profiling. A related but out-of-scope
+finding from code review: `twixt_ai.training.value_diagnostics` builds its
+per-position batches directly on the CUDA device the same way
+`evaluate_batch` used to, which would reproduce this same overhead pattern
+when run on a CUDA-capable machine; it is a separate training-diagnostics
+tool outside this self-play benchmark's scope and was left for a follow-up
+issue rather than fixed here.

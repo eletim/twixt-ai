@@ -16,7 +16,6 @@ from twixt_ai.game import GameState, PegPlacement
 from twixt_ai.models import (
     PolicyValueNetwork,
     encode_position_for_version,
-    legal_move_mask_for_version,
     mask_policy_logits,
     move_to_action_index_for_version,
 )
@@ -28,7 +27,8 @@ class NeuralPolicyValue:
     """Callable inference hook for :class:`~twixt_ai.search.MCTSAgent`.
 
     Inference is performed without gradients and with the model in evaluation
-    mode. The model's device determines where inputs and masks are allocated.
+    mode. See :meth:`evaluate_batch` for why input/output tensors are staged
+    on the CPU rather than built directly on the model's device.
     """
 
     def __init__(self, model: PolicyValueNetwork) -> None:
@@ -77,26 +77,39 @@ class NeuralPolicyValue:
             raise ValueError(
                 "state board dimensions do not match the policy/value model"
             )
-        inputs = torch.stack(
+        # Build every position's encoding and legal-move mask on the CPU, then
+        # move each stacked batch tensor to the model's device in one
+        # transfer each way. Populating a CUDA tensor one element at a time
+        # (the previous behavior of passing ``device=device`` into the
+        # encoding/masking calls below) issues one kernel launch per peg,
+        # link, and legal move instead of two batched host-to-device copies,
+        # and dominated wall time in the fixed Issue #98 self-play benchmark
+        # despite using little actual GPU compute. Each move's action index
+        # is computed once here and reused for both the mask and the result
+        # below, rather than recomputed on extraction.
+        action_indices = [
             [
-                encode_position_for_version(
-                    state, config.encoding_version, device=device
-                )
-                for state in states
-            ]
-        )
-        masks = torch.stack(
-            [
-                legal_move_mask_for_version(
-                    moves,
+                move_to_action_index_for_version(
+                    move,
                     config.encoding_version,
                     board_width=config.board_width,
                     board_height=config.board_height,
-                    device=device,
                 )
-                for moves in move_batches
+                for move in moves
             ]
-        )
+            for moves in move_batches
+        ]
+        inputs = torch.stack(
+            [
+                encode_position_for_version(state, config.encoding_version)
+                for state in states
+            ]
+        ).to(device)
+        action_count = config.board_width * config.board_height
+        masks = torch.zeros((len(move_batches), action_count), dtype=torch.bool)
+        for row, indices in zip(masks, action_indices):
+            row[indices] = True
+        masks = masks.to(device)
         training_modes = tuple(
             (module, module.training) for module in self.model.modules()
         )
@@ -112,25 +125,23 @@ class NeuralPolicyValue:
             # layers. Restore each module's exact pre-inference mode instead.
             for module, was_training in training_modes:
                 module.training = was_training
+        # Convert each result tensor to plain Python values in one transfer
+        # instead of calling ``.item()`` per legal move per position: each
+        # ``.item()`` on a CUDA tensor is its own host/device
+        # synchronization, and a position can have dozens of legal moves.
+        probabilities_list = probabilities.tolist()
+        values_list = values.tolist()
         return tuple(
             PolicyValueEstimate(
                 {
-                    move: float(
-                        probabilities[
-                            index,
-                            move_to_action_index_for_version(
-                                move,
-                                config.encoding_version,
-                                board_width=config.board_width,
-                                board_height=config.board_height,
-                            ),
-                        ].item()
-                    )
-                    for move in moves
+                    move: position_probabilities[action_index]
+                    for move, action_index in zip(moves, indices)
                 },
-                float(values[index].item()),
+                value,
             )
-            for index, moves in enumerate(move_batches)
+            for moves, indices, position_probabilities, value in zip(
+                move_batches, action_indices, probabilities_list, values_list
+            )
         )
 
 

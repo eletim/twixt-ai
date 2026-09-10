@@ -1,0 +1,131 @@
+{
+  "comparison": {
+    "baseline_artifact": "benchmarks/mini-cuda-selfplay-512-baseline.json",
+    "baseline_average_gpu_utilization_percent": 11.199024822695035,
+    "baseline_end_to_end_wall_seconds": 265.3573373078834,
+    "baseline_games_per_hour": 6946.105273363552,
+    "baseline_positions_per_second": 575.3524720624496,
+    "baseline_simulations_per_second": 466.22415364553234,
+    "candidate_average_gpu_utilization_percent": 3.24585635359116,
+    "candidate_end_to_end_wall_seconds": 130.71443787915632,
+    "candidate_games_per_hour": 14100.967191581489,
+    "candidate_positions_per_second": 1167.996454539666,
+    "candidate_simulations_per_second": 946.460100408906,
+    "output_summary_sha256_matches_baseline": true,
+    "speedup": 2.030053769218689
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-contract.json",
+    "sha256": "8ee5656c32143045feac17853f29bfdf623b393edd1dbf38208308b6f3888bba",
+    "verified_unchanged": true
+  },
+  "environment": {
+    "cuda_runtime": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128"
+  },
+  "format": "twixt-ai-mini-cuda-selfplay-baseline",
+  "gpu_sampling": {
+    "average_memory_mib": 484.18876611418045,
+    "average_utilization_percent": 3.24585635359116,
+    "median_utilization_percent": 3.0,
+    "method": "nvidia-smi samples during the complete timed scope",
+    "peak_memory_mib": 562.0,
+    "peak_utilization_percent": 14.0,
+    "pytorch_peak_allocated_memory_bytes": 9737216,
+    "sample_interval_seconds": 0.1,
+    "samples": 1086
+  },
+  "inference": {
+    "average_queue_wait_seconds": 0.0006201569006921908,
+    "batch_size_distribution": {
+      "1": 180,
+      "2": 1244,
+      "3": 1838,
+      "4": 36123
+    },
+    "batches": 39385,
+    "flushes": {
+      "forced": 0,
+      "full_batch": 0,
+      "latency": 39385
+    },
+    "inference_seconds": 82.70740965032019,
+    "maximum_batch_size": 4,
+    "positions_per_second": 1845.9531092255522,
+    "requests": 152674,
+    "total_queue_wait_seconds": 94.68183465627953
+  },
+  "phase_breakdown": {
+    "method": "5 ms exclusive wall-state sampling; priority serialization/I/O, GPU inference, CPU/MCTS, batching/queueing, idle",
+    "phases": {
+      "batching_queueing": {
+        "estimated_wall_seconds": 0.025,
+        "percent": 0.02230549607423269,
+        "samples": 5
+      },
+      "cpu_mcts": {
+        "estimated_wall_seconds": 43.115,
+        "percent": 38.4680585296217,
+        "samples": 8623
+      },
+      "gpu_inference": {
+        "estimated_wall_seconds": 66.615,
+        "percent": 59.435224839400426,
+        "samples": 13323
+      },
+      "idle": {
+        "estimated_wall_seconds": 0.0,
+        "percent": 0.0,
+        "samples": 0
+      },
+      "serialization_io": {
+        "estimated_wall_seconds": 2.325,
+        "percent": 2.0744111349036403,
+        "samples": 465
+      }
+    },
+    "sample_interval_seconds": 0.005,
+    "samples": 22416,
+    "synchronization_note": "No separately observable synchronization-only phase; Future waits before dispatch are batching/queueing and waits during execution are attributed to the phase of the code actually running."
+  },
+  "rates": {
+    "games_per_hour": 14100.967191581489,
+    "positions_per_second": 1167.996454539666,
+    "simulations_per_second": 946.460100408906
+  },
+  "source": {
+    "branch_base": "feature/work-item-optimize-selfplay-throughput",
+    "git_commit": "f5a68ae4fa709229c09c3df4d154669a8b174362",
+    "implementation": "optimized"
+  },
+  "timing": {
+    "end_to_end_wall_seconds": 130.71443787915632,
+    "scope": "End-to-end wall time from immediately before self-play dispatch until all 512 per-game artifacts and summary.json have been durably written; checkpoint load and one-time process setup are reported separately and excluded.",
+    "setup_seconds_excluded": 0.06326671689748764
+  },
+  "validation": {
+    "all_game_seeds_match_contract_derivation": true,
+    "all_policy_root_visit_sums_valid": true,
+    "all_required_artifacts_valid": true,
+    "policy_root_visit_sum_expected": 4,
+    "summary_format": "twixt-ai-selfplay-batch",
+    "summary_version": 1,
+    "total_moves": 30929,
+    "validated_decisions": 30929
+  },
+  "version": 1,
+  "workload": {
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "completed": 512,
+    "failed": 0,
+    "game_artifacts": 512,
+    "games": 512,
+    "output_summary_sha256": "5c8a2444af6c5653872e4f725af0cb550c084705befb7899130242389b12f171",
+    "total_inference_positions": 152674,
+    "total_moves": 30929,
+    "total_simulations": 123716
+  }
+}

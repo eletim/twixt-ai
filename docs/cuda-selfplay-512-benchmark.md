@@ -69,3 +69,57 @@ optimization report for the identified cause and any resulting change.
 Do not regenerate this baseline file to reflect a new implementation; it is
 the fixed pre-optimization reference every later measurement is compared
 against.
+
+## Optimization: batch tensors on the CPU, not the CUDA device
+
+`NeuralPolicyValue.evaluate_batch` (`src/twixt_ai/search/neural.py`) built
+every position's encoding and legal-move mask by passing `device=<cuda>`
+into `encode_position_for_version`/`legal_move_mask_for_version`, which
+populate those tensors with a Python loop of individual element writes (one
+per peg, link, and legal move). On a CUDA tensor, each write is its own
+host/device kernel launch. Extracting results then called `.item()` on the
+softmax output once per legal move per position — another synchronization
+each. With up to roughly 100 legal moves on the 10x10 Mini board and 152,674
+total inference requests in the fixed benchmark, this was thousands of tiny
+synchronous CUDA calls per shared batch — enough to dominate wall time while
+using very little actual GPU compute, which is why GPU utilization measured
+so low even though the phase breakdown attributed most of the wall time to
+"GPU inference." CPU/MCTS game-tree work was not the bottleneck (0.01% of
+sampled baseline wall time).
+
+The fix builds those tensors on the CPU (the encoding/masking functions'
+existing default) and moves each stacked batch to the model's device in one
+transfer each way, then extracts the whole probabilities/values batch to
+Python once with `.tolist()` instead of per-element `.item()`. No model,
+encoding, search, worker-count, or batch-size setting changed.
+
+[`benchmarks/mini-cuda-selfplay-512-optimized.json`](../benchmarks/mini-cuda-selfplay-512-optimized.json)
+records the result of re-running the exact same committed contract after
+this change: 130.714 s wall time for 512 games — a **2.03x** speedup over
+the 265.357 s baseline — at 14,101.0 games/hour, 1,168.0 positions/s, and
+946.5 simulations/s. `output_summary_sha256` for this run is bit-identical
+to the recorded baseline's, confirming every game's winner, move count, and
+derived seed reproduce exactly; the per-decision policy training target
+(root-move visit counts, validated to sum to the contract's 4-simulation
+budget) also matched in every one of the 30,929 recorded decisions.
+
+The phase breakdown shifted accordingly: `gpu_inference` dropped from 82.3%
+to 59.4% of (a much smaller) total wall time, while `cpu_mcts` rose from
+0.01%/17.5% (baseline/independent reproduction of the baseline with this
+runner) to 38.5% — its *absolute* time is effectively unchanged
+(~42-43 s either way), so the shift is proportional, not a regression. GPU
+utilization fell further, to 3.2% average, because each shared batch now
+completes so much faster that `nvidia-smi`'s 100 ms sampling interval rarely
+catches a GPU active moment; this is expected, not evidence of a new
+inefficiency, given the model's total compute cost for this workload.
+
+With the CUDA-call-overhead bottleneck resolved, GPU inference (now mostly
+genuine batched model calls, still capped at an effective batch size of 4 by
+the contract's 4-worker concurrency) and CPU-side MCTS/game-tree Python work
+are comparably sized remaining costs. Increasing effective GPU batch size
+further would require more concurrent self-play workers than the committed
+contract's 4, which this work deliberately left unchanged rather than
+reinterpret the frozen contract; CPU-side MCTS hot-path optimization is a
+separate, larger body of work touching code shared by every self-play use of
+this engine, not just this benchmark, and was left for future work rather
+than attempted without dedicated profiling.

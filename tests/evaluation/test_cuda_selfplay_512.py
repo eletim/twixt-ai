@@ -198,14 +198,16 @@ def test_detailed_profile_reports_batching_separately_from_contention() -> None:
     )
     profile.batch_completion(0.000005, 0.000006)
 
-    result = profile.contention_to_dict()
+    result = profile.scheduling_to_dict()
 
-    assert result["producer_queue_condition_lock_acquisition"]["average"] == 1
-    assert result["producer_queue_condition_critical_section"]["average"] == 2
-    assert result["worker_dispatch_condition_lock_acquisition"]["average"] == 3
-    assert result["batch_formation_delay"]["all"]["average"] == 0.5
-    assert result["worker_condition_wait_deadline_overshoot"]["average"] == 0.007
-    assert result["batch_formation_delay"]["by_flush_reason"]["full_batch"][
+    contention = result["contention"]
+    batching = result["batching"]
+    assert contention["producer_queue_condition_lock_acquisition"]["average"] == 1
+    assert contention["producer_queue_condition_critical_section"]["average"] == 2
+    assert contention["worker_dispatch_condition_lock_acquisition"]["average"] == 3
+    assert batching["formation_delay"]["all"]["average"] == 0.5
+    assert contention["worker_condition_wait_deadline_overshoot"]["average"] == 0.007
+    assert batching["formation_delay"]["by_flush_reason"]["full_batch"][
         "samples"
     ] == 1
 

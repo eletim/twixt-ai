@@ -171,7 +171,7 @@ class CudaInferencePhaseProfile:
             self._completion_lock_waits.append(lock_wait_seconds)
             self._completion_critical_sections.append(critical_section_seconds)
 
-    def contention_to_dict(self) -> dict[str, object]:
+    def scheduling_to_dict(self) -> dict[str, object]:
         with self._contention_lock:
             queue_waits = list(self._queue_lock_waits)
             queue_critical = list(self._queue_critical_sections)
@@ -186,42 +186,49 @@ class CudaInferencePhaseProfile:
             }
         all_formations = [value for values in formations.values() for value in values]
         return {
-            "method": (
-                "direct perf_counter timing of Condition acquisition and lock-held "
-                "critical sections; batch formation is timed separately from first "
-                "queued request until dispatch"
-            ),
             "units": {
                 "condition_measurements": "microseconds",
                 "batch_formation_measurements": "milliseconds",
             },
-            "producer_queue_condition_lock_acquisition": _duration_summary(
-                queue_waits, 1_000_000.0
-            ),
-            "producer_queue_condition_critical_section": _duration_summary(
-                queue_critical, 1_000_000.0
-            ),
-            "worker_dispatch_condition_lock_acquisition": _duration_summary(
-                dispatch_waits, 1_000_000.0
-            ),
-            "worker_dispatch_condition_critical_section_excluding_wait": (
-                _duration_summary(dispatch_critical, 1_000_000.0)
-            ),
-            "worker_condition_wait_deadline_overshoot": _duration_summary(
-                wait_overshoots, 1_000.0
-            ),
-            "worker_completion_condition_lock_acquisition": _duration_summary(
-                completion_waits, 1_000_000.0
-            ),
-            "worker_completion_condition_critical_section": _duration_summary(
-                completion_critical, 1_000_000.0
-            ),
-            "batch_formation_delay": {
-                "all": _duration_summary(all_formations, 1_000.0),
-                "by_flush_reason": {
-                    reason: _duration_summary(values, 1_000.0)
-                    for reason, values in formations.items()
+            "batching": {
+                "method": (
+                    "elapsed time from the first queued request observed by the "
+                    "worker until batch dispatch, grouped by flush reason"
+                ),
+                "formation_delay": {
+                    "all": _duration_summary(all_formations, 1_000.0),
+                    "by_flush_reason": {
+                        reason: _duration_summary(values, 1_000.0)
+                        for reason, values in formations.items()
+                    },
                 },
+            },
+            "contention": {
+                "method": (
+                    "direct perf_counter timing of Condition acquisition, lock-held "
+                    "critical sections, and wait-timeout wake/reacquisition overshoot"
+                ),
+                "producer_queue_condition_lock_acquisition": _duration_summary(
+                    queue_waits, 1_000_000.0
+                ),
+                "producer_queue_condition_critical_section": _duration_summary(
+                    queue_critical, 1_000_000.0
+                ),
+                "worker_dispatch_condition_lock_acquisition": _duration_summary(
+                    dispatch_waits, 1_000_000.0
+                ),
+                "worker_dispatch_condition_critical_section_excluding_wait": (
+                    _duration_summary(dispatch_critical, 1_000_000.0)
+                ),
+                "worker_condition_wait_deadline_overshoot": _duration_summary(
+                    wait_overshoots, 1_000.0
+                ),
+                "worker_completion_condition_lock_acquisition": _duration_summary(
+                    completion_waits, 1_000_000.0
+                ),
+                "worker_completion_condition_critical_section": _duration_summary(
+                    completion_critical, 1_000_000.0
+                ),
             },
             "interpretation": {
                 "summed_thread_times_are_not_wall_time": (
@@ -231,6 +238,11 @@ class CudaInferencePhaseProfile:
                 "observer_overhead": (
                     "Recording each sample uses a separate profiler lock after the "
                     "production Condition is released; percentiles are diagnostic."
+                ),
+                "overshoot_attribution": (
+                    "Condition wait deadline overshoot includes delayed GIL/OS "
+                    "scheduling and lock reacquisition; it does not identify any one "
+                    "of those causes by itself."
                 ),
             },
         }
@@ -286,7 +298,7 @@ class CudaInferencePhaseProfile:
                 }
                 for rank, phase in enumerate(ranked, start=1)
             ],
-            "batching_and_contention": self.contention_to_dict(),
+            "scheduling": self.scheduling_to_dict(),
             "interpretation": {
                 "host_and_cuda_times_are_not_additive": (
                     "CUDA kernels and copies are asynchronous and can overlap host wall "

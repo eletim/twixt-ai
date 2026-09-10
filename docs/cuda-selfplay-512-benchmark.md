@@ -238,49 +238,68 @@ and reproduced output summary SHA-256
 The full ranked evidence is in
 [`benchmarks/mini-cuda-selfplay-512-inference-host-profile.json`](../benchmarks/mini-cuda-selfplay-512-inference-host-profile.json).
 
-This run used the opt-in `--detailed-inference-profile` evaluator. It executes
-the production inference path's same input checks, versioned encoding and
-action mapping, masks, model, softmax, and result construction. Host phases
-use `perf_counter`; CUDA transfers, model execution, mask application, and
-softmax use CUDA events. At the point where production `Tensor.tolist()` must
-synchronize and copy results, the profiler explicitly performs that same
-boundary as synchronization, device-to-host copy, then CPU conversion. The
-instrumented evaluator is benchmark-only and does not change production
-search or inference. Its 112.895 s end-to-end time includes event/clock
-overhead and is diagnostic, not a new optimized throughput claim.
+The opt-in `--detailed-inference-profile` observers measure the source-of-truth
+`NeuralPolicyValue.evaluate_batch` and `NeuralInferenceBatcher` directly;
+there is no benchmark evaluator or copied inference pipeline. Host phases use
+`perf_counter`; CUDA transfers, model execution, mask application, and softmax
+use CUDA events. At the point where production `Tensor.tolist()` must
+synchronize and copy results, the observer explicitly separates that boundary
+into synchronization, device-to-host copy, then CPU conversion. Its 112.690 s
+end-to-end time includes event, observer, and clock overhead and is diagnostic,
+not a new optimized throughput claim.
 
 | Cost | Total (s) | Per batch (ms) | Share of profiled inference wall |
 | --- | ---: | ---: | ---: |
-| CPU encoding + stack | **40.892** | **2.098** | **65.30%** |
-| CPU action-index construction | 4.942 | 0.254 | 7.89% |
-| CPU legal-mask construction | 1.520 | 0.078 | 2.43% |
-| Python result extraction | 1.788 | 0.092 | 2.85% |
-| Explicit CUDA synchronization wait | 0.069 | 0.004 | 0.11% |
+| CPU encoding + stack | **38.230** | **1.968** | **63.73%** |
+| CPU action-index construction | 4.935 | 0.254 | 8.23% |
+| CPU legal-mask construction | 1.535 | 0.079 | 2.56% |
+| Python result extraction | 1.742 | 0.090 | 2.90% |
+| Explicit CUDA synchronization wait | 0.066 | 0.003 | 0.11% |
 
 CUDA-event timings are a separate, overlapping view and must not be added to
-the host wall spans. Across 19,492 inference batches, model execution used
-6.450 device seconds (0.331 ms/batch), H2D copies 1.220 s, policy mask
-application 0.651 s, D2H copies 0.571 s, and softmax 0.236 s. CPU encoding
-alone therefore consumed 6.34 times the aggregate CUDA model-execution time.
-The earlier inference label was too broad: it included this 40.892 s of host
-encoding and other submission/extraction work around only 6.450 s of model
+the host wall spans. Across 19,425 inference batches, model execution used
+6.315 device seconds (0.325 ms/batch), H2D copies 1.336 s, policy mask
+application 0.631 s, D2H copies 0.568 s, and softmax 0.245 s. CPU encoding
+alone therefore consumed 6.05 times the aggregate CUDA model-execution time.
+The earlier inference label was too broad: it included this 38.230 s of host
+encoding and other submission/extraction work around only 6.315 s of model
 device work.
 
-Batching was already effective: the average batch contained 7.833 positions
-(97.91% of capacity), 18,485 of 19,492 batches were full, and mean per-request
-queue wait was 1.303 ms inside the configured 2 ms coalescing bound. Only five
-5 ms stack samples found batcher code as the exclusive active phase. The
-198.910 aggregate queue-wait seconds sum simultaneous waits across 152,674
-requests, so they are not an additive wall-time cost and do not establish lock
-contention as the bottleneck.
+Batching and contention are measured independently. The average batch
+contained 7.860 positions (98.25% of capacity), and 18,610 of 19,425 batches
+were full. Batch formation from the first observed request to dispatch took
+1.301 ms on average; full batches took 0.955 ms on average. The 815
+latency-flushed batches took 9.210 ms on average and 6.691 ms at p50, showing
+that the configured 2 ms timeout was not a hard observed dispatch bound.
 
-The ranked next target is CPU position encoding and stacking, followed by
-action-index/mask construction. Result extraction and transfers are smaller;
-the explicit synchronization wait is negligible. `nvidia-smi` averaged 2.24%
+Direct `Condition` measurements explain what can and cannot be called
+contention:
+
+| Condition measurement | p50 | p95 | p99 | Aggregate |
+| --- | ---: | ---: | ---: | ---: |
+| Producer lock acquisition | 0.551 us | 1.092 us | 1.763 us | 0.494 s across 152,674 calls |
+| Producer lock-held section | 1.002 us | 3.156 us | 4.558 us | 0.220 s across 152,674 calls |
+| Worker dispatch acquisition | 0.241 us | 0.340 us | 0.451 us | 0.005 s across 19,425 batches |
+| Worker completion acquisition | 0.501 us | 0.852 us | 1.382 us | 0.011 s across 19,425 batches |
+| Wait deadline overshoot | 0 ms | 0.526 ms | 6.978 ms | 7.299 s across 19,425 batches |
+
+Typical lock acquisition and critical sections are therefore microsecond-scale,
+although one producer acquisition reached 156 ms. Separately, wait calls
+overshot their remaining timeout by 7.299 s in aggregate. That tail includes
+delayed GIL/OS scheduling and `Condition` lock reacquisition; this profiler
+cannot assign it to only one of those causes. The earlier interpretation of
+queue wait as primarily coalescing was unsupported and is withdrawn. Aggregate
+per-request queue wait likewise sums concurrent waits and is not additive wall
+time.
+
+The ranked next target remains CPU position encoding and stacking. The
+condition wake/reacquisition scheduling tail is second, ahead of model
+execution and action-index/mask construction. Result extraction and explicit
+synchronization are smaller. `nvidia-smi` averaged 2.23%
 utilization during this run, but that coarse sample is only corroboration: the
-host spans, CUDA events, near-full batches, and validated fixed workload are
-the evidence for the host-construction diagnosis. No production optimization
-was attempted in this work item.
+source-of-truth observer spans, direct Condition timings, CUDA events,
+near-full batches, and validated fixed workload support the ranking. No
+production optimization was attempted in this work item.
 
 Reproduce the diagnostic profile with:
 
@@ -289,7 +308,7 @@ PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
   twixt_ai.evaluation.cuda_selfplay_512_cli \
   --output-dir /path/to/scratch/selfplay-profile-out \
   --report /path/to/scratch/inference-profile-report.json \
-  --implementation-label "v0.0.6-profile-w8-b8-f2ms-detailed" \
+  --implementation-label "v0.0.6-profile-w8-b8-f2ms-source-observer" \
   --worker-concurrency 8 \
   --inference-batch-size 8 \
   --queue-flush-max-wait-seconds 0.002 \

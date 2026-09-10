@@ -8,10 +8,10 @@ semantics, and reports timing, GPU utilization, effective inference batching,
 and an approximate phase breakdown so later optimizations can be measured
 against a trustworthy, reproducible baseline.
 
-No production self-play or search code is modified to support profiling:
-the phase breakdown is a lightweight stack-sampling profiler that inspects
-live thread frames from outside the timed call graph, the same technique
-used for the recorded baseline.
+The ordinary phase breakdown is a lightweight stack-sampling profiler. An
+optional detailed profile attaches measurement observers to the same
+production inference evaluator and batcher; it does not substitute a second
+implementation or enable a production optimization.
 """
 
 from __future__ import annotations

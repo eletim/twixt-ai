@@ -155,6 +155,13 @@ class _PhaseSampler:
                         matched.add("gpu_inference")
                     elif name in ("__call__", "_run"):
                         matched.add("batching_queueing")
+                elif filename.endswith(
+                    (
+                        "evaluation/cuda_inference_profile.py",
+                        "evaluation\\cuda_inference_profile.py",
+                    )
+                ) and name == "evaluate_batch":
+                    matched.add("gpu_inference")
                 elif filename.endswith(("search/mcts.py", "search\\mcts.py")):
                     matched.add("cpu_mcts")
                 walked = walked.f_back

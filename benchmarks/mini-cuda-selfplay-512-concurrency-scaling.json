@@ -1,0 +1,173 @@
+{
+  "analysis": {
+    "best_measured_configuration": {
+      "inference_batch_size": 8,
+      "queue_flush_max_wait_seconds": 0.002,
+      "worker_concurrency": 8
+    },
+    "best_measured_end_to_end_wall_seconds": 108.07518664607778,
+    "best_measured_games_per_hour": 17054.79358584011,
+    "bottleneck": {
+      "classification": "host_and_launch_bound_batched_inference_with_cpu_mcts_secondary",
+      "evidence": {
+        "average_gpu_utilization_percent": 1.9491329479768786,
+        "effective_inference_batch_size": 7.831042265080017,
+        "estimated_gpu_idle_percent": 98.05086705202312,
+        "phase_cpu_mcts_percent": 22.229303053125545,
+        "phase_gpu_inference_percent": 75.01303516598111
+      },
+      "reason": "The best run kept batches nearly full but sampled only 1.95% GPU utilization. Time attributed to inference therefore remains dominated by host-side invocation, transfer, extraction, and small-kernel latency rather than RTX 4060 compute saturation; CPU game/MCTS work is the next-largest sampled phase."
+    },
+    "conclusions": [
+      "Worker scaling is strong from 1 to 8 workers, then saturated: 16 workers filled batches slightly better but was 0.21% slower than 8 workers at the same batch and flush settings.",
+      "Batch size 1 was 61.60% slower than batch size 8 at 8 workers; batch size 4 was 10.72% slower. Batch size 16 was ineffective because 8 workers cannot submit more than 8 simultaneous requests.",
+      "A zero-second flush wait was 12.28% slower than 2 ms because it cut the effective batch from 7.83 to 3.97. The 2 ms endpoint was 2.22% faster than 0.5 ms in this single-run sweep.",
+      "nvidia-smi sampled 93.58% to 98.07% estimated GPU idle time across the sweep, so none of the configurations saturated GPU compute."
+    ],
+    "reproduction_delta_percent": 2.92317450922992,
+    "speedup_over_reproduction": 1.1049972097120382,
+    "speedup_over_recorded_v005_configuration": 1.0736136103273268
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "verified_unchanged_for_every_trial": true
+  },
+  "environment": {
+    "cuda_runtime": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128"
+  },
+  "format": "twixt-ai-mini-cuda-selfplay-concurrency-scaling",
+  "historical_reference": {
+    "artifact": "benchmarks/mini-cuda-selfplay-512-optimized.json",
+    "configuration": {
+      "inference_batch_size": 8,
+      "queue_flush_max_wait_seconds": 0.0005,
+      "worker_concurrency": 4
+    },
+    "end_to_end_wall_seconds": 116.03099132189527,
+    "games_per_hour": 15885.411121642159
+  },
+  "measurement": {
+    "gpu_idle_estimate": "100 minus average nvidia-smi utilization over the timed scope; this is an approximate activity complement, not a CUDA trace.",
+    "phase_sampling": "5 ms exclusive wall-state stack sampling; stack-sampler idle is distinct from estimated GPU idle because CPU or inference-host work can continue while the GPU is inactive.",
+    "recorded_on": "2026-09-11",
+    "runs_per_configuration": 1,
+    "source_commit": "5e458f303e060269d4e4882e4559832dfc8b5043"
+  },
+  "trials": [
+    {
+      "configuration": {"inference_batch_size": 8, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 4},
+      "gpu": {"average_utilization_percent": 2.9582484725050917, "estimated_idle_percent": 97.04175152749491, "peak_memory_mib": 436, "peak_utilization_percent": 4, "samples": 982},
+      "id": "reproduction-w4-b8-f0.5ms",
+      "inference": {"average_queue_wait_seconds": 0.0006460966250276412, "batches": 39430, "effective_batch_capacity_percent": 48.40032969819934, "effective_batch_size_average": 3.8720263758559472, "inference_seconds": 69.24503499735147},
+      "outcome": "reproduction",
+      "phase_percent": {"batching_queueing": 0.024709661477637757, "cpu_mcts": 29.799851742031137, "gpu_inference": 67.86261428218432, "idle": 0.0, "serialization_io": 2.312824314306894},
+      "rates": {"games_per_hour": 15434.241313862301, "positions_per_second": 1278.4328116062356, "simulations_per_second": 1035.9497604089565},
+      "timing": {"end_to_end_wall_seconds": 119.42277968302369, "relative_to_reproduction_percent": 0.0},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 8, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 1},
+      "gpu": {"average_utilization_percent": 4.743237047226043, "estimated_idle_percent": 95.25676295277395, "peak_memory_mib": 436, "peak_utilization_percent": 6, "samples": 2181},
+      "id": "workers-1",
+      "inference": {"average_queue_wait_seconds": 0.0005661753657544633, "batches": 152674, "effective_batch_capacity_percent": 12.5, "effective_batch_size_average": 1.0, "inference_seconds": 115.04573877062649},
+      "outcome": "regressive",
+      "phase_percent": {"batching_queueing": 1.940889188278882, "cpu_mcts": 51.08411923206467, "gpu_inference": 45.911923206466824, "idle": 0.0, "serialization_io": 1.063068373189626},
+      "rates": {"games_per_hour": 7286.132146365849, "positions_per_second": 603.5172196800454, "simulations_per_second": 489.0468341036227},
+      "timing": {"end_to_end_wall_seconds": 252.9737263850402, "relative_to_reproduction_percent": 111.83037864006545},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 8, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 8},
+      "gpu": {"average_utilization_percent": 1.9887133182844243, "estimated_idle_percent": 98.01128668171557, "peak_memory_mib": 436, "peak_utilization_percent": 4, "samples": 886},
+      "id": "workers-8",
+      "inference": {"average_queue_wait_seconds": 0.0013817563032803906, "batches": 20867, "effective_batch_capacity_percent": 91.4566061245028, "effective_batch_size_average": 7.316528489960224, "inference_seconds": 63.271201852941886},
+      "outcome": "improved",
+      "phase_percent": {"batching_queueing": 0.02834467120181406, "cpu_mcts": 16.060090702947846, "gpu_inference": 81.1734693877551, "idle": 0.0, "serialization_io": 2.738095238095238},
+      "rates": {"games_per_hour": 16685.177442438446, "positions_per_second": 1382.0490347476384, "simulations_per_second": 1119.9128756883217},
+      "timing": {"end_to_end_wall_seconds": 110.4693076449912, "relative_to_reproduction_percent": -7.497289932286888},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 8, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 16},
+      "gpu": {"average_utilization_percent": 1.928246013667426, "estimated_idle_percent": 98.07175398633257, "peak_memory_mib": 436, "peak_utilization_percent": 4, "samples": 878},
+      "id": "workers-16",
+      "inference": {"average_queue_wait_seconds": 0.003971413721813821, "batches": 19230, "effective_batch_capacity_percent": 99.24206968278732, "effective_batch_size_average": 7.939365574622985, "inference_seconds": 108.92011976544745},
+      "outcome": "ineffective",
+      "phase_percent": {"batching_queueing": 0.02939965896395602, "cpu_mcts": 1.6287411066031634, "gpu_inference": 95.46069265596519, "idle": 0.0, "serialization_io": 2.8811665784676896},
+      "rates": {"games_per_hour": 16650.457923750648, "positions_per_second": 1379.1731841637945, "simulations_per_second": 1117.5824937579944},
+      "timing": {"end_to_end_wall_seconds": 110.69965813797899, "relative_to_reproduction_percent": -7.304403371113899},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 1, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 8},
+      "gpu": {"average_utilization_percent": 6.4217595701813295, "estimated_idle_percent": 93.57824042981866, "peak_memory_mib": 434, "peak_utilization_percent": 8, "samples": 1489},
+      "id": "batch-1",
+      "inference": {"average_queue_wait_seconds": 0.007686890565583883, "batches": 152674, "effective_batch_capacity_percent": 100.0, "effective_batch_size_average": 1.0, "inference_seconds": 176.02342657744884},
+      "outcome": "regressive",
+      "phase_percent": {"batching_queueing": 0.018997561979545958, "cpu_mcts": 1.1588512807523035, "gpu_inference": 97.32451002121394, "idle": 0.0, "serialization_io": 1.4976411360542063},
+      "rates": {"games_per_hour": 10325.116445532849, "positions_per_second": 855.2391646079005, "simulations_per_second": 693.0241461455848},
+      "timing": {"end_to_end_wall_seconds": 178.51614649803378, "relative_to_reproduction_percent": 49.48249150778257},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 4, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 8},
+      "gpu": {"average_utilization_percent": 2.8565656565656568, "estimated_idle_percent": 97.14343434343434, "peak_memory_mib": 434, "peak_utilization_percent": 4, "samples": 990},
+      "id": "batch-4",
+      "inference": {"average_queue_wait_seconds": 0.00217413627554786, "batches": 38324, "effective_batch_capacity_percent": 99.59424903454754, "effective_batch_size_average": 3.9837699613819018, "inference_seconds": 120.68592747929506},
+      "outcome": "regressive",
+      "phase_percent": {"batching_queueing": 0.024963802486394727, "cpu_mcts": 1.4628788257027312, "gpu_inference": 96.08068300963602, "idle": 0.0, "serialization_io": 2.4314743621748467},
+      "rates": {"games_per_hour": 15069.723289629648, "positions_per_second": 1248.2394387591778, "simulations_per_second": 1011.4832283527676},
+      "timing": {"end_to_end_wall_seconds": 122.31146946595982, "relative_to_reproduction_percent": 2.4188766922051075},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 16, "queue_flush_max_wait_seconds": 0.0005, "worker_concurrency": 8},
+      "gpu": {"average_utilization_percent": 1.996617812852311, "estimated_idle_percent": 98.0033821871477, "peak_memory_mib": 434, "peak_utilization_percent": 5, "samples": 887},
+      "id": "batch-16",
+      "inference": {"average_queue_wait_seconds": 0.0014265439411887471, "batches": 20879, "effective_batch_capacity_percent": 45.70202116959624, "effective_batch_size_average": 7.312323387135399, "inference_seconds": 63.11362343118526},
+      "outcome": "ineffective",
+      "phase_percent": {"batching_queueing": 0.028373623879241854, "cpu_mcts": 20.082850981727386, "gpu_inference": 77.17625695153785, "idle": 0.0, "serialization_io": 2.7125184428555214},
+      "rates": {"games_per_hour": 16702.77392354791, "positions_per_second": 1383.5065679273835, "simulations_per_second": 1121.093955471817},
+      "timing": {"end_to_end_wall_seconds": 110.35292750992812, "relative_to_reproduction_percent": -7.594742139790334},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 8, "queue_flush_max_wait_seconds": 0.0, "worker_concurrency": 8},
+      "gpu": {"average_utilization_percent": 2.902439024390244, "estimated_idle_percent": 97.09756097560975, "peak_memory_mib": 434, "peak_utilization_percent": 6, "samples": 984},
+      "id": "flush-0ms",
+      "inference": {"average_queue_wait_seconds": 0.002188905621050047, "batches": 38492, "effective_batch_capacity_percent": 49.57978281201289, "effective_batch_size_average": 3.966382624961031, "inference_seconds": 120.06475787237287},
+      "outcome": "regressive",
+      "phase_percent": {"batching_queueing": 0.02528189310815594, "cpu_mcts": 1.0011629670829751, "gpu_inference": 96.5464934014259, "idle": 0.0, "serialization_io": 2.42706173838297},
+      "rates": {"games_per_hour": 15190.085011859219, "positions_per_second": 1258.2091140953746, "simulations_per_second": 1019.5619343137886},
+      "timing": {"end_to_end_wall_seconds": 121.34230970800854, "relative_to_reproduction_percent": 1.6073399313596193},
+      "validation_passed": true
+    },
+    {
+      "configuration": {"inference_batch_size": 8, "queue_flush_max_wait_seconds": 0.002, "worker_concurrency": 8},
+      "gpu": {"average_utilization_percent": 1.9491329479768786, "estimated_idle_percent": 98.05086705202312, "peak_memory_mib": 434, "peak_utilization_percent": 4, "samples": 865},
+      "id": "flush-2ms",
+      "inference": {"average_queue_wait_seconds": 0.0012644451466173705, "batches": 19496, "effective_batch_capacity_percent": 97.88802831350021, "effective_batch_size_average": 7.831042265080017, "inference_seconds": 58.662397066364065},
+      "outcome": "best",
+      "phase_percent": {"batching_queueing": 0.02896703551358554, "cpu_mcts": 22.229303053125545, "gpu_inference": 75.01303516598111, "idle": 0.0, "serialization_io": 2.728694745379758},
+      "rates": {"games_per_hour": 17054.79358584011, "positions_per_second": 1412.6646896292061, "simulations_per_second": 1144.7215946537517},
+      "timing": {"end_to_end_wall_seconds": 108.07518664607778, "relative_to_reproduction_percent": -9.502033922728225},
+      "validation_passed": true
+    }
+  ],
+  "version": 1,
+  "workload": {
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "completed_per_trial": 512,
+    "failed_per_trial": 0,
+    "games_per_trial": 512,
+    "total_inference_positions_per_trial": 152674,
+    "total_moves_per_trial": 30929,
+    "total_simulations_per_trial": 123716,
+    "validation": "All match replay, game and decision seed, search-parameter, policy-target, value-target, artifact, and summary checks passed for every trial."
+  }
+}

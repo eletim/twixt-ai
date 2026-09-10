@@ -161,3 +161,68 @@ per-position batches directly on the CUDA device the same way
 when run on a CUDA-capable machine; it is a separate training-diagnostics
 tool outside this self-play benchmark's scope and was left for a follow-up
 issue rather than fixed here.
+
+## Concurrency, batch, and queue scaling on the RTX 4060
+
+The v0.0.5 optimized configuration was reproduced on 2026-09-11 from the
+v0.0.6 contract runner before varying any scheduling input. The reproduction
+used 4 workers, batch size 8, and a 0.5 ms maximum queue wait and completed in
+119.423 s, within 2.93% of the recorded 116.031 s result. It produced the same
+summary SHA-256 as the recorded run and passed every artifact, replay, seed,
+search-parameter, policy-target, and value-target check.
+
+Each sweep row below is one complete 512-game run. Only the three declared
+optimization variables changed; the checkpoint, seeds, board/rules, MCTS
+parameters, thread worker mode, single shared CUDA model, required artifacts,
+and target semantics remained fixed. No multiprocessing or implementation
+optimization was introduced. `GPU idle` is the approximate complement of
+average `nvidia-smi` utilization over the timed scope; it is different from
+the stack sampler's `idle` phase because CPU or inference-host work can run
+while the GPU is inactive. The complete machine-readable results, including
+all ineffective and regressive trials, are in
+[`benchmarks/mini-cuda-selfplay-512-concurrency-scaling.json`](../benchmarks/mini-cuda-selfplay-512-concurrency-scaling.json).
+
+| Trial | Workers | Batch | Flush wait | Wall (s) | Games/hour | Effective batch | GPU util. | GPU idle | CPU/MCTS phase | Inference phase | Result vs reproduction |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Reproduction | 4 | 8 | 0.5 ms | 119.423 | 15,434 | 3.87 | 2.96% | 97.04% | 29.80% | 67.86% | reference |
+| Worker floor | 1 | 8 | 0.5 ms | 252.974 | 7,286 | 1.00 | 4.74% | 95.26% | 51.08% | 45.91% | 111.83% slower |
+| Worker scale-up | 8 | 8 | 0.5 ms | 110.469 | 16,685 | 7.32 | 1.99% | 98.01% | 16.06% | 81.17% | 7.50% faster |
+| Worker saturation | 16 | 8 | 0.5 ms | 110.700 | 16,650 | 7.94 | 1.93% | 98.07% | 1.63% | 95.46% | 7.30% faster |
+| No batching | 8 | 1 | 0.5 ms | 178.516 | 10,325 | 1.00 | 6.42% | 93.58% | 1.16% | 97.32% | 49.48% slower |
+| Smaller batch | 8 | 4 | 0.5 ms | 122.311 | 15,070 | 3.98 | 2.86% | 97.14% | 1.46% | 96.08% | 2.42% slower |
+| Unreachable batch cap | 8 | 16 | 0.5 ms | 110.353 | 16,703 | 7.31 | 2.00% | 98.00% | 20.08% | 77.18% | 7.59% faster |
+| Immediate flush | 8 | 8 | 0 ms | 121.342 | 15,190 | 3.97 | 2.90% | 97.10% | 1.00% | 96.55% | 1.61% slower |
+| Longer coalescing | 8 | 8 | 2 ms | **108.075** | **17,055** | **7.83** | 1.95% | 98.05% | 22.23% | 75.01% | **9.50% faster** |
+
+Worker scaling is substantial through eight threads, but saturates there:
+sixteen workers made batches 99.2% full yet was 0.21% slower than eight
+workers. At eight workers, batch size 1 was 61.60% slower than batch size 8,
+and batch size 4 was 10.72% slower. Raising the cap to 16 was ineffective
+because eight producers cannot make a batch larger than eight. Immediate
+flush was also regressive: it reduced the realized batch from 7.83 to 3.97
+and was 12.28% slower than the 2 ms endpoint. The 2 ms result was 2.22% faster
+than the matching 0.5 ms trial, but this single-run profiling sweep is not
+enough evidence to change the canonical default.
+
+The best measured configuration completed in 108.075 s (17,054.8
+games/hour), a 1.074x speedup over the recorded 116.031 s configuration and
+1.105x over this run's reproduction. It still averaged only 1.95% sampled GPU
+utilization (approximately 98.05% GPU idle) while realizing a 7.83-position
+batch. The RTX 4060 is therefore not compute-saturated. The remaining primary
+bottleneck is the host/launch side of batched inference—CPU encoding and
+result extraction around small CUDA operations—with CPU game/MCTS work the
+secondary bottleneck (22.23% of best-run wall-state samples). Implementation
+changes for either path are intentionally outside this measurement task.
+
+To reproduce any row, start with the documented benchmark command and pass
+the row's values, for example:
+
+```bash
+PYTHONHASHSEED=0 python -m twixt_ai.evaluation.cuda_selfplay_512_cli \
+  --output-dir /path/to/scratch/selfplay-out \
+  --report /path/to/report.json \
+  --implementation-label "v0.0.6-profile-w8-b8-f2ms" \
+  --worker-concurrency 8 \
+  --inference-batch-size 8 \
+  --queue-flush-max-wait-seconds 0.002
+```

@@ -11,9 +11,11 @@ Exactly three settings are optimization variables because they affect how
 fixed requests are scheduled, not what any game or training target means:
 `worker_concurrency`, `inference_batch_size`, and
 `queue_flush_max_wait_seconds`. No other contract field may vary between
-comparable v0.0.6 runs. `--contract` may select another path for portability,
-but the runner compares its full JSON content with the committed canonical
-contract and rejects any fixed-field or declaration change. The older
+comparable v0.0.6 runs. Version 1 contracts are historical artifacts and are
+not executable through this v0.0.6 runner. `--contract` may select another
+path for portability, but the runner compares its full JSON content with the
+committed canonical contract and rejects any fixed-field or declaration
+change. The older
 `mini-cuda-selfplay-512-contract.json` remains the immutable v0.0.5 contract
 referenced by the recorded baseline and optimized result files below.
 
@@ -53,8 +55,9 @@ underlying implementation. It:
   and rollout budgets, a complete legal root-move set whose visits sum to the
   fixed budget, normalized policy targets, and terminal side-to-move value
   targets in `{-1, 0, 1}`. Match/replay/decision and policy/value validation
-  uses `training.data.training_examples_from_match`, the same conversion used
-  to build training datasets, rather than defining benchmark-local targets;
+  uses `selfplay.trajectory.trajectory_from_match`, the shared persisted-match
+  and trajectory-target boundary also used to build training datasets, rather
+  than defining benchmark-local targets or depending on the training layer;
 - reports GPU utilization/memory (`nvidia-smi` sampling, reusing
   `cuda_tuning._GpuSampler`), effective inference batch-size distribution
   (`NeuralInferenceBatcher.statistics`), throughput rates, an approximate

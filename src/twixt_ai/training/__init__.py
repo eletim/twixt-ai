@@ -9,7 +9,6 @@ from .data import (
     DatasetSummary,
     Shard,
     build_dataset,
-    training_examples_from_match,
 )
 from .encoding_experiment import (
     MATCHED_ENCODING_TRAINING_FORMAT,
@@ -83,5 +82,4 @@ __all__ = [
     "run_mini_training_experiment",
     "run_mini_training_generations",
     "train_model",
-    "training_examples_from_match",
 ]

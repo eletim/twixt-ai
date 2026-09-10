@@ -34,12 +34,12 @@ import torch
 
 from twixt_ai.device import select_device
 from twixt_ai.evaluation.cuda_tuning import _GpuSampler
-from twixt_ai.game import GameState, experiment_board, legal_peg_placements
+from twixt_ai.game import experiment_board, legal_peg_placements
 from twixt_ai.models import load_policy_value_checkpoint
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
 from twixt_ai.selfplay.batch import BatchConfig, run_batch
-from twixt_ai.training.data import training_examples_from_match
+from twixt_ai.selfplay.trajectory import trajectory_from_match
 
 RESULT_FORMAT = "twixt-ai-mini-cuda-selfplay-benchmark-result"
 RESULT_VERSION = 2
@@ -271,45 +271,36 @@ def _validate_outputs(
         }
         if payload.get("config") != expected_match_config:
             raise ValueError(f"game {index} match configuration changed semantics")
-        _, board, examples = training_examples_from_match(payload, artifact_path)
-        if board.to_dict() != expected_batch_config["board"]:
+        trajectory = trajectory_from_match(payload, artifact_path)
+        if trajectory.config.board.to_dict() != expected_batch_config["board"]:
             raise ValueError(f"game {index} board changed semantics")
         result = payload["result"]
         if game.get("winner") != result["winner"] or game.get(
             "move_count"
         ) != result["move_count"]:
             raise ValueError(f"game {index} summary does not match its artifact")
-        if len(examples) != game["move_count"]:
+        if len(trajectory.steps) != game["move_count"]:
             raise ValueError(f"game {index} artifact move count mismatch")
-        total_moves += len(examples)
-        for ply, example in enumerate(examples):
-            source = example["source"]
-            assert isinstance(source, dict)
-            decision = source["decision"]
-            assert isinstance(decision, dict)
-            metadata = decision["metadata"]
-            assert isinstance(metadata, dict)
+        total_moves += len(trajectory.steps)
+        for step in trajectory.steps:
+            metadata = step.metadata
             if metadata.get("simulations") != simulations:
                 raise ValueError(f"game {index} decision search budget changed")
             if metadata.get("rollout_limit") != rollout_limit:
                 raise ValueError(f"game {index} decision rollout limit changed")
-            position = example["position"]
-            assert isinstance(position, dict)
-            state = GameState.from_dict(position)
             root_moves = metadata.get("root_moves")
             if not isinstance(root_moves, list) or len(root_moves) != len(
-                legal_peg_placements(state)
+                legal_peg_placements(step.position)
             ):
                 raise ValueError(
                     f"game {index} decision root-move coverage changed semantics"
                 )
-            policy = example.get("policy")
-            if not isinstance(policy, list):
+            if step.policy is None:
                 raise ValueError(f"game {index} decision policy target is missing")
-            probability_sum = sum(item["probability"] for item in policy)
+            probability_sum = sum(item.probability for item in step.policy)
             if abs(probability_sum - 1.0) > 1e-9:
                 raise ValueError(f"game {index} decision policy target does not sum to 1")
-            if example.get("outcome") not in (-1, 0, 1):
+            if step.outcome not in (-1, 0, 1):
                 raise ValueError(f"game {index} decision value target is invalid")
             validated_decisions += 1
     return {
@@ -367,26 +358,14 @@ class BenchmarkTuning:
 def _resolved_config(
     contract: dict[str, Any], tuning: BenchmarkTuning
 ) -> tuple[dict[str, Any], dict[str, object]]:
-    """Resolve v1's frozen settings or v2's three declared tuning variables."""
+    """Resolve the canonical contract's three declared tuning variables."""
 
     config = json.loads(json.dumps(contract["config"]))
     version = contract.get("version")
-    if version == 1:
-        if any(
-            getattr(tuning, name) is not None
-            for name in _OPTIMIZATION_VARIABLES
-        ):
-            raise ValueError("contract version 1 does not permit tuning overrides")
-        values = {
-            "worker_concurrency": config["workers"]["count"],
-            "inference_batch_size": config["shared_inference"]["batch_size"],
-            "queue_flush_max_wait_seconds": config["shared_inference"][
-                "max_wait_seconds"
-            ],
-        }
-        return config, values
     if version != CONTRACT_VERSION:
-        raise ValueError(f"unsupported contract version: {version!r}")
+        raise ValueError(
+            f"the v0.0.6 benchmark requires contract version {CONTRACT_VERSION}"
+        )
 
     variables = contract.get("optimization_variables")
     if not isinstance(variables, dict) or set(variables) != _OPTIMIZATION_VARIABLES:
@@ -480,8 +459,11 @@ def run_cuda_selfplay_512_benchmark(
     if contract.get("format") != CONTRACT_FORMAT:
         raise ValueError("contract has an unexpected format")
     root = Path(repo_root) if repo_root is not None else Path.cwd()
-    if contract.get("version") == CONTRACT_VERSION:
-        _require_canonical_v2_contract(contract, root)
+    if contract.get("version") != CONTRACT_VERSION:
+        raise ValueError(
+            f"the v0.0.6 benchmark requires contract version {CONTRACT_VERSION}"
+        )
+    _require_canonical_v2_contract(contract, root)
     tuning = tuning or BenchmarkTuning()
     config, tuning_values = _resolved_config(contract, tuning)
     _validate_supported_semantics(contract, config)

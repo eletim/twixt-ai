@@ -10,6 +10,12 @@ from .batch import (
     GameReport,
     run_batch,
 )
+from .trajectory import (
+    MatchTrajectory,
+    PolicyTarget,
+    TrajectoryStep,
+    trajectory_from_match,
+)
 
 __all__ = [
     "BATCH_FORMAT",
@@ -19,5 +25,9 @@ __all__ = [
     "BatchConfig",
     "BatchSummary",
     "GameReport",
+    "MatchTrajectory",
+    "PolicyTarget",
+    "TrajectoryStep",
     "run_batch",
+    "trajectory_from_match",
 ]

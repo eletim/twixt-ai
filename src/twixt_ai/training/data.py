@@ -8,19 +8,10 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from random import Random
 from typing import Any
 
-from twixt_ai.evaluation import MATCH_FORMAT, MATCH_FORMAT_VERSION, MatchConfig
-from twixt_ai.game import (
-    BoardDimensions,
-    Coordinate,
-    GameRecord,
-    GameState,
-    PegPlacement,
-    apply_move,
-    legal_peg_placements,
-)
+from twixt_ai.game import BoardDimensions
+from twixt_ai.selfplay.trajectory import trajectory_from_match
 
 
 DATASET_FORMAT = "twixt-ai-training-dataset"
@@ -31,10 +22,6 @@ EXAMPLE_VERSION = 1
 
 def _json_bytes(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
-
-
-def _digest(value: object) -> str:
-    return hashlib.sha256(_json_bytes(value)).hexdigest()
 
 
 def _copy_json(value: object, name: str) -> object:
@@ -196,190 +183,34 @@ def _source_paths(source: str | Path | Iterable[str | Path]) -> tuple[Path, ...]
         raise TypeError("source must be a path or iterable of paths") from exc
 
 
-def _validated_match(
-    value: Mapping[str, Any], path: Path
-) -> tuple[GameRecord, list[dict[str, Any]]]:
-    if value.get("format") != MATCH_FORMAT:
-        raise ValueError(f"unsupported match format in {path}: {value.get('format')!r}")
-    if value.get("version") != MATCH_FORMAT_VERSION:
-        raise ValueError(f"unsupported match version in {path}: {value.get('version')!r}")
-    config = value.get("config")
-    decisions = value.get("decisions")
-    record_value = value.get("record")
-    result = value.get("result")
-    if not isinstance(config, dict):
-        raise ValueError(f"match config in {path} must be an object")
-    if set(config) != {"board", "seed", "agents"}:
-        raise ValueError(
-            f"match config in {path} must contain exactly agents, board, and seed"
-        )
-    board = config["board"]
-    agents = config["agents"]
-    if not isinstance(board, dict) or set(board) != {"width", "height"}:
-        raise ValueError(
-            f"match config board in {path} must contain exactly height and width"
-        )
-    if not isinstance(agents, dict) or set(agents) != {"red", "black"}:
-        raise ValueError(
-            f"match config agents in {path} must contain exactly black and red"
-        )
-    try:
-        match_config = MatchConfig(
-            board=BoardDimensions(width=board["width"], height=board["height"]),
-            seed=config["seed"],
-            red_agent=agents["red"],
-            black_agent=agents["black"],
-        )
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"invalid match config in {path}: {exc}") from exc
-    if not isinstance(decisions, list) or any(not isinstance(item, dict) for item in decisions):
-        raise ValueError(f"match decisions in {path} must be an array of objects")
-    if not isinstance(record_value, dict):
-        raise ValueError(f"match record in {path} must be an object")
-    record = GameRecord.from_dict(record_value)
-    if not record.final_state.is_terminal:
-        raise ValueError(f"match record in {path} is not terminal")
-    if match_config.board != record.initial_state.board:
-        raise ValueError(f"match config board in {path} does not match record")
-    expected_result = {
-        "status": record.final_state.result.value,
-        "winner": (
-            record.final_state.winner.value
-            if record.final_state.winner is not None
-            else None
-        ),
-        "move_count": len(record.moves),
-    }
-    if result != expected_result:
-        raise ValueError(f"match result in {path} does not match record")
-    if len(decisions) != len(record.moves):
-        raise ValueError(f"match decisions in {path} do not align with moves")
-    seed_source = (
-        Random(match_config.seed) if match_config.seed is not None else None
-    )
-    for index, (decision, move) in enumerate(zip(decisions, record.moves)):
-        if (
-            decision.get("player") != move.player.value
-            or decision.get("coordinate") != move.coordinate.to_dict()
-        ):
-            raise ValueError(f"match decision {index} in {path} does not match record")
-        if not isinstance(decision.get("metadata"), dict):
-            raise ValueError(f"match decision {index} metadata in {path} must be an object")
-        if "seed" not in decision:
-            raise ValueError(
-                f"match decision {index} seed in {path} must be an integer or null"
-            )
-        decision_seed = decision["seed"]
-        if decision_seed is not None and (
-            isinstance(decision_seed, bool) or not isinstance(decision_seed, int)
-        ):
-            raise ValueError(
-                f"match decision {index} seed in {path} must be an integer or null"
-            )
-        expected_seed = (
-            seed_source.randrange(2**64) if seed_source is not None else None
-        )
-        if decision_seed != expected_seed:
-            raise ValueError(
-                f"match decision {index} seed in {path} does not match the "
-                "configured seed sequence"
-            )
-    return record, decisions  # type: ignore[return-value]
-
-
-def _policy_target(
-    metadata: Mapping[str, Any], state: GameState
-) -> list[dict[str, object]] | None:
-    root_moves = metadata.get("root_moves")
-    if root_moves is None:
-        return None
-    if not isinstance(root_moves, list):
-        raise ValueError("root_moves metadata must be an array")
-    simulations = metadata.get("simulations")
-    if (
-        isinstance(simulations, bool)
-        or not isinstance(simulations, int)
-        or simulations < 1
-    ):
-        raise ValueError(
-            "root_moves metadata requires a positive integer simulations count"
-        )
-    visits: list[tuple[int, int, int]] = []
-    legal = set(legal_peg_placements(state))
-    seen: set[Coordinate] = set()
-    for index, item in enumerate(root_moves):
-        if not isinstance(item, dict):
-            raise ValueError(f"root_moves[{index}] must be an object")
-        x, y, count = item.get("x"), item.get("y"), item.get("visits")
-        if any(
-            isinstance(value, bool) or not isinstance(value, int)
-            for value in (x, y, count)
-        ):
-            raise ValueError(
-                f"root_moves[{index}] coordinates and visits must be integers"
-            )
-        coordinate = Coordinate(x, y)
-        if (
-            count < 0
-            or coordinate in seen
-            or PegPlacement(state.side_to_move, coordinate) not in legal
-        ):
-            raise ValueError(
-                f"root_moves[{index}] contains an invalid move or visit count"
-            )
-        seen.add(coordinate)
-        visits.append((x, y, count))
-    total = sum(item[2] for item in visits)
-    if total != simulations:
-        raise ValueError("root move visits must sum to metadata.simulations")
-    return [
-        {"coordinate": {"x": x, "y": y}, "probability": count / total}
-        for x, y, count in visits
-        if count
-    ]
-
-
-def training_examples_from_match(
-    value: dict[str, Any], source: str | Path
+def _examples(
+    value: dict[str, Any], path: Path
 ) -> tuple[str, BoardDimensions, list[dict[str, object]]]:
-    """Validate one match and derive its canonical policy/value examples.
-
-    This is the shared validation boundary for consumers that need to verify
-    persisted match semantics without writing a complete dataset.
-    """
-
-    path = Path(source)
-    record, decisions = _validated_match(value, path)
-    game_id = _digest(value)
-    winner = record.final_state.winner
-    state = record.initial_state
+    trajectory = trajectory_from_match(value, path)
     examples: list[dict[str, object]] = []
-    for ply, (move, decision) in enumerate(zip(record.moves, decisions)):
-        outcome = 0 if winner is None else (1 if winner is state.side_to_move else -1)
+    for step in trajectory.steps:
         source = {
-            "game_id": game_id,
-            "ply": ply,
-            "config": _copy_json(value["config"], "match config"),
+            "game_id": trajectory.game_id,
+            "ply": step.ply,
+            "config": _copy_json(trajectory.config.to_dict(), "match config"),
             "decision": {
-                "seed": decision.get("seed"),
-                "metadata": _copy_json(decision["metadata"], "decision metadata"),
+                "seed": step.decision_seed,
+                "metadata": _copy_json(step.metadata, "decision metadata"),
             },
         }
         example: dict[str, object] = {
             "format": EXAMPLE_FORMAT,
             "version": EXAMPLE_VERSION,
-            "id": f"{game_id}:{ply}",
-            "position": state.to_dict(),
-            "action": move.coordinate.to_dict(),
-            "outcome": outcome,
+            "id": f"{trajectory.game_id}:{step.ply}",
+            "position": step.position.to_dict(),
+            "action": step.action.to_dict(),
+            "outcome": step.outcome,
             "source": source,
         }
-        policy = _policy_target(decision["metadata"], state)
-        if policy is not None:
-            example["policy"] = policy
+        if step.policy is not None:
+            example["policy"] = [target.to_dict() for target in step.policy]
         examples.append(example)
-        state = apply_move(state, move)
-    return game_id, record.initial_state.board, examples
+    return trajectory.game_id, trajectory.config.board, examples
 
 
 def _split(game_id: str, config: DatasetConfig) -> str:
@@ -443,9 +274,7 @@ def build_dataset(
     by_id: dict[str, tuple[str, list[dict[str, object]]]] = {}
     boards: set[BoardDimensions] = set()
     for path in paths:
-        game_id, board, examples = training_examples_from_match(
-            _load_object(path), path
-        )
+        game_id, board, examples = _examples(_load_object(path), path)
         if game_id in by_id:
             raise ValueError(f"duplicate source game: {path}")
         by_id[game_id] = (_split(game_id, dataset_config), examples)
@@ -493,5 +322,4 @@ __all__ = [
     "DatasetSummary",
     "Shard",
     "build_dataset",
-    "training_examples_from_match",
 ]

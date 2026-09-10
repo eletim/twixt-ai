@@ -20,7 +20,6 @@ from twixt_ai.evaluation.cuda_selfplay_512 import (
 )
 from twixt_ai.evaluation.cuda_inference_profile import (
     CudaInferencePhaseProfile,
-    ProfiledCudaNeuralPolicyValue,
 )
 from twixt_ai.game import GameState, experiment_board, legal_peg_placements
 from twixt_ai.models import (
@@ -191,6 +190,23 @@ def test_detailed_profile_ranks_host_phases_and_keeps_cuda_separate() -> None:
     assert result["interpretation"]["host_and_cuda_times_are_not_additive"]
 
 
+def test_detailed_profile_reports_batching_separately_from_contention() -> None:
+    profile = CudaInferencePhaseProfile()
+    profile.queue_submission(0.000001, 0.000002)
+    profile.batch_dispatch("full_batch", 0.0005, 0.000003, 0.000004)
+    profile.batch_completion(0.000005, 0.000006)
+
+    result = profile.contention_to_dict()
+
+    assert result["producer_queue_condition_lock_acquisition"]["average"] == 1
+    assert result["producer_queue_condition_critical_section"]["average"] == 2
+    assert result["worker_dispatch_condition_lock_acquisition"]["average"] == 3
+    assert result["batch_formation_delay"]["all"]["average"] == 0.5
+    assert result["batch_formation_delay"]["by_flush_reason"]["full_batch"][
+        "samples"
+    ] == 1
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is unavailable")
 def test_detailed_profile_preserves_policy_value_results() -> None:
     model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG).cuda()
@@ -200,7 +216,7 @@ def test_detailed_profile_preserves_policy_value_results() -> None:
 
     expected = NeuralPolicyValue(model).evaluate_batch(requests)
     profile = CudaInferencePhaseProfile()
-    actual = ProfiledCudaNeuralPolicyValue(model, profile).evaluate_batch(requests)
+    actual = NeuralPolicyValue(model, observer=profile).evaluate_batch(requests)
 
     assert actual == expected
     assert profile.batches == 1

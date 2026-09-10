@@ -33,10 +33,7 @@ from typing import Any
 import torch
 
 from twixt_ai.device import select_device
-from twixt_ai.evaluation.cuda_inference_profile import (
-    CudaInferencePhaseProfile,
-    ProfiledCudaNeuralPolicyValue,
-)
+from twixt_ai.evaluation.cuda_inference_profile import CudaInferencePhaseProfile
 from twixt_ai.evaluation.cuda_tuning import _GpuSampler
 from twixt_ai.game import experiment_board, legal_peg_placements
 from twixt_ai.models import load_policy_value_checkpoint
@@ -155,13 +152,6 @@ class _PhaseSampler:
                         matched.add("gpu_inference")
                     elif name in ("__call__", "_run"):
                         matched.add("batching_queueing")
-                elif filename.endswith(
-                    (
-                        "evaluation/cuda_inference_profile.py",
-                        "evaluation\\cuda_inference_profile.py",
-                    )
-                ) and name == "evaluate_batch":
-                    matched.add("gpu_inference")
                 elif filename.endswith(("search/mcts.py", "search\\mcts.py")):
                     matched.add("cpu_mcts")
                 walked = walked.f_back
@@ -541,15 +531,15 @@ def run_cuda_selfplay_512_benchmark(
         if options.detailed_inference_profile
         else None
     )
-    policy_value = (
-        ProfiledCudaNeuralPolicyValue(loaded.model, inference_phase_profile)
-        if inference_phase_profile is not None
-        else NeuralPolicyValue(loaded.model)
+    policy_value = NeuralPolicyValue(
+        loaded.model,
+        observer=inference_phase_profile,
     )
     with NeuralInferenceBatcher(
         policy_value,
         batch_size=shared_config["batch_size"],
         max_wait_seconds=shared_config["max_wait_seconds"],
+        observer=inference_phase_profile,
     ) as batcher:
         factory = partial(
             MCTSAgent,

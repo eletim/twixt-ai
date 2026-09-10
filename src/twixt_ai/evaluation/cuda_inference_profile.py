@@ -1,33 +1,12 @@
-"""Measurement-only phase profiler for the canonical CUDA inference path.
-
-This module deliberately lives outside :mod:`twixt_ai.search`: it reproduces
-``NeuralPolicyValue.evaluate_batch`` with timing boundaries, but does not alter
-the production evaluator.  The profile synchronizes once at the same result
-extraction boundary where ``Tensor.tolist`` necessarily synchronizes, then
-spells its implicit device-to-host copy out so transfer and Python extraction
-can be measured separately.
-"""
+"""CUDA and contention measurements for the canonical inference observers."""
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from threading import Lock
 from time import perf_counter
-from typing import TypeVar
 
 import torch
 
-from twixt_ai.game import GameState, PegPlacement
-from twixt_ai.models import (
-    PolicyValueNetwork,
-    encode_position_for_version,
-    mask_policy_logits,
-    move_to_action_index_for_version,
-)
-from twixt_ai.search.mcts import PolicyValueEstimate
-from twixt_ai.search.neural import NeuralPolicyValue
-
-
-_T = TypeVar("_T")
 
 _HOST_PHASES = (
     "request_validation",
@@ -52,9 +31,36 @@ _CUDA_PHASES = (
     "device_to_host_transfer",
 )
 
+_CUDA_NAMES = {
+    "host_to_device": "host_to_device_transfer",
+    "model": "model_execution",
+    "policy_mask": "policy_mask",
+    "softmax": "softmax",
+}
+
+
+def _percentile(values: list[float], percent: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = int((len(ordered) - 1) * percent)
+    return ordered[index]
+
+
+def _duration_summary(values: list[float], scale: float) -> dict[str, float | int]:
+    return {
+        "samples": len(values),
+        "total_seconds": sum(values),
+        "average": sum(values) / len(values) * scale if values else 0.0,
+        "p50": _percentile(values, 0.50) * scale,
+        "p95": _percentile(values, 0.95) * scale,
+        "p99": _percentile(values, 0.99) * scale,
+        "maximum": max(values, default=0.0) * scale,
+    }
+
 
 class CudaInferencePhaseProfile:
-    """Accumulate host wall time and CUDA event time for inference batches."""
+    """Implement inference and batcher observers with diagnostic timing."""
 
     def __init__(self) -> None:
         self.batches = 0
@@ -62,30 +68,163 @@ class CudaInferencePhaseProfile:
         self.total_evaluate_batch_seconds = 0.0
         self.host_seconds = {phase: 0.0 for phase in _HOST_PHASES}
         self.cuda_seconds = {phase: 0.0 for phase in _CUDA_PHASES}
+        self._pending_cuda_events: list[
+            tuple[str, torch.cuda.Event, torch.cuda.Event]
+        ] = []
+        self._contention_lock = Lock()
+        self._queue_lock_waits: list[float] = []
+        self._queue_critical_sections: list[float] = []
+        self._dispatch_lock_waits: list[float] = []
+        self._dispatch_critical_sections: list[float] = []
+        self._completion_lock_waits: list[float] = []
+        self._completion_critical_sections: list[float] = []
+        self._formation_by_reason: dict[str, list[float]] = {
+            "full_batch": [],
+            "latency": [],
+            "forced": [],
+        }
 
-    def host_call(self, phase: str, operation: Callable[[], _T]) -> _T:
-        started = perf_counter()
-        try:
-            return operation()
-        finally:
-            self.host_seconds[phase] += perf_counter() - started
+    def start_host_phase(self, phase: str) -> object:
+        return perf_counter()
 
-    def cuda_call(
-        self, phase: str, operation: Callable[[], _T]
-    ) -> tuple[_T, torch.cuda.Event, torch.cuda.Event]:
+    def finish_host_phase(self, phase: str, token: object) -> None:
+        self.host_seconds[phase] += perf_counter() - float(token)
+
+    def start_cuda_phase(self, phase: str) -> object:
         started = torch.cuda.Event(enable_timing=True)
         finished = torch.cuda.Event(enable_timing=True)
         host_started = perf_counter()
         started.record()
-        result = operation()
+        return phase, host_started, started, finished
+
+    def finish_cuda_phase(self, phase: str, token: object) -> None:
+        token_phase, host_started, started, finished = token  # type: ignore[misc]
+        if token_phase != phase:
+            raise RuntimeError("CUDA inference observer phase mismatch")
         finished.record()
         self.host_seconds[f"{phase}_submission"] += perf_counter() - host_started
-        return result, started, finished
+        self._pending_cuda_events.append((_CUDA_NAMES[phase], started, finished))
 
-    def record_cuda_elapsed(
-        self, phase: str, started: torch.cuda.Event, finished: torch.cuda.Event
+    def prepare_result_tensors(
+        self, probabilities: torch.Tensor, values: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if not self._pending_cuda_events:
+            raise RuntimeError("CUDA inference observer has no pending device work")
+        sync_started = perf_counter()
+        self._pending_cuda_events[-1][2].synchronize()
+        self.host_seconds["cuda_synchronization_wait"] += (
+            perf_counter() - sync_started
+        )
+        for phase, started, finished in self._pending_cuda_events:
+            self.cuda_seconds[phase] += started.elapsed_time(finished) / 1000.0
+        self._pending_cuda_events.clear()
+
+        transfer_started = perf_counter()
+        copy_start = torch.cuda.Event(enable_timing=True)
+        copy_end = torch.cuda.Event(enable_timing=True)
+        copy_start.record()
+        cpu_probabilities = probabilities.to("cpu")
+        cpu_values = values.to("cpu")
+        copy_end.record()
+        copy_end.synchronize()
+        self.host_seconds["device_to_host_transfer"] += (
+            perf_counter() - transfer_started
+        )
+        self.cuda_seconds["device_to_host_transfer"] += (
+            copy_start.elapsed_time(copy_end) / 1000.0
+        )
+        return cpu_probabilities, cpu_values
+
+    def batch_completed(self, positions: int, total_seconds: float) -> None:
+        self.batches += 1
+        self.positions += positions
+        self.total_evaluate_batch_seconds += total_seconds
+
+    def queue_submission(
+        self, lock_wait_seconds: float, critical_section_seconds: float
     ) -> None:
-        self.cuda_seconds[phase] += started.elapsed_time(finished) / 1000.0
+        with self._contention_lock:
+            self._queue_lock_waits.append(lock_wait_seconds)
+            self._queue_critical_sections.append(critical_section_seconds)
+
+    def batch_dispatch(
+        self,
+        flush_reason: str,
+        formation_seconds: float,
+        lock_wait_seconds: float,
+        critical_section_seconds: float,
+    ) -> None:
+        with self._contention_lock:
+            self._formation_by_reason[flush_reason].append(formation_seconds)
+            self._dispatch_lock_waits.append(lock_wait_seconds)
+            self._dispatch_critical_sections.append(critical_section_seconds)
+
+    def batch_completion(
+        self, lock_wait_seconds: float, critical_section_seconds: float
+    ) -> None:
+        with self._contention_lock:
+            self._completion_lock_waits.append(lock_wait_seconds)
+            self._completion_critical_sections.append(critical_section_seconds)
+
+    def contention_to_dict(self) -> dict[str, object]:
+        with self._contention_lock:
+            queue_waits = list(self._queue_lock_waits)
+            queue_critical = list(self._queue_critical_sections)
+            dispatch_waits = list(self._dispatch_lock_waits)
+            dispatch_critical = list(self._dispatch_critical_sections)
+            completion_waits = list(self._completion_lock_waits)
+            completion_critical = list(self._completion_critical_sections)
+            formations = {
+                reason: list(values)
+                for reason, values in self._formation_by_reason.items()
+            }
+        all_formations = [value for values in formations.values() for value in values]
+        return {
+            "method": (
+                "direct perf_counter timing of Condition acquisition and lock-held "
+                "critical sections; batch formation is timed separately from first "
+                "queued request until dispatch"
+            ),
+            "units": {
+                "condition_measurements": "microseconds",
+                "batch_formation_measurements": "milliseconds",
+            },
+            "producer_queue_condition_lock_acquisition": _duration_summary(
+                queue_waits, 1_000_000.0
+            ),
+            "producer_queue_condition_critical_section": _duration_summary(
+                queue_critical, 1_000_000.0
+            ),
+            "worker_dispatch_condition_lock_acquisition": _duration_summary(
+                dispatch_waits, 1_000_000.0
+            ),
+            "worker_dispatch_condition_critical_section_excluding_wait": (
+                _duration_summary(dispatch_critical, 1_000_000.0)
+            ),
+            "worker_completion_condition_lock_acquisition": _duration_summary(
+                completion_waits, 1_000_000.0
+            ),
+            "worker_completion_condition_critical_section": _duration_summary(
+                completion_critical, 1_000_000.0
+            ),
+            "batch_formation_delay": {
+                "all": _duration_summary(all_formations, 1_000.0),
+                "by_flush_reason": {
+                    reason: _duration_summary(values, 1_000.0)
+                    for reason, values in formations.items()
+                },
+            },
+            "interpretation": {
+                "summed_thread_times_are_not_wall_time": (
+                    "Producer acquisition and critical-section totals sum concurrent "
+                    "requests and must not be added to end-to-end wall time."
+                ),
+                "observer_overhead": (
+                    "Recording each sample uses a separate profiler lock after the "
+                    "production Condition is released; percentiles are diagnostic."
+                ),
+            },
+        }
 
     def to_dict(self) -> dict[str, object]:
         accounted_host = sum(self.host_seconds.values())
@@ -95,10 +234,14 @@ class CudaInferencePhaseProfile:
         ranked = sorted(host, key=host.__getitem__, reverse=True)
         return {
             "method": (
-                "benchmark-only perf_counter host spans plus CUDA events; an explicit "
-                "CUDA event synchronization at the existing Tensor.tolist result "
+                "observer spans on NeuralPolicyValue.evaluate_batch plus CUDA events; "
+                "an explicit CUDA event synchronization at its Tensor.tolist result "
                 "boundary separates pending device work, device-to-host copies, and "
                 "Python extraction"
+            ),
+            "source_of_truth": (
+                "The observer measures NeuralPolicyValue.evaluate_batch directly; no "
+                "second evaluator or inference implementation is used."
             ),
             "batches": self.batches,
             "positions": self.positions,
@@ -134,6 +277,7 @@ class CudaInferencePhaseProfile:
                 }
                 for rank, phase in enumerate(ranked, start=1)
             ],
+            "batching_and_contention": self.contention_to_dict(),
             "interpretation": {
                 "host_and_cuda_times_are_not_additive": (
                     "CUDA kernels and copies are asynchronous and can overlap host wall "
@@ -141,185 +285,11 @@ class CudaInferencePhaseProfile:
                     "exclusive wall-time partition."
                 ),
                 "profiling_overhead": (
-                    "CUDA events and phase clocks add overhead, so profile wall time is "
-                    "diagnostic and must not be compared as an optimized throughput run."
+                    "CUDA events, observer calls, and phase clocks add overhead, so "
+                    "profile wall time is diagnostic, not optimized throughput."
                 ),
             },
         }
 
 
-class ProfiledCudaNeuralPolicyValue(NeuralPolicyValue):
-    """Semantics-equivalent CUDA evaluator with detailed timing boundaries."""
-
-    def __init__(
-        self, model: PolicyValueNetwork, profile: CudaInferencePhaseProfile
-    ) -> None:
-        super().__init__(model)
-        self.profile = profile
-
-    def evaluate_batch(
-        self,
-        requests: Sequence[tuple[GameState, tuple[PegPlacement, ...]]],
-    ) -> tuple[PolicyValueEstimate, ...]:
-        if not requests:
-            return ()
-        total_started = perf_counter()
-        profile = self.profile
-
-        def validate_requests() -> tuple[
-            list[GameState], list[tuple[PegPlacement, ...]]
-        ]:
-            states: list[GameState] = []
-            move_batches: list[tuple[PegPlacement, ...]] = []
-            for request in requests:
-                if not isinstance(request, tuple) or len(request) != 2:
-                    raise TypeError("requests must contain (state, moves) tuples")
-                state, moves = request
-                if not isinstance(state, GameState):
-                    raise TypeError("state must be a GameState")
-                if not isinstance(moves, tuple):
-                    raise TypeError("moves must be a tuple")
-                if any(not isinstance(move, PegPlacement) for move in moves):
-                    raise TypeError("moves must contain only PegPlacement values")
-                states.append(state)
-                move_batches.append(moves)
-            return states, move_batches
-
-        states, move_batches = profile.host_call(
-            "request_validation", validate_requests
-        )
-        parameter = next(self.model.parameters())
-        device = parameter.device
-        if device.type != "cuda":
-            raise ValueError("the CUDA inference phase profiler requires a CUDA model")
-        config = self.model.config
-        if any(
-            state.board.width != config.board_width
-            or state.board.height != config.board_height
-            for state in states
-        ):
-            raise ValueError(
-                "state board dimensions do not match the policy/value model"
-            )
-
-        action_indices = profile.host_call(
-            "action_index_construction",
-            lambda: [
-                [
-                    move_to_action_index_for_version(
-                        move,
-                        config.encoding_version,
-                        board_width=config.board_width,
-                        board_height=config.board_height,
-                    )
-                    for move in moves
-                ]
-                for moves in move_batches
-            ],
-        )
-        cpu_inputs = profile.host_call(
-            "cpu_encoding_and_stack",
-            lambda: torch.stack(
-                [
-                    encode_position_for_version(state, config.encoding_version)
-                    for state in states
-                ]
-            ),
-        )
-
-        def construct_masks() -> torch.Tensor:
-            masks = torch.zeros(
-                (len(move_batches), config.board_width * config.board_height),
-                dtype=torch.bool,
-            )
-            for row, indices in zip(masks, action_indices):
-                row[indices] = True
-            return masks
-
-        cpu_masks = profile.host_call("cpu_mask_construction", construct_masks)
-        inputs, input_start, input_end = profile.cuda_call(
-            "host_to_device", lambda: cpu_inputs.to(device)
-        )
-        masks, mask_start, mask_end = profile.cuda_call(
-            "host_to_device", lambda: cpu_masks.to(device)
-        )
-
-        mode_started = perf_counter()
-        training_modes = tuple(
-            (module, module.training) for module in self.model.modules()
-        )
-        self.model.eval()
-        profile.host_seconds["model_mode_management"] += perf_counter() - mode_started
-        try:
-            with torch.inference_mode():
-                (logits, values), model_start, model_end = profile.cuda_call(
-                    "model", lambda: self.model(inputs)
-                )
-                masked, policy_mask_start, policy_mask_end = profile.cuda_call(
-                    "policy_mask", lambda: mask_policy_logits(logits, masks)
-                )
-                probabilities, softmax_start, softmax_end = profile.cuda_call(
-                    "softmax", lambda: torch.softmax(masked, dim=-1)
-                )
-        finally:
-            mode_started = perf_counter()
-            for module, was_training in training_modes:
-                module.training = was_training
-            profile.host_seconds["model_mode_management"] += (
-                perf_counter() - mode_started
-            )
-
-        sync_started = perf_counter()
-        softmax_end.synchronize()
-        profile.host_seconds["cuda_synchronization_wait"] += (
-            perf_counter() - sync_started
-        )
-        for phase, started, finished in (
-            ("host_to_device_transfer", input_start, input_end),
-            ("host_to_device_transfer", mask_start, mask_end),
-            ("model_execution", model_start, model_end),
-            ("policy_mask", policy_mask_start, policy_mask_end),
-            ("softmax", softmax_start, softmax_end),
-        ):
-            profile.record_cuda_elapsed(phase, started, finished)
-
-        transfer_started = perf_counter()
-        copy_start = torch.cuda.Event(enable_timing=True)
-        copy_end = torch.cuda.Event(enable_timing=True)
-        copy_start.record()
-        cpu_probabilities = probabilities.to("cpu")
-        cpu_values = values.to("cpu")
-        copy_end.record()
-        copy_end.synchronize()
-        profile.host_seconds["device_to_host_transfer"] += (
-            perf_counter() - transfer_started
-        )
-        profile.record_cuda_elapsed("device_to_host_transfer", copy_start, copy_end)
-
-        def extract_results() -> tuple[PolicyValueEstimate, ...]:
-            probabilities_list = cpu_probabilities.tolist()
-            values_list = cpu_values.tolist()
-            return tuple(
-                PolicyValueEstimate(
-                    {
-                        move: position_probabilities[action_index]
-                        for move, action_index in zip(moves, indices)
-                    },
-                    value,
-                )
-                for moves, indices, position_probabilities, value in zip(
-                    move_batches,
-                    action_indices,
-                    probabilities_list,
-                    values_list,
-                )
-            )
-
-        estimates = profile.host_call("python_result_extraction", extract_results)
-        profile.batches += 1
-        profile.positions += len(requests)
-        profile.total_evaluate_batch_seconds += perf_counter() - total_started
-        return estimates
-
-
-__all__ = ["CudaInferencePhaseProfile", "ProfiledCudaNeuralPolicyValue"]
+__all__ = ["CudaInferencePhaseProfile"]

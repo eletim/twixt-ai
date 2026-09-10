@@ -198,9 +198,9 @@ def test_canonical_v006_contract_fixes_semantics() -> None:
     ]
 
 
-def test_output_validation_checks_complete_reproducible_match_artifacts(
-    tmp_path: Path,
-) -> None:
+def _write_tiny_output(
+    root: Path,
+) -> tuple[dict[str, object], BatchConfig, dict[str, object]]:
     contract = _tiny_contract(games=1)
     config, _ = _resolved_config(contract, BenchmarkTuning())
     batch_config = BatchConfig(
@@ -213,8 +213,15 @@ def test_output_validation_checks_complete_reproducible_match_artifacts(
         worker_mode="thread",
     )
     factory = partial(MCTSAgent, simulations=2, rollout_limit=2)
-    run_batch(factory, factory, config=batch_config, output_dir=tmp_path)
-    summary = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
+    run_batch(factory, factory, config=batch_config, output_dir=root)
+    summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+    return config, batch_config, summary
+
+
+def test_output_validation_checks_complete_reproducible_match_artifacts(
+    tmp_path: Path,
+) -> None:
+    config, batch_config, summary = _write_tiny_output(tmp_path)
 
     validation = _validate_outputs(
         tmp_path, summary, config, batch_config.to_dict()
@@ -225,3 +232,38 @@ def test_output_validation_checks_complete_reproducible_match_artifacts(
     assert validation["all_decision_seeds_match_contract_derivation"] is True
     assert validation["all_search_parameters_match_contract"] is True
     assert validation["all_value_targets_valid"] is True
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("simulations", 3, "search budget"),
+        ("exploration", 0.5, "exploration"),
+        ("rollout_limit", 3, "rollout limit"),
+        ("rollout_evaluator", "other_evaluator", "rollout evaluator"),
+        (
+            "progressive_widening",
+            {"constant": 2.0, "exponent": 0.5},
+            "progressive widening",
+        ),
+        (
+            "progressive_widening",
+            {"constant": 1.5, "exponent": 0.75},
+            "progressive widening",
+        ),
+    ],
+)
+def test_output_validation_rejects_changed_search_parameter(
+    tmp_path: Path, field: str, value: object, message: str
+) -> None:
+    config, batch_config, summary = _write_tiny_output(tmp_path)
+    artifact = tmp_path / "games/game-000000.json"
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    metadata = payload["decisions"][0]["metadata"]
+    metadata[field] = value
+    if field == "simulations":
+        metadata["root_moves"][0]["visits"] += 1
+    artifact.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        _validate_outputs(tmp_path, summary, config, batch_config.to_dict())

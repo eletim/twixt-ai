@@ -39,8 +39,8 @@ DEFAULT_ROLLOUT_LIMIT = 4
 """Default playout horizon, chosen to keep standard-board decisions practical."""
 
 _HEURISTIC_VALUE_SCALE = 100.0
-_PROGRESSIVE_WIDENING_CONSTANT = 1.5
-_PROGRESSIVE_WIDENING_EXPONENT = 0.5
+DEFAULT_PROGRESSIVE_WIDENING_CONSTANT = 1.5
+DEFAULT_PROGRESSIVE_WIDENING_EXPONENT = 0.5
 
 
 RolloutEvaluationFunction = Callable[[GameState, Player], float]
@@ -68,7 +68,11 @@ class MCTSSearchStatistics:
     """Inspectable summary of a completed MCTS decision."""
 
     simulations: int
+    exploration: float
     rollout_limit: int | None
+    rollout_evaluator: str
+    progressive_widening_constant: float
+    progressive_widening_exponent: float
     nodes: int
     rollout_moves: int
     maximum_depth: int
@@ -144,6 +148,8 @@ class MCTSAgent:
         exploration: float = math.sqrt(2.0),
         rollout_limit: int | None = DEFAULT_ROLLOUT_LIMIT,
         rollout_evaluator: RolloutEvaluationFunction = heuristic_rollout_value,
+        progressive_widening_constant: float = DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+        progressive_widening_exponent: float = DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
         policy_value: PolicyValueFunction | None = None,
     ) -> None:
         if (
@@ -169,10 +175,23 @@ class MCTSAgent:
             raise TypeError("policy_value must be callable or None")
         if not callable(rollout_evaluator):
             raise TypeError("rollout_evaluator must be callable")
+        for name, value in (
+            ("progressive_widening_constant", progressive_widening_constant),
+            ("progressive_widening_exponent", progressive_widening_exponent),
+        ):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value <= 0
+            ):
+                raise ValueError(f"{name} must be a finite positive number")
         self.simulations = simulations
         self.exploration = float(exploration)
         self.rollout_limit = rollout_limit
         self.rollout_evaluator = rollout_evaluator
+        self.progressive_widening_constant = float(progressive_widening_constant)
+        self.progressive_widening_exponent = float(progressive_widening_exponent)
         self.policy_value = policy_value
         self.last_statistics: MCTSSearchStatistics | None = None
         self._rollout_moves = 0
@@ -271,8 +290,7 @@ class MCTSAgent:
 
         return max(node.children, key=score)
 
-    @staticmethod
-    def _can_expand(node: _Node) -> bool:
+    def _can_expand(self, node: _Node) -> bool:
         """Return whether progressive widening admits another action."""
 
         if not node.unexpanded:
@@ -280,8 +298,8 @@ class MCTSAgent:
         if not node.children:
             return True
         child_limit = math.ceil(
-            _PROGRESSIVE_WIDENING_CONSTANT
-            * node.visits**_PROGRESSIVE_WIDENING_EXPONENT
+            self.progressive_widening_constant
+            * node.visits**self.progressive_widening_exponent
         )
         return len(node.children) < child_limit
 
@@ -382,7 +400,15 @@ class MCTSAgent:
         )
         statistics = MCTSSearchStatistics(
             simulations=self.simulations,
+            exploration=self.exploration,
             rollout_limit=self.rollout_limit,
+            rollout_evaluator=getattr(
+                self.rollout_evaluator,
+                "__name__",
+                type(self.rollout_evaluator).__name__,
+            ),
+            progressive_widening_constant=self.progressive_widening_constant,
+            progressive_widening_exponent=self.progressive_widening_exponent,
             nodes=1 + sum(1 for _ in self._walk(root)),
             rollout_moves=self._rollout_moves,
             maximum_depth=self._maximum_depth,
@@ -392,7 +418,13 @@ class MCTSAgent:
         assert best.move is not None
         metadata = {
             "simulations": statistics.simulations,
+            "exploration": statistics.exploration,
             "rollout_limit": statistics.rollout_limit,
+            "rollout_evaluator": statistics.rollout_evaluator,
+            "progressive_widening": {
+                "constant": statistics.progressive_widening_constant,
+                "exponent": statistics.progressive_widening_exponent,
+            },
             "nodes": statistics.nodes,
             "rollout_moves": statistics.rollout_moves,
             "maximum_depth": statistics.maximum_depth,
@@ -438,6 +470,8 @@ class MCTSAgent:
 
 
 __all__ = [
+    "DEFAULT_PROGRESSIVE_WIDENING_CONSTANT",
+    "DEFAULT_PROGRESSIVE_WIDENING_EXPONENT",
     "DEFAULT_ROLLOUT_LIMIT",
     "MCTSAgent",
     "MCTSMoveStatistics",

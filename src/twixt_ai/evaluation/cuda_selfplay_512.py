@@ -36,7 +36,7 @@ from twixt_ai.device import select_device
 from twixt_ai.evaluation.cuda_tuning import _GpuSampler
 from twixt_ai.game import experiment_board, legal_peg_placements
 from twixt_ai.models import load_policy_value_checkpoint
-from twixt_ai.search import MCTSAgent
+from twixt_ai.search import MCTSAgent, heuristic_rollout_value
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
 from twixt_ai.selfplay.batch import BatchConfig, run_batch
 from twixt_ai.selfplay.trajectory import trajectory_from_match
@@ -242,7 +242,10 @@ def _validate_outputs(
 
     expected_seeds = _seeds(contract_config["seeds"]["batch_seed"], expected_games)
     simulations = contract_config["mcts"]["simulations"]
+    exploration = contract_config["mcts"]["exploration"]
     rollout_limit = contract_config["mcts"]["rollout_limit"]
+    rollout_evaluator = contract_config["mcts"]["rollout_evaluator"]
+    progressive_widening = contract_config["mcts"]["progressive_widening"]
     expected_paths = {
         f"games/game-{index:06d}.json" for index in range(expected_games)
     }
@@ -286,8 +289,16 @@ def _validate_outputs(
             metadata = step.metadata
             if metadata.get("simulations") != simulations:
                 raise ValueError(f"game {index} decision search budget changed")
+            if metadata.get("exploration") != exploration:
+                raise ValueError(f"game {index} decision exploration changed")
             if metadata.get("rollout_limit") != rollout_limit:
                 raise ValueError(f"game {index} decision rollout limit changed")
+            if metadata.get("rollout_evaluator") != rollout_evaluator:
+                raise ValueError(f"game {index} decision rollout evaluator changed")
+            if metadata.get("progressive_widening") != progressive_widening:
+                raise ValueError(
+                    f"game {index} decision progressive widening changed"
+                )
             root_moves = metadata.get("root_moves")
             if not isinstance(root_moves, list) or len(root_moves) != len(
                 legal_peg_placements(step.position)
@@ -523,6 +534,13 @@ def run_cuda_selfplay_512_benchmark(
             simulations=mcts_config["simulations"],
             exploration=mcts_config["exploration"],
             rollout_limit=mcts_config["rollout_limit"],
+            rollout_evaluator=heuristic_rollout_value,
+            progressive_widening_constant=mcts_config["progressive_widening"][
+                "constant"
+            ],
+            progressive_widening_exponent=mcts_config["progressive_widening"][
+                "exponent"
+            ],
             policy_value=batcher,
         )
         with gpu_sampler, phase_sampler:

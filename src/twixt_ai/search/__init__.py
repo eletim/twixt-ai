@@ -2,6 +2,8 @@
 
 from .agent import EvaluationFunction, HeuristicSearchAgent, MoveOrderer, SearchAgent
 from .mcts import (
+    DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+    DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
     DEFAULT_ROLLOUT_LIMIT,
     MCTSAgent,
     MCTSMoveStatistics,
@@ -13,6 +15,8 @@ from .mcts import (
 )
 
 __all__ = [
+    "DEFAULT_PROGRESSIVE_WIDENING_CONSTANT",
+    "DEFAULT_PROGRESSIVE_WIDENING_EXPONENT",
     "EvaluationFunction",
     "DEFAULT_ROLLOUT_LIMIT",
     "HeuristicSearchAgent",

@@ -8,7 +8,13 @@ from agents.contract import AgentContract
 from twixt_ai.agents import AgentRequest
 from twixt_ai.game import BoardDimensions, Coordinate, GameState, PegPlacement, Player
 from twixt_ai.evaluation.benchmark_cli import _entrants
-from twixt_ai.search import DEFAULT_ROLLOUT_LIMIT, MCTSAgent, PolicyValueEstimate
+from twixt_ai.search import (
+    DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+    DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
+    DEFAULT_ROLLOUT_LIMIT,
+    MCTSAgent,
+    PolicyValueEstimate,
+)
 from twixt_ai.selfplay.cli import _agent_factory
 
 
@@ -25,6 +31,12 @@ def test_seeded_search_is_reproducible_and_reports_root_statistics() -> None:
     assert first.move == second.move
     assert first.metadata == second.metadata
     assert first.metadata["simulations"] == 12
+    assert first.metadata["exploration"] == pytest.approx(2**0.5)
+    assert first.metadata["rollout_evaluator"] == "heuristic_rollout_value"
+    assert first.metadata["progressive_widening"] == {
+        "constant": DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+        "exponent": DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
+    }
     assert first.metadata["nodes"] <= 13
     assert sum(item["visits"] for item in first.metadata["root_moves"]) == 12
     inspection = first.metadata["inspection"]
@@ -111,6 +123,22 @@ def test_policy_and_value_hook_guides_the_same_tree() -> None:
 def test_simulation_budget_must_be_a_positive_integer(simulations: object) -> None:
     with pytest.raises(ValueError, match="positive integer"):
         MCTSAgent(simulations=simulations)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"progressive_widening_constant": 0},
+        {"progressive_widening_constant": float("inf")},
+        {"progressive_widening_exponent": 0},
+        {"progressive_widening_exponent": float("nan")},
+    ],
+)
+def test_progressive_widening_parameters_must_be_positive(
+    kwargs: dict[str, float],
+) -> None:
+    with pytest.raises(ValueError, match="finite positive"):
+        MCTSAgent(**kwargs)
 
 
 def test_policy_hook_rejects_illegal_priors() -> None:

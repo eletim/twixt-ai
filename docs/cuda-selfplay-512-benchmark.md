@@ -42,9 +42,12 @@ underlying implementation. It:
   `PYTHONHASHSEED`, and resolves only its three declared optimization variables
   from explicit runner inputs before running anything;
 - builds the shared-model inference path with the contract's exact
-  `NeuralInferenceBatcher`/`MCTSAgent` settings and runs `selfplay.batch.run_batch`
-  with the contract's worker count, seed, and board — the same primitives
-  `selfplay.large_experiment` uses for staged dataset generation;
+  `NeuralInferenceBatcher` settings and explicitly binds every `MCTSAgent`
+  search parameter: simulations, exploration, rollout limit, rollout
+  evaluator, and both progressive-widening values. It runs
+  `selfplay.batch.run_batch` with the contract's worker count, seed, and board
+  — the same primitives `selfplay.large_experiment` uses for staged dataset
+  generation;
 - measures end-to-end wall time over the same scope the contract defines
   (dispatch through artifact/summary writes; checkpoint load and
   sampler setup are excluded and reported separately);
@@ -52,9 +55,11 @@ underlying implementation. It:
   summary and match schema versions, resolved batch and per-game
   configurations, replay-valid terminal records, game and per-decision seed
   derivations, recorded decisions matching the replay, unchanged simulation
-  and rollout budgets, a complete legal root-move set whose visits sum to the
-  fixed budget, normalized policy targets, and terminal side-to-move value
-  targets in `{-1, 0, 1}`. Match/replay/decision and policy/value validation
+  budget, exploration, rollout limit/evaluator, and progressive-widening
+  values recorded by every decision, a complete legal root-move set whose
+  visits sum to the fixed budget, normalized policy targets, and terminal
+  side-to-move value targets in `{-1, 0, 1}`. Match/replay/decision and
+  policy/value validation
   uses `selfplay.trajectory.trajectory_from_match`, the shared persisted-match
   and trajectory-target boundary also used to build training datasets, rather
   than defining benchmark-local targets or depending on the training layer;

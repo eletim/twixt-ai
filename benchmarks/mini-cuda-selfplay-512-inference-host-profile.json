@@ -1,0 +1,125 @@
+{
+  "format": "twixt-ai-mini-cuda-selfplay-inference-host-profile",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "source": {
+    "git_commit": "24c1d924eb69660e83a275e20e50176d468c56d1",
+    "implementation": "v0.0.6-profile-w8-b8-f2ms-detailed"
+  },
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "verified_unchanged": true
+  },
+  "configuration": {
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002
+  },
+  "workload": {
+    "games": 512,
+    "completed": 512,
+    "failed": 0,
+    "total_moves": 30929,
+    "total_simulations": 123716,
+    "total_inference_positions": 152674,
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+  },
+  "measurement": {
+    "method": "Host phases use perf_counter spans. Device phases use CUDA events on the inference stream. The profiler explicitly synchronizes at the existing result-extraction boundary, then separates device-to-host copies from Python conversion and result construction.",
+    "diagnostic_end_to_end_wall_seconds": 112.8953998379875,
+    "total_profiled_evaluate_batch_seconds": 62.61732958559878,
+    "batches": 19492,
+    "positions": 152674,
+    "caveats": [
+      "CUDA event and host wall durations overlap and must not be added together.",
+      "Event recording and phase clocks add diagnostic overhead, so the profiled wall time is not an optimized-throughput result.",
+      "Aggregate queue wait sums simultaneous per-request waits and is not an end-to-end wall-time component.",
+      "nvidia-smi utilization is retained as corroborating coarse telemetry, not used alone to identify the bottleneck."
+    ]
+  },
+  "batching_and_contention": {
+    "effective_batch_size_average": 7.832649292017238,
+    "effective_batch_capacity_percent": 97.90811615021548,
+    "full_batches": 18485,
+    "latency_flushes": 1007,
+    "forced_flushes": 0,
+    "average_queue_wait_milliseconds_per_request": 1.3028438908077144,
+    "aggregate_queue_wait_seconds_non_additive": 198.910388185177,
+    "batching_queueing_wall_samples": 5,
+    "batching_queueing_sampled_wall_percent": 0.02753000770840216,
+    "interpretation": "The queue formed 97.9%-full batches and spent little exclusive sampled wall time in batcher code. The 1.30 ms mean request wait is mostly useful coalescing inside the 2 ms bound, not evidence that lock contention dominates."
+  },
+  "host_phase_ranking": [
+    {"rank": 1, "phase": "cpu_encoding_and_stack", "seconds": 40.89169070310891, "milliseconds_per_batch": 2.0978704444443315, "percent_of_evaluate_batch": 65.30411145561452},
+    {"rank": 2, "phase": "model_submission", "seconds": 6.6069663991220295, "milliseconds_per_batch": 0.3389578493290596, "percent_of_evaluate_batch": 10.551338491831103},
+    {"rank": 3, "phase": "action_index_construction", "seconds": 4.942399378865957, "milliseconds_per_batch": 0.25356040318417594, "percent_of_evaluate_batch": 7.893021646842392},
+    {"rank": 4, "phase": "model_mode_management", "seconds": 2.0330237003508955, "milliseconds_per_batch": 0.10430041557310156, "percent_of_evaluate_batch": 3.246742896583801},
+    {"rank": 5, "phase": "python_result_extraction", "seconds": 1.7876143739558756, "milliseconds_per_batch": 0.09171015667739973, "percent_of_evaluate_batch": 2.8548237137966437},
+    {"rank": 6, "phase": "host_to_device_submission", "seconds": 1.706577705219388, "milliseconds_per_batch": 0.08755272446231213, "percent_of_evaluate_batch": 2.7254079925054486},
+    {"rank": 7, "phase": "cpu_mask_construction", "seconds": 1.5200873338617384, "milliseconds_per_batch": 0.07798519053261535, "percent_of_evaluate_batch": 2.4275824982024465},
+    {"rank": 8, "phase": "device_to_host_transfer", "seconds": 0.7951771647203714, "milliseconds_per_batch": 0.040795052571330356, "percent_of_evaluate_batch": 1.2698995150110208},
+    {"rank": 9, "phase": "policy_mask_submission", "seconds": 0.7879042481072247, "milliseconds_per_batch": 0.04042192941243714, "percent_of_evaluate_batch": 1.2582846527016907},
+    {"rank": 10, "phase": "softmax_submission", "seconds": 0.3465788767207414, "milliseconds_per_batch": 0.017780570322221495, "percent_of_evaluate_batch": 0.5534871560547199},
+    {"rank": 11, "phase": "request_validation", "seconds": 0.2627789401449263, "milliseconds_per_batch": 0.013481373904418547, "percent_of_evaluate_batch": 0.41965849052330434},
+    {"rank": 12, "phase": "cuda_synchronization_wait", "seconds": 0.06891071680001915, "milliseconds_per_batch": 0.003535333305972663, "percent_of_evaluate_batch": 0.11005055190962305}
+  ],
+  "cuda_event_phase_ranking": [
+    {"rank": 1, "phase": "model_execution", "seconds": 6.449683889336852, "milliseconds_per_batch": 0.3308887692046405},
+    {"rank": 2, "phase": "host_to_device_transfer", "seconds": 1.2196122883120897, "milliseconds_per_batch": 0.06256988961174276},
+    {"rank": 3, "phase": "policy_mask", "seconds": 0.6510025602416266, "milliseconds_per_batch": 0.03339844860669129},
+    {"rank": 4, "phase": "device_to_host_transfer", "seconds": 0.5705462718755008, "milliseconds_per_batch": 0.029270791703032054},
+    {"rank": 5, "phase": "softmax", "seconds": 0.2355791353264139, "milliseconds_per_batch": 0.012085939632998866}
+  ],
+  "corroborating_observations": {
+    "nvidia_smi_average_utilization_percent": 2.2406593406593407,
+    "nvidia_smi_peak_utilization_percent": 4,
+    "nvidia_smi_samples": 910,
+    "stack_sampled_inference_percent": 78.31185992732078,
+    "stack_sampled_cpu_mcts_percent": 19.00671732188085,
+    "stack_sampled_serialization_io_percent": 2.653892743089968
+  },
+  "ranked_evidence_for_next_change": [
+    {
+      "rank": 1,
+      "target": "CPU position encoding and stacking",
+      "evidence": "40.892 s, or 65.30% of profiled inference wall time and 2.098 ms per batch; CPU encoding alone is 6.34x the CUDA-event model execution total.",
+      "next_experiment": "Reduce repeated Python/tensor construction in canonical CPU encoding while keeping encoding version 1 byte-for-byte equivalent."
+    },
+    {
+      "rank": 2,
+      "target": "CPU action-index construction",
+      "evidence": "4.942 s, or 7.89% and 0.254 ms per batch; with CPU mask construction, host index/mask work totals 6.462 s.",
+      "next_experiment": "Measure reuse or more direct construction of unchanged legal-move indices and masks without changing legal policy semantics."
+    },
+    {
+      "rank": 3,
+      "target": "Model invocation and execution",
+      "evidence": "CUDA-event model execution totals 6.450 s (0.331 ms per batch), while model-call host spans total 6.607 s; this is meaningful but far below CPU encoding.",
+      "next_experiment": "Only after encoding work, evaluate safe launch/static-shape techniques against identical outputs."
+    },
+    {
+      "rank": 4,
+      "target": "Result extraction and transfers",
+      "evidence": "Python result extraction is 1.788 s; H2D and D2H CUDA-event transfers total 1.790 s; explicit synchronization wait is only 0.069 s.",
+      "next_experiment": "Do not prioritize synchronization or transfer changes before CPU encoding; measure any extraction change separately."
+    }
+  ],
+  "conclusion": "The shared path is host-construction bound, specifically CPU encoding/stacking, not synchronization bound or GPU-compute saturated. This conclusion follows from direct host spans and CUDA events; the 2.24% nvidia-smi utilization sample is corroboration only.",
+  "validation": {
+    "all_required_artifacts_valid": true,
+    "all_match_records_replay_valid": true,
+    "all_game_and_decision_seeds_match_contract_derivation": true,
+    "all_search_parameters_match_contract": true,
+    "all_policy_root_visit_sums_valid": true,
+    "all_value_targets_valid": true,
+    "validated_decisions": 30929
+  }
+}

@@ -226,3 +226,72 @@ PYTHONHASHSEED=0 python -m twixt_ai.evaluation.cuda_selfplay_512_cli \
   --inference-batch-size 8 \
   --queue-flush-max-wait-seconds 0.002
 ```
+
+## Detailed inference-host profile
+
+The best measured scheduling configuration above was profiled again on the
+same RTX 4060 with all 512 canonical games: eight workers, batch size eight,
+and a 2 ms maximum flush wait. The run used the unchanged canonical contract,
+completed all games, validated all 30,929 decisions and policy/value targets,
+and reproduced output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+The full ranked evidence is in
+[`benchmarks/mini-cuda-selfplay-512-inference-host-profile.json`](../benchmarks/mini-cuda-selfplay-512-inference-host-profile.json).
+
+This run used the opt-in `--detailed-inference-profile` evaluator. It executes
+the production inference path's same input checks, versioned encoding and
+action mapping, masks, model, softmax, and result construction. Host phases
+use `perf_counter`; CUDA transfers, model execution, mask application, and
+softmax use CUDA events. At the point where production `Tensor.tolist()` must
+synchronize and copy results, the profiler explicitly performs that same
+boundary as synchronization, device-to-host copy, then CPU conversion. The
+instrumented evaluator is benchmark-only and does not change production
+search or inference. Its 112.895 s end-to-end time includes event/clock
+overhead and is diagnostic, not a new optimized throughput claim.
+
+| Cost | Total (s) | Per batch (ms) | Share of profiled inference wall |
+| --- | ---: | ---: | ---: |
+| CPU encoding + stack | **40.892** | **2.098** | **65.30%** |
+| CPU action-index construction | 4.942 | 0.254 | 7.89% |
+| CPU legal-mask construction | 1.520 | 0.078 | 2.43% |
+| Python result extraction | 1.788 | 0.092 | 2.85% |
+| Explicit CUDA synchronization wait | 0.069 | 0.004 | 0.11% |
+
+CUDA-event timings are a separate, overlapping view and must not be added to
+the host wall spans. Across 19,492 inference batches, model execution used
+6.450 device seconds (0.331 ms/batch), H2D copies 1.220 s, policy mask
+application 0.651 s, D2H copies 0.571 s, and softmax 0.236 s. CPU encoding
+alone therefore consumed 6.34 times the aggregate CUDA model-execution time.
+The earlier inference label was too broad: it included this 40.892 s of host
+encoding and other submission/extraction work around only 6.450 s of model
+device work.
+
+Batching was already effective: the average batch contained 7.833 positions
+(97.91% of capacity), 18,485 of 19,492 batches were full, and mean per-request
+queue wait was 1.303 ms inside the configured 2 ms coalescing bound. Only five
+5 ms stack samples found batcher code as the exclusive active phase. The
+198.910 aggregate queue-wait seconds sum simultaneous waits across 152,674
+requests, so they are not an additive wall-time cost and do not establish lock
+contention as the bottleneck.
+
+The ranked next target is CPU position encoding and stacking, followed by
+action-index/mask construction. Result extraction and transfers are smaller;
+the explicit synchronization wait is negligible. `nvidia-smi` averaged 2.24%
+utilization during this run, but that coarse sample is only corroboration: the
+host spans, CUDA events, near-full batches, and validated fixed workload are
+the evidence for the host-construction diagnosis. No production optimization
+was attempted in this work item.
+
+Reproduce the diagnostic profile with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.cuda_selfplay_512_cli \
+  --output-dir /path/to/scratch/selfplay-profile-out \
+  --report /path/to/scratch/inference-profile-report.json \
+  --implementation-label "v0.0.6-profile-w8-b8-f2ms-detailed" \
+  --worker-concurrency 8 \
+  --inference-batch-size 8 \
+  --queue-flush-max-wait-seconds 0.002 \
+  --detailed-inference-profile
+```

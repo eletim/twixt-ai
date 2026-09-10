@@ -16,7 +16,7 @@ import torch
 from twixt_ai.game import GameState, PegPlacement
 from twixt_ai.models import (
     PolicyValueNetwork,
-    encode_position_for_version,
+    encode_positions_for_version,
     mask_policy_logits,
     move_to_action_index_for_version,
 )
@@ -166,11 +166,8 @@ class NeuralPolicyValue:
             if observer is not None
             else None
         )
-        cpu_inputs = torch.stack(
-            [
-                encode_position_for_version(state, config.encoding_version)
-                for state in states
-            ]
+        cpu_inputs = encode_positions_for_version(
+            states, config.encoding_version
         )
         if observer is not None:
             observer.finish_host_phase("cpu_encoding_and_stack", phase_token)

@@ -314,3 +314,40 @@ PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
   --queue-flush-max-wait-seconds 0.002 \
   --detailed-inference-profile
 ```
+
+## Batched version-1 position encoding
+
+The next optimization replaces per-position version-1 tensor allocation plus
+`torch.stack` with one batch allocation and bulk indexed writes for pegs and
+links. The public single-position encoder and encoding version remain
+unchanged. Version 2 continues to use its prior path.
+
+Both unprofiled measurements used the exact 512-game contract with eight
+workers, inference batch eight, and a 2 ms maximum flush wait:
+
+| Measurement | Baseline | Batched encoder | Change |
+| --- | ---: | ---: | ---: |
+| End-to-end wall time | 108.409 s | **83.773 s** | **-22.72%** |
+| Games/hour | 17,002.3 | **22,002.2** | **+29.41%** |
+| Positions/second | 1,408.3 | **1,822.5** | **+29.41%** |
+| Simulations/second | 1,141.2 | **1,476.8** | **+29.41%** |
+| Inference positions/second | 2,595.1 | **4,365.6** | **+68.22%** |
+
+The detailed source observer measured CPU encoding and stacking at 13.924 s,
+or 0.716 ms per batch, down 63.58% from the earlier 38.230 s and 1.968 ms per
+batch. Observer overhead is diagnostic and is not used for the throughput
+claim.
+
+Both throughput runs completed all 512 games and validated all 30,929
+decisions. Their output summary SHA-256 values are byte-identical at
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+Differential regression tests also compare the complete batch byte buffer
+against the single-position version-1 encoder across deterministic legal
+trajectories on tiny, rectangular, Mini, and standard board dimensions.
+
+An alternative that replaced `stack` with `unsqueeze` plus `torch.cat` was
+rejected. It retained every per-position allocation and measured 1,316.9 us
+per representative batch, 0.57% slower than the 1,309.4 us legacy median. The
+retained bulk encoder measured 200.4 us (6.53x faster) in the same nine-sample
+microbenchmark. Full machine-readable evidence is in
+[`benchmarks/mini-batched-position-encoding.json`](../benchmarks/mini-batched-position-encoding.json).

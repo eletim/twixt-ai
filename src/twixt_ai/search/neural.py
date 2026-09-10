@@ -55,6 +55,7 @@ class InferenceBatcherObserver(Protocol):
         formation_seconds: float,
         lock_wait_seconds: float,
         critical_section_seconds: float,
+        condition_wait_deadline_overshoot_seconds: float,
     ) -> None: ...
 
     def batch_completion(
@@ -442,6 +443,7 @@ class NeuralInferenceBatcher:
                     perf_counter() if observer is not None else 0.0
                 )
                 condition_wait_seconds = 0.0
+                condition_wait_overshoot_seconds = 0.0
                 formation_started = monotonic()
                 deadline = monotonic() + self.max_wait_seconds
                 while (
@@ -455,7 +457,11 @@ class NeuralInferenceBatcher:
                     wait_started = perf_counter() if observer is not None else 0.0
                     self._condition.wait(remaining)
                     if observer is not None:
-                        condition_wait_seconds += perf_counter() - wait_started
+                        wait_seconds = perf_counter() - wait_started
+                        condition_wait_seconds += wait_seconds
+                        condition_wait_overshoot_seconds += max(
+                            0.0, wait_seconds - remaining
+                        )
                 if len(self._queue) >= self.batch_size:
                     flush_reason = "full_batch"
                 elif self._flushing or self._closed:
@@ -480,6 +486,7 @@ class NeuralInferenceBatcher:
                     critical_finished
                     - active_critical_started
                     - condition_wait_seconds,
+                    condition_wait_overshoot_seconds,
                 )
 
             try:

@@ -76,6 +76,7 @@ class CudaInferencePhaseProfile:
         self._queue_critical_sections: list[float] = []
         self._dispatch_lock_waits: list[float] = []
         self._dispatch_critical_sections: list[float] = []
+        self._condition_wait_overshoots: list[float] = []
         self._completion_lock_waits: list[float] = []
         self._completion_critical_sections: list[float] = []
         self._formation_by_reason: dict[str, list[float]] = {
@@ -153,11 +154,15 @@ class CudaInferencePhaseProfile:
         formation_seconds: float,
         lock_wait_seconds: float,
         critical_section_seconds: float,
+        condition_wait_deadline_overshoot_seconds: float,
     ) -> None:
         with self._contention_lock:
             self._formation_by_reason[flush_reason].append(formation_seconds)
             self._dispatch_lock_waits.append(lock_wait_seconds)
             self._dispatch_critical_sections.append(critical_section_seconds)
+            self._condition_wait_overshoots.append(
+                condition_wait_deadline_overshoot_seconds
+            )
 
     def batch_completion(
         self, lock_wait_seconds: float, critical_section_seconds: float
@@ -172,6 +177,7 @@ class CudaInferencePhaseProfile:
             queue_critical = list(self._queue_critical_sections)
             dispatch_waits = list(self._dispatch_lock_waits)
             dispatch_critical = list(self._dispatch_critical_sections)
+            wait_overshoots = list(self._condition_wait_overshoots)
             completion_waits = list(self._completion_lock_waits)
             completion_critical = list(self._completion_critical_sections)
             formations = {
@@ -200,6 +206,9 @@ class CudaInferencePhaseProfile:
             ),
             "worker_dispatch_condition_critical_section_excluding_wait": (
                 _duration_summary(dispatch_critical, 1_000_000.0)
+            ),
+            "worker_condition_wait_deadline_overshoot": _duration_summary(
+                wait_overshoots, 1_000.0
             ),
             "worker_completion_condition_lock_acquisition": _duration_summary(
                 completion_waits, 1_000_000.0

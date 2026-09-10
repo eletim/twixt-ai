@@ -54,7 +54,7 @@ class BlockingNetwork(PolicyValueNetwork):
 class RecordingBatcherObserver:
     def __init__(self) -> None:
         self.queue_samples: list[tuple[float, float]] = []
-        self.dispatch_samples: list[tuple[str, float, float, float]] = []
+        self.dispatch_samples: list[tuple[str, float, float, float, float]] = []
         self.completion_samples: list[tuple[float, float]] = []
 
     def queue_submission(
@@ -68,6 +68,7 @@ class RecordingBatcherObserver:
         formation_seconds: float,
         lock_wait_seconds: float,
         critical_section_seconds: float,
+        condition_wait_deadline_overshoot_seconds: float,
     ) -> None:
         self.dispatch_samples.append(
             (
@@ -75,6 +76,7 @@ class RecordingBatcherObserver:
                 formation_seconds,
                 lock_wait_seconds,
                 critical_section_seconds,
+                condition_wait_deadline_overshoot_seconds,
             )
         )
 

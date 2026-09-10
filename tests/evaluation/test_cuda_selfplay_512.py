@@ -193,7 +193,9 @@ def test_detailed_profile_ranks_host_phases_and_keeps_cuda_separate() -> None:
 def test_detailed_profile_reports_batching_separately_from_contention() -> None:
     profile = CudaInferencePhaseProfile()
     profile.queue_submission(0.000001, 0.000002)
-    profile.batch_dispatch("full_batch", 0.0005, 0.000003, 0.000004)
+    profile.batch_dispatch(
+        "full_batch", 0.0005, 0.000003, 0.000004, 0.000007
+    )
     profile.batch_completion(0.000005, 0.000006)
 
     result = profile.contention_to_dict()
@@ -202,6 +204,7 @@ def test_detailed_profile_reports_batching_separately_from_contention() -> None:
     assert result["producer_queue_condition_critical_section"]["average"] == 2
     assert result["worker_dispatch_condition_lock_acquisition"]["average"] == 3
     assert result["batch_formation_delay"]["all"]["average"] == 0.5
+    assert result["worker_condition_wait_deadline_overshoot"]["average"] == 0.007
     assert result["batch_formation_delay"]["by_flush_reason"]["full_batch"][
         "samples"
     ] == 1

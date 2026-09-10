@@ -78,6 +78,14 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--gpu-sample-interval-seconds", type=float, default=0.1)
     parser.add_argument("--phase-sample-interval-seconds", type=float, default=0.005)
     parser.add_argument(
+        "--detailed-inference-profile",
+        action="store_true",
+        help=(
+            "use the measurement-only CUDA/host phase evaluator; adds diagnostic "
+            "overhead and does not represent optimized throughput"
+        ),
+    )
+    parser.add_argument(
         "--worker-concurrency",
         type=int,
         default=None,
@@ -112,6 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 gpu_sample_interval_seconds=args.gpu_sample_interval_seconds,
                 phase_sample_interval_seconds=args.phase_sample_interval_seconds,
                 implementation_label=args.implementation_label,
+                detailed_inference_profile=args.detailed_inference_profile,
             ),
             tuning=BenchmarkTuning(
                 worker_concurrency=args.worker_concurrency,

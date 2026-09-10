@@ -8,10 +8,10 @@ semantics, and reports timing, GPU utilization, effective inference batching,
 and an approximate phase breakdown so later optimizations can be measured
 against a trustworthy, reproducible baseline.
 
-No production self-play or search code is modified to support profiling:
-the phase breakdown is a lightweight stack-sampling profiler that inspects
-live thread frames from outside the timed call graph, the same technique
-used for the recorded baseline.
+The ordinary phase breakdown is a lightweight stack-sampling profiler. An
+optional detailed profile attaches measurement observers to the same
+production inference evaluator and batcher; it does not substitute a second
+implementation or enable a production optimization.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from typing import Any
 import torch
 
 from twixt_ai.device import select_device
+from twixt_ai.evaluation.cuda_inference_profile import CudaInferencePhaseProfile
 from twixt_ai.evaluation.cuda_tuning import _GpuSampler
 from twixt_ai.game import experiment_board, legal_peg_placements
 from twixt_ai.models import load_policy_value_checkpoint
@@ -337,6 +338,7 @@ class BenchmarkOptions:
     gpu_sample_interval_seconds: float = 0.1
     phase_sample_interval_seconds: float = 0.005
     implementation_label: str = "v0.0.6-default"
+    detailed_inference_profile: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -524,10 +526,20 @@ def run_cuda_selfplay_512_benchmark(
     phase_sampler = _PhaseSampler(options.phase_sample_interval_seconds)
     setup_seconds = perf_counter() - setup_started
 
+    inference_phase_profile = (
+        CudaInferencePhaseProfile()
+        if options.detailed_inference_profile
+        else None
+    )
+    policy_value = NeuralPolicyValue(
+        loaded.model,
+        observer=inference_phase_profile,
+    )
     with NeuralInferenceBatcher(
-        NeuralPolicyValue(loaded.model),
+        policy_value,
         batch_size=shared_config["batch_size"],
         max_wait_seconds=shared_config["max_wait_seconds"],
+        observer=inference_phase_profile,
     ) as batcher:
         factory = partial(
             MCTSAgent,
@@ -644,6 +656,8 @@ def run_cuda_selfplay_512_benchmark(
         "phase_breakdown": phase_sampler.to_dict(),
         "validation": validation,
     }
+    if inference_phase_profile is not None:
+        report["detailed_inference_profile"] = inference_phase_profile.to_dict()
     return report
 
 

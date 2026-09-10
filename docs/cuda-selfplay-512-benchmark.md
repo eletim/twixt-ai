@@ -226,3 +226,91 @@ PYTHONHASHSEED=0 python -m twixt_ai.evaluation.cuda_selfplay_512_cli \
   --inference-batch-size 8 \
   --queue-flush-max-wait-seconds 0.002
 ```
+
+## Detailed inference-host profile
+
+The best measured scheduling configuration above was profiled again on the
+same RTX 4060 with all 512 canonical games: eight workers, batch size eight,
+and a 2 ms maximum flush wait. The run used the unchanged canonical contract,
+completed all games, validated all 30,929 decisions and policy/value targets,
+and reproduced output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+The full ranked evidence is in
+[`benchmarks/mini-cuda-selfplay-512-inference-host-profile.json`](../benchmarks/mini-cuda-selfplay-512-inference-host-profile.json).
+
+The opt-in `--detailed-inference-profile` observers measure the source-of-truth
+`NeuralPolicyValue.evaluate_batch` and `NeuralInferenceBatcher` directly;
+there is no benchmark evaluator or copied inference pipeline. Host phases use
+`perf_counter`; CUDA transfers, model execution, mask application, and softmax
+use CUDA events. At the point where production `Tensor.tolist()` must
+synchronize and copy results, the observer explicitly separates that boundary
+into synchronization, device-to-host copy, then CPU conversion. Its 112.690 s
+end-to-end time includes event, observer, and clock overhead and is diagnostic,
+not a new optimized throughput claim.
+
+| Cost | Total (s) | Per batch (ms) | Share of profiled inference wall |
+| --- | ---: | ---: | ---: |
+| CPU encoding + stack | **38.230** | **1.968** | **63.73%** |
+| CPU action-index construction | 4.935 | 0.254 | 8.23% |
+| CPU legal-mask construction | 1.535 | 0.079 | 2.56% |
+| Python result extraction | 1.742 | 0.090 | 2.90% |
+| Explicit CUDA synchronization wait | 0.066 | 0.003 | 0.11% |
+
+CUDA-event timings are a separate, overlapping view and must not be added to
+the host wall spans. Across 19,425 inference batches, model execution used
+6.315 device seconds (0.325 ms/batch), H2D copies 1.336 s, policy mask
+application 0.631 s, D2H copies 0.568 s, and softmax 0.245 s. CPU encoding
+alone therefore consumed 6.05 times the aggregate CUDA model-execution time.
+The earlier inference label was too broad: it included this 38.230 s of host
+encoding and other submission/extraction work around only 6.315 s of model
+device work.
+
+Batching and contention are measured independently. The average batch
+contained 7.860 positions (98.25% of capacity), and 18,610 of 19,425 batches
+were full. Batch formation from the first observed request to dispatch took
+1.301 ms on average; full batches took 0.955 ms on average. The 815
+latency-flushed batches took 9.210 ms on average and 6.691 ms at p50, showing
+that the configured 2 ms timeout was not a hard observed dispatch bound.
+
+Direct `Condition` measurements explain what can and cannot be called
+contention:
+
+| Condition measurement | p50 | p95 | p99 | Aggregate |
+| --- | ---: | ---: | ---: | ---: |
+| Producer lock acquisition | 0.551 us | 1.092 us | 1.763 us | 0.494 s across 152,674 calls |
+| Producer lock-held section | 1.002 us | 3.156 us | 4.558 us | 0.220 s across 152,674 calls |
+| Worker dispatch acquisition | 0.241 us | 0.340 us | 0.451 us | 0.005 s across 19,425 batches |
+| Worker completion acquisition | 0.501 us | 0.852 us | 1.382 us | 0.011 s across 19,425 batches |
+| Wait deadline overshoot | 0 ms | 0.526 ms | 6.978 ms | 7.299 s across 19,425 batches |
+
+Typical lock acquisition and critical sections are therefore microsecond-scale,
+although one producer acquisition reached 156 ms. Separately, wait calls
+overshot their remaining timeout by 7.299 s in aggregate. That tail includes
+delayed GIL/OS scheduling and `Condition` lock reacquisition; this profiler
+cannot assign it to only one of those causes. The earlier interpretation of
+queue wait as primarily coalescing was unsupported and is withdrawn. Aggregate
+per-request queue wait likewise sums concurrent waits and is not additive wall
+time.
+
+The ranked next target remains CPU position encoding and stacking. The
+condition wake/reacquisition scheduling tail is second, ahead of model
+execution and action-index/mask construction. Result extraction and explicit
+synchronization are smaller. `nvidia-smi` averaged 2.23%
+utilization during this run, but that coarse sample is only corroboration: the
+source-of-truth observer spans, direct Condition timings, CUDA events,
+near-full batches, and validated fixed workload support the ranking. No
+production optimization was attempted in this work item.
+
+Reproduce the diagnostic profile with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.cuda_selfplay_512_cli \
+  --output-dir /path/to/scratch/selfplay-profile-out \
+  --report /path/to/scratch/inference-profile-report.json \
+  --implementation-label "v0.0.6-profile-w8-b8-f2ms-source-observer" \
+  --worker-concurrency 8 \
+  --inference-batch-size 8 \
+  --queue-flush-max-wait-seconds 0.002 \
+  --detailed-inference-profile
+```

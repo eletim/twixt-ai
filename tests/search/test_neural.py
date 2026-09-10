@@ -51,6 +51,43 @@ class BlockingNetwork(PolicyValueNetwork):
                 self.active -= 1
 
 
+class RecordingBatcherObserver:
+    def __init__(self) -> None:
+        self.queue_samples: list[tuple[float, float]] = []
+        self.dispatch_samples: list[tuple[str, float, float, float, float]] = []
+        self.completion_samples: list[tuple[float, float]] = []
+
+    def queue_submission(
+        self, lock_wait_seconds: float, critical_section_seconds: float
+    ) -> None:
+        self.queue_samples.append((lock_wait_seconds, critical_section_seconds))
+
+    def batch_dispatch(
+        self,
+        flush_reason: str,
+        formation_seconds: float,
+        lock_wait_seconds: float,
+        critical_section_seconds: float,
+        condition_wait_deadline_overshoot_seconds: float,
+    ) -> None:
+        self.dispatch_samples.append(
+            (
+                flush_reason,
+                formation_seconds,
+                lock_wait_seconds,
+                critical_section_seconds,
+                condition_wait_deadline_overshoot_seconds,
+            )
+        )
+
+    def batch_completion(
+        self, lock_wait_seconds: float, critical_section_seconds: float
+    ) -> None:
+        self.completion_samples.append(
+            (lock_wait_seconds, critical_section_seconds)
+        )
+
+
 def _assert_next_request_waits_for_batch(
     batcher: NeuralInferenceBatcher,
     state: GameState,
@@ -188,6 +225,42 @@ def test_batched_inference_matches_synchronous_semantics() -> None:
     for synchronous, batched in zip(expected, actual):
         assert batched.value == pytest.approx(synchronous.value, abs=1e-6)
         assert batched.priors == pytest.approx(synchronous.priors, abs=1e-7)
+
+
+def test_batcher_observer_separates_formation_and_condition_timings() -> None:
+    model = PolicyValueNetwork(
+        PolicyValueConfig(
+            channels=4,
+            residual_blocks=1,
+            value_hidden=8,
+            board_width=10,
+            board_height=10,
+        )
+    )
+    state = GameState.initial(BoardDimensions(10, 10))
+    moves = legal_peg_placements(state)
+    observer = RecordingBatcherObserver()
+
+    with NeuralInferenceBatcher(
+        NeuralPolicyValue(model),
+        batch_size=2,
+        max_wait_seconds=1.0,
+        observer=observer,
+    ) as batcher:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(batcher, (state, state), (moves, moves)))
+
+    assert len(results) == 2
+    assert len(observer.queue_samples) == 2
+    assert len(observer.dispatch_samples) == 1
+    assert observer.dispatch_samples[0][0] == "full_batch"
+    assert len(observer.completion_samples) == 1
+    for sample in (
+        *observer.queue_samples,
+        observer.dispatch_samples[0][1:],
+        *observer.completion_samples,
+    ):
+        assert all(duration >= 0 for duration in sample)
 
 
 def test_batch_size_one_is_a_synchronous_debugging_path() -> None:

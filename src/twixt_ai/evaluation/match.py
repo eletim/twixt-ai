@@ -194,6 +194,99 @@ class MatchResult:
         separators = None if indent is not None else (",", ":")
         return json.dumps(self.to_dict(), sort_keys=True, separators=separators, indent=indent)
 
+    @classmethod
+    def from_dict(cls, value: Mapping[str, object]) -> MatchResult:
+        """Validate, replay, and deserialize a persisted match artifact."""
+
+        if not isinstance(value, Mapping):
+            raise TypeError("match artifact must be an object")
+        if value.get("format") != MATCH_FORMAT:
+            raise ValueError(f"unsupported match format: {value.get('format')!r}")
+        if value.get("version") != MATCH_FORMAT_VERSION:
+            raise ValueError(f"unsupported match version: {value.get('version')!r}")
+        config_value = value.get("config")
+        if not isinstance(config_value, Mapping):
+            raise ValueError("match config must be an object")
+        if set(config_value) != {"board", "seed", "agents"}:
+            raise ValueError("match config must contain exactly agents, board, and seed")
+        board_value = config_value["board"]
+        agents_value = config_value["agents"]
+        if not isinstance(board_value, Mapping) or set(board_value) != {
+            "width",
+            "height",
+        }:
+            raise ValueError("match config board must contain exactly height and width")
+        if not isinstance(agents_value, Mapping) or set(agents_value) != {
+            "red",
+            "black",
+        }:
+            raise ValueError("match config agents must contain exactly black and red")
+        try:
+            config = MatchConfig(
+                board=BoardDimensions(
+                    width=board_value["width"],  # type: ignore[arg-type]
+                    height=board_value["height"],  # type: ignore[arg-type]
+                ),
+                seed=config_value["seed"],  # type: ignore[arg-type]
+                red_agent=agents_value["red"],  # type: ignore[arg-type]
+                black_agent=agents_value["black"],  # type: ignore[arg-type]
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"invalid match config: {exc}") from exc
+
+        record_value = value.get("record")
+        if not isinstance(record_value, Mapping):
+            raise ValueError("match record must be an object")
+        record = GameRecord.from_dict(record_value)
+        decisions_value = value.get("decisions")
+        if not isinstance(decisions_value, list) or any(
+            not isinstance(item, Mapping) for item in decisions_value
+        ):
+            raise ValueError("match decisions must be an array of objects")
+        if len(decisions_value) != len(record.moves):
+            raise ValueError("match decisions do not align with moves")
+
+        seed_source = Random(config.seed) if config.seed is not None else None
+        decisions: list[MatchDecision] = []
+        for index, (decision_value, move) in enumerate(
+            zip(decisions_value, record.moves)
+        ):
+            if (
+                decision_value.get("player") != move.player.value
+                or decision_value.get("coordinate") != move.coordinate.to_dict()
+            ):
+                raise ValueError(f"match decision {index} does not match record")
+            metadata = decision_value.get("metadata")
+            if not isinstance(metadata, Mapping):
+                raise ValueError(f"match decision {index} metadata must be an object")
+            if "seed" not in decision_value:
+                raise ValueError(
+                    f"match decision {index} seed must be an integer or null"
+                )
+            decision_seed = decision_value["seed"]
+            try:
+                _require_seed(decision_seed)  # type: ignore[arg-type]
+            except TypeError as exc:
+                raise ValueError(
+                    f"match decision {index} seed must be an integer or null"
+                ) from exc
+            expected_seed = (
+                seed_source.randrange(2**64) if seed_source is not None else None
+            )
+            if decision_seed != expected_seed:
+                raise ValueError(
+                    f"match decision {index} seed does not match the configured "
+                    "seed sequence"
+                )
+            decisions.append(
+                MatchDecision(move, decision_seed, metadata)  # type: ignore[arg-type]
+            )
+
+        result = cls(config, record, tuple(decisions))
+        if value.get("result") != result.to_dict()["result"]:
+            raise ValueError("match result does not match record")
+        return result
+
 
 def run_match(
     red_agent: Agent,

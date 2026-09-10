@@ -8,9 +8,14 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-from .cuda_selfplay_512 import BenchmarkOptions, run_cuda_selfplay_512_benchmark
+from .cuda_selfplay_512 import (
+    BenchmarkOptions,
+    BenchmarkTuning,
+    CANONICAL_CONTRACT_PATH,
+    run_cuda_selfplay_512_benchmark,
+)
 
-_DEFAULT_CONTRACT = Path("benchmarks/mini-cuda-selfplay-512-contract.json")
+_DEFAULT_CONTRACT = CANONICAL_CONTRACT_PATH
 
 
 def _git_commit(repo_root: Path) -> str | None:
@@ -45,7 +50,12 @@ def _git_branch(repo_root: Path) -> str | None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--contract", type=Path, default=_DEFAULT_CONTRACT)
+    parser.add_argument(
+        "--contract",
+        type=Path,
+        default=_DEFAULT_CONTRACT,
+        help="canonical v0.0.6 contract or a JSON-identical copy",
+    )
     parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument(
@@ -62,11 +72,29 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--implementation-label",
-        default="pre-optimization",
+        default="v0.0.6-default",
         help="free-text label distinguishing baseline vs. optimized runs",
     )
     parser.add_argument("--gpu-sample-interval-seconds", type=float, default=0.1)
     parser.add_argument("--phase-sample-interval-seconds", type=float, default=0.005)
+    parser.add_argument(
+        "--worker-concurrency",
+        type=int,
+        default=None,
+        help="override the contract default for concurrent game threads",
+    )
+    parser.add_argument(
+        "--inference-batch-size",
+        type=int,
+        default=None,
+        help="override the contract default maximum shared inference batch",
+    )
+    parser.add_argument(
+        "--queue-flush-max-wait-seconds",
+        type=float,
+        default=None,
+        help="override the contract default inference queue/flush wait",
+    )
     return parser
 
 
@@ -84,6 +112,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 gpu_sample_interval_seconds=args.gpu_sample_interval_seconds,
                 phase_sample_interval_seconds=args.phase_sample_interval_seconds,
                 implementation_label=args.implementation_label,
+            ),
+            tuning=BenchmarkTuning(
+                worker_concurrency=args.worker_concurrency,
+                inference_batch_size=args.inference_batch_size,
+                queue_flush_max_wait_seconds=args.queue_flush_max_wait_seconds,
             ),
         )
     except (OSError, RuntimeError, TypeError, ValueError) as exc:

@@ -10,7 +10,7 @@
   },
   "source": {
     "base_git_commit": "1e211c4fc66a5511bae820a86ae0a047571f7878",
-    "implementation_git_commit": "0784b15b4e890b2116b45f06fb9c575b4fdf4714",
+    "implementation_git_commit": "0784b1564e4946075147ece7c6954ebaea9cd63a",
     "branch": "feature/work-item-optimize-batched-position-encoding",
     "candidate": "bulk version-1 batch encoder"
   },

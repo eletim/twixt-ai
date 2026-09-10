@@ -8,6 +8,7 @@ import pytest
 import torch
 from torch import nn
 
+import twixt_ai.search.neural as neural
 from twixt_ai.agents import AgentRequest
 from twixt_ai.game import (
     BoardDimensions,
@@ -313,6 +314,91 @@ def test_timed_batchers_bound_and_restore_the_thread_switch_interval() -> None:
         for batcher in (first, second, synchronous):
             if batcher is not None:
                 batcher.close()
+        sys.setswitchinterval(original_interval)
+
+
+def test_timed_batcher_preserves_an_external_switch_interval_change() -> None:
+    original_interval = sys.getswitchinterval()
+    batcher = None
+    try:
+        sys.setswitchinterval(0.005)
+        model = PolicyValueNetwork(
+            PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+        )
+        batcher = NeuralInferenceBatcher(
+            NeuralPolicyValue(model), batch_size=2, max_wait_seconds=0.002
+        )
+        assert sys.getswitchinterval() == pytest.approx(0.001)
+
+        sys.setswitchinterval(0.002)
+        batcher.close()
+
+        assert sys.getswitchinterval() == pytest.approx(0.002)
+    finally:
+        if batcher is not None:
+            batcher.close()
+        sys.setswitchinterval(original_interval)
+
+
+def test_thread_construction_failure_does_not_acquire_switch_interval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_interval = sys.getswitchinterval()
+    try:
+        sys.setswitchinterval(0.005)
+        model = PolicyValueNetwork(
+            PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+        )
+
+        def fail_thread_construction(**kwargs: object) -> None:
+            raise RuntimeError("thread construction failed")
+
+        monkeypatch.setattr(neural, "Thread", fail_thread_construction)
+        with pytest.raises(RuntimeError, match="thread construction failed"):
+            NeuralInferenceBatcher(
+                NeuralPolicyValue(model), batch_size=2, max_wait_seconds=0.002
+            )
+
+        assert sys.getswitchinterval() == pytest.approx(0.005)
+    finally:
+        sys.setswitchinterval(original_interval)
+
+
+def test_interrupted_close_retries_join_and_releases_switch_interval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_interval = sys.getswitchinterval()
+    batcher = None
+    try:
+        sys.setswitchinterval(0.005)
+        model = PolicyValueNetwork(
+            PolicyValueConfig(channels=4, residual_blocks=1, value_hidden=8)
+        )
+        batcher = NeuralInferenceBatcher(
+            NeuralPolicyValue(model), batch_size=2, max_wait_seconds=0.002
+        )
+        real_join = batcher._worker.join
+        attempts = 0
+
+        def interrupted_join() -> None:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise KeyboardInterrupt
+            real_join()
+
+        monkeypatch.setattr(batcher._worker, "join", interrupted_join)
+        with pytest.raises(KeyboardInterrupt):
+            batcher.close()
+        assert sys.getswitchinterval() == pytest.approx(0.001)
+
+        batcher.close()
+
+        assert attempts == 2
+        assert sys.getswitchinterval() == pytest.approx(0.005)
+    finally:
+        if batcher is not None:
+            batcher.close()
         sys.setswitchinterval(original_interval)
 
 

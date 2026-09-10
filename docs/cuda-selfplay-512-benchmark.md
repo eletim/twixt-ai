@@ -360,9 +360,10 @@ batcher is active. This gives the inference worker more frequent opportunities
 to run after a notification or deadline without changing the configured 2 ms
 formation wait, batch contents, or synchronous caller interface. The process
 setting is reference-counted across overlapping batchers, never lengthens an
-already shorter interval, and is restored when the final timed batcher closes.
-Batch-size-one and zero-wait paths leave it unchanged. This remains threaded;
-no multiprocessing path was introduced.
+already shorter interval, and restores the prior value when the final timed
+batcher closes if no other component changed it in the meantime. Batch-size-one
+and zero-wait paths leave it unchanged. This remains threaded; no
+multiprocessing path was introduced.
 
 Two unprofiled canonical runs per implementation measured mean end-to-end time
 of 82.438 s at CPython's 5 ms default and 81.640 s with the scoped 1 ms

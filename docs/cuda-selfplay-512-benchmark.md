@@ -351,3 +351,33 @@ per representative batch, 0.57% slower than the 1,309.4 us legacy median. The
 retained bulk encoder measured 200.4 us (6.53x faster) in the same nine-sample
 microbenchmark. Full machine-readable evidence is in
 [`benchmarks/mini-batched-position-encoding.json`](../benchmarks/mini-batched-position-encoding.json).
+
+## Inference-batcher scheduling latency
+
+The remaining condition-wait tail is reduced by bounding CPython's thread
+switch interval at 1 ms while at least one timeout-based dynamic inference
+batcher is active. This gives the inference worker more frequent opportunities
+to run after a notification or deadline without changing the configured 2 ms
+formation wait, batch contents, or synchronous caller interface. The process
+setting is reference-counted across overlapping batchers, never lengthens an
+already shorter interval, and is restored when the final timed batcher closes.
+Batch-size-one and zero-wait paths leave it unchanged. This remains threaded;
+no multiprocessing path was introduced.
+
+Two unprofiled canonical runs per implementation measured mean end-to-end time
+of 82.438 s at CPython's 5 ms default and 81.640 s with the scoped 1 ms
+interval, a reproducible 0.97% reduction. Both optimized runs beat both
+baseline runs. Mean aggregate queue wait fell 9.63%. A controlled detailed
+observer pair measured aggregate deadline overshoot falling from 8.371 s to
+6.465 s (22.77%) and p99 overshoot from 7.386 ms to 2.147 ms (70.93%). All
+nine canonical runs used for baseline, retained, detailed, and rejected trials
+completed and validated 512 games and 30,929 decisions with the unchanged
+output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+
+Producer-assisted full-batch dispatch with first-request deadline accounting
+was rejected after regressing the adjacent baseline by 0.91%. A 0.5 ms interval
+improved wall time but was weaker than 1 ms and produced more latency flushes;
+a 2 ms interval was effectively tied with its adjacent baseline.
+Machine-readable results and negative-trial reasons are in
+[`benchmarks/mini-inference-batcher-scheduling.json`](../benchmarks/mini-inference-batcher-scheduling.json).

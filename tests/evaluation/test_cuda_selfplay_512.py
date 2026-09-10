@@ -7,8 +7,10 @@ from functools import partial
 from pathlib import Path
 
 import pytest
+import torch
 
 from twixt_ai.evaluation.cuda_selfplay_512 import (
+    BenchmarkOptions,
     CONTRACT_FORMAT,
     CONTRACT_VERSION,
     BenchmarkTuning,
@@ -16,13 +18,18 @@ from twixt_ai.evaluation.cuda_selfplay_512 import (
     _validate_outputs,
     run_cuda_selfplay_512_benchmark,
 )
-from twixt_ai.game import experiment_board
+from twixt_ai.evaluation.cuda_inference_profile import (
+    CudaInferencePhaseProfile,
+    ProfiledCudaNeuralPolicyValue,
+)
+from twixt_ai.game import GameState, experiment_board, legal_peg_placements
 from twixt_ai.models import (
     MINI_POLICY_VALUE_CONFIG,
     PolicyValueNetwork,
     save_policy_value_checkpoint,
 )
 from twixt_ai.search import MCTSAgent
+from twixt_ai.search.neural import NeuralPolicyValue
 from twixt_ai.selfplay.batch import BatchConfig, run_batch
 
 
@@ -154,6 +161,51 @@ def test_v006_contract_rejects_an_extra_optimization_variable() -> None:
 
     with pytest.raises(ValueError, match="exactly"):
         _resolved_config(contract, BenchmarkTuning())
+
+
+def test_detailed_profile_is_an_explicit_non_workload_option() -> None:
+    options = BenchmarkOptions(detailed_inference_profile=True)
+
+    assert options.detailed_inference_profile is True
+
+
+def test_detailed_profile_ranks_host_phases_and_keeps_cuda_separate() -> None:
+    profile = CudaInferencePhaseProfile()
+    profile.batches = 2
+    profile.positions = 16
+    profile.total_evaluate_batch_seconds = 1.0
+    profile.host_seconds["cpu_encoding_and_stack"] = 0.6
+    profile.host_seconds["python_result_extraction"] = 0.2
+    profile.cuda_seconds["model_execution"] = 0.05
+
+    result = profile.to_dict()
+
+    assert result["ranked_host_phases"][0] == {
+        "rank": 1,
+        "phase": "cpu_encoding_and_stack",
+        "seconds": 0.6,
+        "percent_of_evaluate_batch": 60.0,
+    }
+    assert result["host_milliseconds_per_batch"]["cpu_encoding_and_stack"] == 300
+    assert result["cuda_milliseconds_per_batch"]["model_execution"] == 25
+    assert result["interpretation"]["host_and_cuda_times_are_not_additive"]
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is unavailable")
+def test_detailed_profile_preserves_policy_value_results() -> None:
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG).cuda()
+    state = GameState(board=experiment_board("mini"))
+    moves = legal_peg_placements(state)
+    requests = ((state, moves),) * 8
+
+    expected = NeuralPolicyValue(model).evaluate_batch(requests)
+    profile = CudaInferencePhaseProfile()
+    actual = ProfiledCudaNeuralPolicyValue(model, profile).evaluate_batch(requests)
+
+    assert actual == expected
+    assert profile.batches == 1
+    assert profile.positions == 8
+    assert profile.cuda_seconds["model_execution"] > 0
 
 
 @pytest.mark.parametrize("fixed_field", ["games", "checkpoint", "seeds", "mcts"])

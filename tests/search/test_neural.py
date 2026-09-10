@@ -20,10 +20,13 @@ from twixt_ai.game import (
     legal_peg_placements,
 )
 from twixt_ai.models import (
+    ENCODING_VERSION,
     MINI_ENCODING_VERSION,
     MINI_NUM_CHANNELS,
     PolicyValueConfig,
     PolicyValueNetwork,
+    legal_move_mask_for_version,
+    move_to_action_index_for_version,
 )
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
@@ -87,6 +90,53 @@ class RecordingBatcherObserver:
     ) -> None:
         self.completion_samples.append(
             (lock_wait_seconds, critical_section_seconds)
+        )
+
+
+@pytest.mark.parametrize(
+    "encoding_version", (ENCODING_VERSION, MINI_ENCODING_VERSION)
+)
+@pytest.mark.parametrize("dimensions", ((5, 5), (10, 10), (24, 24)))
+def test_batched_action_preparation_matches_versioned_reference(
+    encoding_version: int, dimensions: tuple[int, int]
+) -> None:
+    width, height = dimensions
+    states = tuple(
+        GameState(board=BoardDimensions(width, height), side_to_move=player)
+        for player in Player
+    )
+    move_batches = tuple(legal_peg_placements(state) for state in states)
+
+    actual_indices = neural._batched_action_indices(
+        move_batches,
+        encoding_version,
+        board_width=width,
+        board_height=height,
+    )
+    expected_indices = [
+        [
+            move_to_action_index_for_version(
+                move,
+                encoding_version,
+                board_width=width,
+                board_height=height,
+            )
+            for move in moves
+        ]
+        for moves in move_batches
+    ]
+    actual_masks = neural._batched_legal_mask(actual_indices, width * height)
+
+    assert actual_indices == expected_indices
+    for actual_mask, moves in zip(actual_masks, move_batches):
+        assert torch.equal(
+            actual_mask,
+            legal_move_mask_for_version(
+                moves,
+                encoding_version,
+                board_width=width,
+                board_height=height,
+            ),
         )
 
 

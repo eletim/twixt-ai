@@ -387,14 +387,19 @@ Machine-readable results and negative-trial reasons are in
 
 The unchanged post-encoding, post-scheduling implementation was profiled on
 the exact contract with the retained eight workers, inference batch eight,
-and 2 ms flush wait. An external 100 Hz `py-spy --gil --threads` run captured
-only the Python thread holding the GIL. MCTS attribution additionally requires
-a game-worker stack containing `MCTSAgent.choose_move`, so post-timing replay
-validation is excluded. The profiled run completed and validated all 512 games
-and 30,929 decisions with the canonical output SHA-256
+and 2 ms flush wait. An external 100 Hz `py-spy --gil --threads` run ranks
+executable Python paths. A complementary nonblocking 50 Hz
+`py-spy --threads --idle` run accounts for all worker residence, inference
+futures, and the inference thread while it is inside native work. MCTS
+attribution requires a game-worker stack containing `MCTSAgent.choose_move`,
+so post-timing main-thread replay validation is excluded. Both runs completed
+and validated all 512 games and 30,929 decisions with the canonical output
+SHA-256
 `f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
-Its 84.851 s wall time is 3.93% above the retained 81.640 s two-run unprofiled
-mean and is diagnostic, not a replacement throughput claim.
+The GIL-ranking run's 84.851 s wall time is 3.93% above the retained 81.640 s
+two-run unprofiled mean. The all-thread run measured 81.880 s, only 0.29%
+above that mean, with effective batch size 7.815. Profiled wall times remain
+diagnostic, not replacement throughput claims.
 
 The 2,733 GIL-held samples inside `choose_move` rank as follows. Categories
 are exclusive: nested win and legal-move functions take precedence,
@@ -433,19 +438,35 @@ win checks rebuild owned-coordinate and adjacency collections at
 `game/win.py:100-128`. Selection and backup together are only 0.37%, so
 neither is a credible next target under this workload.
 
-All eight game workers contributed between 10.98% and 14.01% of MCTS GIL
-samples, confirming balanced participation. They nevertheless take turns:
-CPython allows only one worker to execute these Python game-tree paths at a
-time. Threads overlap native inference and waits but do not parallelize MCTS
-bytecode. This profile does not estimate each worker's GIL-wait duration.
+All eight game workers contributed between 10.98% and 14.01% of GIL-held MCTS
+samples, confirming balanced participation but not measuring contention. The
+all-thread run instead found 601.84 aggregate worker thread-seconds explicitly
+blocked in `Future.result()` for inference: 91.19% of worker residence and an
+average 7.35 of eight workers across end-to-end wall time. After excluding
+those waits, only 25.16 aggregate thread-seconds were resident in MCTS, or
+0.31 worker on average. The inference worker was inside `evaluate_batch` for
+34.96 sampled seconds (42.70% of wall); its direct runner timer measured
+37.845 s (46.22%).
 
-The end-to-end phase sampler was almost evenly split between inference
-(48.26%) and CPU/MCTS (47.90%), with serialization at 3.80%; average GPU
-utilization was only 2.43%. The remaining bottleneck is therefore an
-overlapped inference/serialized-CPU plateau rather than saturated device
-compute. The ranked next CPU target is expansion/initialization: it is 42.04%
-of GIL-held MCTS samples, and expansion plus its transition and state-copy
-work totals 66.70%. No production optimization was made in this work item.
+The GIL-only profile represents 27.33 sampled execution-seconds, close to the
+25.16 all-thread MCTS-resident seconds only within separate-run and sampling
+variation; their difference is not a wait estimate. The latter provides a
+conservative bound: even if every non-inference-wait MCTS sample were waiting
+on a GIL held by another worker, the inference thread, or the main thread,
+GIL wait and its possible end-to-end impact cannot exceed 25.16 seconds
+(30.73% of wall). This deliberately loose ceiling includes actual MCTS
+execution, and the profile does not resolve a positive GIL-wait cost.
+
+The runner's priority sampler reported a near-even inference/CPU-MCTS split,
+but it classifies a worker blocked inside `NeuralInferenceBatcher.__call__` as
+CPU/MCTS whenever the inference thread is not in `evaluate_batch`; it cannot
+support a CPU co-dominance claim. The complementary evidence instead identifies
+the shared synchronous inference path as the largest measured end-to-end
+limiter. The next end-to-end change should target inference service/wait rather
+than GIL scheduling, selection, or backup. If CPU MCTS is revisited after
+inference, expansion/initialization remains its source-ranked target at 42.04%
+of executable MCTS samples; expansion plus transition and state-copy work is
+66.70%. No production optimization was made in this work item.
 Full source anchors, methodology, worker distribution, validation evidence,
 and limitations are recorded in
 [`benchmarks/mini-cpu-mcts-hot-paths.json`](../benchmarks/mini-cpu-mcts-hot-paths.json).

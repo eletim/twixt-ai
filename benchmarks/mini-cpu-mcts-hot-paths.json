@@ -24,16 +24,18 @@
     "encoding_version": 1
   },
   "method": {
-    "command": "PYTHONHASHSEED=0 PYTHONPATH=src py-spy record --format raw --rate 100 --gil --threads --full-filenames -- python3 -m twixt_ai.evaluation.cuda_selfplay_512_cli --output-dir /path/to/scratch/selfplay-out --report /path/to/scratch/report.json --implementation-label post-scheduling-gil-profile --worker-concurrency 8 --inference-batch-size 8 --queue-flush-max-wait-seconds 0.002",
-    "sampling": "External 100 Hz stack sampling restricted to the Python thread holding the GIL. MCTS samples contain a ThreadPoolExecutor worker and MCTSAgent.choose_move, which excludes main-thread post-run replay validation.",
+    "gil_ranking_command": "PYTHONHASHSEED=0 PYTHONPATH=src py-spy record --format raw --rate 100 --gil --threads --full-filenames -- python3 -m twixt_ai.evaluation.cuda_selfplay_512_cli --output-dir /path/to/scratch/selfplay-out --report /path/to/scratch/report.json --implementation-label post-scheduling-gil-profile --worker-concurrency 8 --inference-batch-size 8 --queue-flush-max-wait-seconds 0.002",
+    "all_thread_wall_command": "PYTHONHASHSEED=0 PYTHONPATH=src py-spy record --format raw --rate 50 --threads --idle --nonblocking --full-filenames -- python3 -m twixt_ai.evaluation.cuda_selfplay_512_cli --output-dir /path/to/scratch/selfplay-wall-out --report /path/to/scratch/wall-report.json --implementation-label post-scheduling-all-thread-wall-profile-nonblocking --worker-concurrency 8 --inference-batch-size 8 --queue-flush-max-wait-seconds 0.002",
+    "sampling": "The 100 Hz --gil profile ranks executable Python paths. The complementary nonblocking 50 Hz all-thread profile includes idle/waiting workers and retains the Python evaluate_batch boundary while its thread is in native inference. Both filter MCTS evidence to ThreadPoolExecutor workers; post-timing validation occurs on MainThread and is excluded.",
     "classification": "Exclusive deepest-stack/source-line classification. Nested win and legal-move functions take precedence; automatic-link rules are state transitions; direct tuple sorting and GameState._from_canonical are allocation/copy; choose_move lines 371-373 are backup and lines 375-461 are metadata construction.",
     "limitations": [
       "Sampling percentages are relative evidence, not exact function timers.",
-      "The --gil view ranks executable Python work and intentionally omits native CUDA time and time workers spend waiting for inference or the GIL.",
-      "The profiled wall time is diagnostic; retained unprofiled runs remain the throughput source of truth."
+      "The --gil view ranks executable Python work and intentionally omits native CUDA time and time workers spend waiting for inference or the GIL; it is not used alone for an end-to-end conclusion.",
+      "The nonblocking all-thread view accounts thread residence and waits but cannot identify the GIL owner in each sample, so GIL contention is bounded rather than point-estimated.",
+      "Profiled wall times are diagnostic; retained unprofiled runs remain the throughput source of truth."
     ]
   },
-  "profiled_canonical_run": {
+  "gil_ranking_run": {
     "end_to_end_wall_seconds": 84.85132600809447,
     "difference_from_retained_unprofiled_mean_percent": 3.933370726209695,
     "games_per_hour": 21722.701184707075,
@@ -45,7 +47,7 @@
     "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
     "average_gpu_utilization_percent": 2.43491124260355,
     "effective_inference_batch_size_average": 7.804222256300158,
-    "phase_breakdown": [
+    "runner_priority_phase_breakdown": [
       {
         "rank": 1,
         "phase": "gpu_inference",
@@ -70,7 +72,48 @@
         "samples": 6,
         "percent": 0.04610419548178884
       }
-    ]
+    ],
+    "phase_breakdown_limitation": "This runner sampler inspects all threads, but its priority classifier labels a worker blocked in NeuralInferenceBatcher.__call__ as cpu_mcts whenever the inference thread is not in evaluate_batch. It is retained as raw corroboration and is not used to quantify CPU execution or GIL wait."
+  },
+  "all_thread_wall_profile": {
+    "git_commit": "0e79a1777b887a1c410d3006efe8a6a43be8a68f",
+    "sampling_rate_hz": 50,
+    "mode": "threads, idle, nonblocking; native inference retained at the evaluate_batch Python boundary",
+    "raw_samples": 51290,
+    "sampling_errors": 5,
+    "end_to_end_wall_seconds": 81.88047142489813,
+    "difference_from_retained_unprofiled_mean_percent": 0.2944066074928253,
+    "effective_inference_batch_size_average": 7.814608179351999,
+    "completed_games": 512,
+    "failed_games": 0,
+    "validated_decisions": 30929,
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "inference_worker": {
+      "evaluate_batch_samples": 1748,
+      "evaluate_batch_sampled_wall_seconds": 34.96,
+      "evaluate_batch_sampled_percent_of_end_to_end_wall": 42.6963833886396,
+      "runner_evaluate_batch_timer_seconds": 37.84497570688836,
+      "runner_evaluate_batch_timer_percent_of_end_to_end_wall": 46.21978238315382,
+      "queue_or_formation_wait_samples": 2175,
+      "queue_or_formation_wait_seconds": 43.5,
+      "other_samples": 220
+    },
+    "game_worker_thread_residence": {
+      "total_samples": 33000,
+      "total_thread_seconds": 660.0,
+      "waiting_for_inference_future_samples": 30092,
+      "waiting_for_inference_future_thread_seconds": 601.84,
+      "waiting_for_inference_future_percent": 91.1878787878788,
+      "average_workers_waiting_for_inference": 7.350226366881825,
+      "mcts_resident_excluding_inference_wait_samples": 1258,
+      "mcts_resident_excluding_inference_wait_thread_seconds": 25.16,
+      "average_mcts_resident_workers": 0.3072771756459303,
+      "result_metadata_and_replay_thread_seconds": 8.36,
+      "match_transition_thread_seconds": 3.4,
+      "other_active_thread_seconds": 6.06,
+      "pool_idle_thread_seconds": 15.18
+    },
+    "why_representative": "Wall time is 0.29% above the retained unprofiled mean, effective batch size is 7.815, and output and validation are unchanged. A pause-based 100 Hz all-thread trial (93.327 s, batch 7.680) and a native-unwinding trial (118.241 s, batch 7.474) were rejected as scheduling-distorting diagnostics."
   },
   "retained_unprofiled_reference": {
     "source": "benchmarks/mini-inference-batcher-scheduling.json optimized canonical throughput",
@@ -177,7 +220,7 @@
       }
     ],
     "thread_and_gil": {
-      "interpretation": "All eight game workers contributed GIL-held MCTS samples, but CPython permits only one of them to execute Python bytecode at a time. Threads overlap inference/native work and waits; they do not parallelize these ranked MCTS/game-tree paths.",
+      "interpretation": "All eight game workers contributed GIL-held MCTS samples, but sample balance establishes participation rather than contention cost. The complementary all-thread run finds only 25.16 aggregate thread-seconds resident in MCTS after excluding inference-future waits, versus 601.84 thread-seconds explicitly waiting for inference.",
       "samples_by_worker": [
         357,
         349,
@@ -190,12 +233,18 @@
       ],
       "minimum_worker_share_percent": 10.976948408342481,
       "maximum_worker_share_percent": 14.013904134650568,
-      "measurement_boundary": "This establishes balanced participation and serialized GIL ownership; it does not estimate per-worker GIL wait duration."
+      "gil_ranking_equivalent_execution_seconds": 27.33,
+      "all_thread_mcts_resident_seconds": 25.16,
+      "gil_wait_worker_seconds_upper_bound": 25.16,
+      "gil_wait_end_to_end_seconds_upper_bound": 25.16,
+      "gil_wait_end_to_end_percent_upper_bound": 30.727717564593032,
+      "bound_derivation": "After explicit inference waits are excluded, only 25.16 aggregate worker thread-seconds remain resident anywhere in MCTS. Even if every such sample were waiting on a GIL held by another worker, the inference thread, or the main thread, GIL wait and its possible end-to-end impact cannot exceed 25.16 seconds. This is deliberately conservative and includes actual MCTS execution; actual GIL wait may be zero.",
+      "measurement_boundary": "The 27.33 GIL-ranking sample-seconds and 25.16 all-thread resident-seconds come from separate equivalent runs and agree only to sampling/run variation; their difference is not a wait estimate. The evidence does not resolve a positive GIL-wait cost."
     }
   },
   "conclusion": {
-    "remaining_end_to_end_bottleneck": "The workload is on an overlapped inference/serialized-CPU plateau: inference and CPU/MCTS account for 48.26% and 47.90% of sampled wall state, while 2.43% average GPU utilization rules out saturated device compute. CPU MCTS/game-tree work is therefore a co-dominant end-to-end limiter, not background noise.",
-    "ranked_next_target": "Target expansion/initialization first. It is 42.04% of GIL-held MCTS samples; together with transition and state-copy work reached from expansion it accounts for 66.70%. Preserve selection and backup, which together are only 0.37%.",
+    "remaining_end_to_end_bottleneck": "The shared synchronous inference path is the largest measured limiter: an average 7.35 of eight game workers wait on inference futures, and evaluate_batch occupies 34.96 sampled seconds (42.70% of wall; 37.845 seconds or 46.22% by its runner timer). Non-waiting MCTS residence is 25.16 aggregate thread-seconds (0.31 worker on average). The earlier near-even runner phase split cannot establish CPU co-dominance because its priority classifier includes inference-future waits under cpu_mcts.",
+    "ranked_next_target": "For the next end-to-end change, target shared inference service/synchronous wait rather than GIL scheduling, selection, or backup. If CPU MCTS work is revisited after inference, expansion/initialization remains its first source-ranked target at 42.04% of executable MCTS samples; expansion plus transition and state-copy work is 66.70%.",
     "production_optimization_performed": false
   }
 }

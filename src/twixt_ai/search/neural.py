@@ -28,7 +28,11 @@ class NeuralPolicyValue:
     """Callable inference hook for :class:`~twixt_ai.search.MCTSAgent`.
 
     Inference is performed without gradients and with the model in evaluation
-    mode. The model's device determines where inputs and masks are allocated.
+    mode. Encoding and masking build each position's tensors on the CPU and
+    transfer the whole stacked batch to the model's device in one call each
+    way; building those tensors directly on a CUDA device would instead issue
+    one small kernel launch per peg, link, and legal move, which dominates
+    wall time far more than it uses the GPU (see Issue #98).
     """
 
     def __init__(self, model: PolicyValueNetwork) -> None:
@@ -77,14 +81,20 @@ class NeuralPolicyValue:
             raise ValueError(
                 "state board dimensions do not match the policy/value model"
             )
+        # Build every position's encoding and legal-move mask on the CPU, then
+        # move each stacked batch tensor to the model's device in one
+        # transfer. Populating a CUDA tensor one element at a time (the
+        # previous behavior of passing ``device=device`` here) issues one
+        # kernel launch per peg, link, and legal move instead of two batched
+        # host-to-device copies, and dominated wall time in the fixed
+        # Issue #98 self-play benchmark despite using little actual GPU
+        # compute.
         inputs = torch.stack(
             [
-                encode_position_for_version(
-                    state, config.encoding_version, device=device
-                )
+                encode_position_for_version(state, config.encoding_version)
                 for state in states
             ]
-        )
+        ).to(device)
         masks = torch.stack(
             [
                 legal_move_mask_for_version(
@@ -92,11 +102,10 @@ class NeuralPolicyValue:
                     config.encoding_version,
                     board_width=config.board_width,
                     board_height=config.board_height,
-                    device=device,
                 )
                 for moves in move_batches
             ]
-        )
+        ).to(device)
         training_modes = tuple(
             (module, module.training) for module in self.model.modules()
         )
@@ -112,23 +121,26 @@ class NeuralPolicyValue:
             # layers. Restore each module's exact pre-inference mode instead.
             for module, was_training in training_modes:
                 module.training = was_training
+        # Convert each result tensor to plain Python values in one transfer
+        # instead of calling ``.item()`` per legal move per position: each
+        # ``.item()`` on a CUDA tensor is its own host/device
+        # synchronization, and a position can have dozens of legal moves.
+        probabilities_list = probabilities.tolist()
+        values_list = values.tolist()
         return tuple(
             PolicyValueEstimate(
                 {
-                    move: float(
-                        probabilities[
-                            index,
-                            move_to_action_index_for_version(
-                                move,
-                                config.encoding_version,
-                                board_width=config.board_width,
-                                board_height=config.board_height,
-                            ),
-                        ].item()
-                    )
+                    move: probabilities_list[index][
+                        move_to_action_index_for_version(
+                            move,
+                            config.encoding_version,
+                            board_width=config.board_width,
+                            board_height=config.board_height,
+                        )
+                    ]
                     for move in moves
                 },
-                float(values[index].item()),
+                values_list[index],
             )
             for index, moves in enumerate(move_batches)
         )

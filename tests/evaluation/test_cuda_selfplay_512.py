@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -10,21 +11,38 @@ import torch
 
 from twixt_ai.evaluation.cuda_selfplay_512 import (
     CONTRACT_FORMAT,
+    CONTRACT_VERSION,
     BenchmarkOptions,
+    BenchmarkTuning,
+    _resolved_config,
+    _validate_outputs,
     run_cuda_selfplay_512_benchmark,
 )
+from twixt_ai.game import experiment_board
 from twixt_ai.models import (
     MINI_POLICY_VALUE_CONFIG,
     PolicyValueNetwork,
     save_policy_value_checkpoint,
 )
+from twixt_ai.search import MCTSAgent
+from twixt_ai.selfplay.batch import BatchConfig, run_batch
 
 
 def _tiny_contract(games: int = 2) -> dict[str, object]:
     return {
         "format": CONTRACT_FORMAT,
-        "version": 1,
-        "board": {"preset": "mini", "width": 10, "height": 10},
+        "version": CONTRACT_VERSION,
+        "board": {
+            "preset": "mini",
+            "width": 10,
+            "height": 10,
+            "rules": {
+                "version": "v0.0.1",
+                "move": "peg-placement-only",
+                "links": "automatic",
+                "pie_or_swap": False,
+            },
+        },
         "checkpoint": {
             "path": "model.pt",
             "sha256": "placeholder",
@@ -38,13 +56,23 @@ def _tiny_contract(games: int = 2) -> dict[str, object]:
                 "black": "checkpoint-mcts",
                 "guidance": "policy-value",
             },
-            "mcts": {"simulations": 2, "rollout_limit": 2},
+            "mcts": {
+                "simulations": 2,
+                "exploration": 1.4142135623730951,
+                "rollout_limit": 2,
+                "rollout_evaluator": "heuristic_rollout_value",
+                "progressive_widening": {"constant": 1.5, "exponent": 0.5},
+            },
             "seeds": {"python_hash_seed": 0, "batch_seed": 123456},
-            "workers": {"count": 1, "mode": "thread"},
-            "shared_inference": {
-                "model_instances": 1,
-                "batch_size": 2,
-                "max_wait_seconds": 0.0005,
+            "workers": {"mode": "thread"},
+            "shared_inference": {"model_instances": 1},
+        },
+        "optimization_variables": {
+            "worker_concurrency": {"default": 1, "minimum": 1},
+            "inference_batch_size": {"default": 2, "minimum": 1},
+            "queue_flush_max_wait_seconds": {
+                "default": 0.0005,
+                "minimum": 0.0,
             },
         },
         "output": {"timing_scope": "test scope"},
@@ -101,6 +129,91 @@ def test_rejects_wrong_pythonhashseed(
         )
 
 
+def test_v006_contract_exposes_only_semantics_neutral_tuning() -> None:
+    contract = _tiny_contract()
+    config, values = _resolved_config(
+        contract,
+        BenchmarkTuning(
+            worker_concurrency=7,
+            inference_batch_size=16,
+            queue_flush_max_wait_seconds=0.002,
+        ),
+    )
+
+    assert values == {
+        "worker_concurrency": 7,
+        "inference_batch_size": 16,
+        "queue_flush_max_wait_seconds": 0.002,
+    }
+    assert config["workers"] == {"mode": "thread", "count": 7}
+    assert config["shared_inference"] == {
+        "model_instances": 1,
+        "batch_size": 16,
+        "max_wait_seconds": 0.002,
+    }
+    assert config["games"] == 2
+    assert config["mcts"] == contract["config"]["mcts"]
+    assert config["seeds"] == contract["config"]["seeds"]
+
+
+def test_v006_contract_rejects_an_extra_optimization_variable() -> None:
+    contract = _tiny_contract()
+    contract["optimization_variables"]["simulations"] = {"default": 1}
+
+    with pytest.raises(ValueError, match="exactly"):
+        _resolved_config(contract, BenchmarkTuning())
+
+
+def test_canonical_v006_contract_fixes_semantics() -> None:
+    path = Path("benchmarks/mini-cuda-selfplay-512-v006-contract.json")
+    contract = json.loads(path.read_text(encoding="utf-8"))
+
+    assert contract["version"] == CONTRACT_VERSION
+    assert contract["release"] == "v0.0.6"
+    assert contract["config"]["games"] == 512
+    assert contract["config"]["device"] == "cuda"
+    assert contract["config"]["mcts"]["simulations"] == 4
+    assert set(contract["optimization_variables"]) == {
+        "worker_concurrency",
+        "inference_batch_size",
+        "queue_flush_max_wait_seconds",
+    }
+    assert contract["invariants"]["allowed_optimization_variables"] == [
+        "worker_concurrency",
+        "inference_batch_size",
+        "queue_flush_max_wait_seconds",
+    ]
+
+
+def test_output_validation_checks_complete_reproducible_match_artifacts(
+    tmp_path: Path,
+) -> None:
+    contract = _tiny_contract(games=1)
+    config, _ = _resolved_config(contract, BenchmarkTuning())
+    batch_config = BatchConfig(
+        games=1,
+        workers=1,
+        seed=config["seeds"]["batch_seed"],
+        board=experiment_board("mini"),
+        red_agent=config["agents"]["red"],
+        black_agent=config["agents"]["black"],
+        worker_mode="thread",
+    )
+    factory = partial(MCTSAgent, simulations=2, rollout_limit=2)
+    run_batch(factory, factory, config=batch_config, output_dir=tmp_path)
+    summary = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
+
+    validation = _validate_outputs(
+        tmp_path, summary, config, batch_config.to_dict()
+    )
+
+    assert validation["all_required_artifacts_valid"] is True
+    assert validation["all_match_records_replay_valid"] is True
+    assert validation["all_decision_seeds_match_contract_derivation"] is True
+    assert validation["all_search_parameters_match_contract"] is True
+    assert validation["all_value_targets_valid"] is True
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is unavailable")
 def test_end_to_end_tiny_workload_validates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -117,6 +230,7 @@ def test_end_to_end_tiny_workload_validates(
             phase_sample_interval_seconds=0.005,
             implementation_label="test",
         ),
+        tuning=BenchmarkTuning(worker_concurrency=1),
     )
     assert report["workload"]["games"] == 2
     assert report["workload"]["completed"] == 2
@@ -125,6 +239,12 @@ def test_end_to_end_tiny_workload_validates(
     assert report["validation"]["policy_root_visit_sum_expected"] == 2
     assert report["timing"]["end_to_end_wall_seconds"] > 0
     assert report["rates"]["games_per_hour"] > 0
+    assert report["configuration"]["optimization_variables"] == {
+        "worker_concurrency": 1,
+        "inference_batch_size": 2,
+        "queue_flush_max_wait_seconds": 0.0005,
+    }
+    assert report["validation"]["all_value_targets_valid"] is True
     assert (output_dir / "summary.json").exists()
     assert (output_dir / "games" / "game-000000.json").exists()
     assert (output_dir / "games" / "game-000001.json").exists()

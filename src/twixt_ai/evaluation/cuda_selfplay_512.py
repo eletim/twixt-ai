@@ -34,16 +34,30 @@ import torch
 
 from twixt_ai.device import select_device
 from twixt_ai.evaluation.cuda_tuning import _GpuSampler
-from twixt_ai.game import experiment_board
+from twixt_ai.game import (
+    Coordinate,
+    GameRecord,
+    PegPlacement,
+    apply_move,
+    experiment_board,
+    legal_peg_placements,
+)
 from twixt_ai.models import load_policy_value_checkpoint
 from twixt_ai.search import MCTSAgent
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
 
 from twixt_ai.selfplay.batch import BatchConfig, run_batch
 
-RESULT_FORMAT = "twixt-ai-mini-cuda-selfplay-baseline"
-RESULT_VERSION = 1
+RESULT_FORMAT = "twixt-ai-mini-cuda-selfplay-benchmark-result"
+RESULT_VERSION = 2
 CONTRACT_FORMAT = "twixt-ai-mini-cuda-selfplay-benchmark-contract"
+CONTRACT_VERSION = 2
+
+_OPTIMIZATION_VARIABLES = {
+    "worker_concurrency",
+    "inference_batch_size",
+    "queue_flush_max_wait_seconds",
+}
 
 _PHASE_PRIORITY = ("serialization_io", "gpu_inference", "cpu_mcts", "batching_queueing")
 
@@ -192,13 +206,20 @@ def _validate_outputs(
     root: Path,
     summary: dict[str, Any],
     contract_config: dict[str, Any],
+    expected_batch_config: dict[str, object],
 ) -> dict[str, object]:
     """Validate required artifacts and policy/value target semantics."""
 
     if summary.get("format") != "twixt-ai-selfplay-batch":
         raise ValueError("summary.json has an unexpected format")
+    if summary.get("version") != 1:
+        raise ValueError("summary.json has an unexpected version")
+    if summary.get("config") != expected_batch_config:
+        raise ValueError("summary.json configuration does not match the resolved contract")
     expected_games = contract_config["games"]
-    games = summary["games"]
+    games = summary.get("games")
+    if not isinstance(games, list) or any(not isinstance(game, dict) for game in games):
+        raise ValueError("summary.json games must be an array of objects")
     if (
         len(games) != expected_games
         or summary["aggregate"]["completed"] != expected_games
@@ -211,19 +232,111 @@ def _validate_outputs(
 
     expected_seeds = _seeds(contract_config["seeds"]["batch_seed"], expected_games)
     simulations = contract_config["mcts"]["simulations"]
+    rollout_limit = contract_config["mcts"]["rollout_limit"]
+    expected_paths = {
+        f"games/game-{index:06d}.json" for index in range(expected_games)
+    }
+    actual_paths = {
+        path.relative_to(root).as_posix() for path in (root / "games").glob("*.json")
+    }
+    if actual_paths != expected_paths:
+        raise ValueError("game artifacts do not exactly match the required path set")
+
     total_moves = 0
     validated_decisions = 0
     for index, game in enumerate(games):
+        if game.get("index") != index or game.get("status") != "completed":
+            raise ValueError(f"game {index} summary entry is not a completed index match")
         if game["seed"] != expected_seeds[index]:
             raise ValueError(f"game {index} seed does not match the contract derivation")
+        expected_artifact = f"games/game-{index:06d}.json"
+        if game.get("artifact") != expected_artifact:
+            raise ValueError(f"game {index} artifact path does not match the contract")
         artifact_path = root / game["artifact"]
         payload = _load_json(artifact_path)
-        decisions = payload["decisions"]
+        if payload.get("format") != "twixt-ai-match" or payload.get("version") != 1:
+            raise ValueError(f"game {index} artifact has an unexpected format/version")
+        expected_match_config = {
+            "board": expected_batch_config["board"],
+            "seed": expected_seeds[index],
+            "agents": expected_batch_config["agents"],
+        }
+        if payload.get("config") != expected_match_config:
+            raise ValueError(f"game {index} match configuration changed semantics")
+        record_value = payload.get("record")
+        if not isinstance(record_value, dict):
+            raise ValueError(f"game {index} record must be an object")
+        record = GameRecord.from_dict(record_value)
+        if not record.final_state.is_terminal:
+            raise ValueError(f"game {index} record is not terminal")
+        expected_result = {
+            "status": record.final_state.result.value,
+            "winner": (
+                record.final_state.winner.value
+                if record.final_state.winner is not None
+                else None
+            ),
+            "move_count": len(record.moves),
+        }
+        if payload.get("result") != expected_result:
+            raise ValueError(f"game {index} result does not match its replayed record")
+        if game.get("winner") != expected_result["winner"] or game.get(
+            "move_count"
+        ) != expected_result["move_count"]:
+            raise ValueError(f"game {index} summary does not match its artifact")
+        decisions = payload.get("decisions")
+        if not isinstance(decisions, list) or any(
+            not isinstance(decision, dict) for decision in decisions
+        ):
+            raise ValueError(f"game {index} decisions must be an array of objects")
         if len(decisions) != game["move_count"]:
             raise ValueError(f"game {index} artifact move count mismatch")
         total_moves += len(decisions)
-        for decision in decisions:
-            root_moves = decision["metadata"]["root_moves"]
+        state = record.initial_state
+        decision_seeds = Random(expected_seeds[index])
+        for ply, (decision, played_move) in enumerate(zip(decisions, record.moves)):
+            if decision.get("seed") != decision_seeds.randrange(2**64):
+                raise ValueError(f"game {index} decision {ply} seed changed semantics")
+            if decision.get("player") != played_move.player.value or decision.get(
+                "coordinate"
+            ) != played_move.coordinate.to_dict():
+                raise ValueError(f"game {index} decision {ply} does not match the record")
+            metadata = decision.get("metadata")
+            if not isinstance(metadata, dict):
+                raise ValueError(f"game {index} decision {ply} metadata is missing")
+            if metadata.get("simulations") != simulations:
+                raise ValueError(f"game {index} decision search budget changed")
+            if metadata.get("rollout_limit") != rollout_limit:
+                raise ValueError(f"game {index} decision rollout limit changed")
+            root_moves = metadata.get("root_moves")
+            if not isinstance(root_moves, list):
+                raise ValueError(f"game {index} decision root moves are missing")
+            legal_moves = set(legal_peg_placements(state))
+            recorded_moves: set[PegPlacement] = set()
+            for item in root_moves:
+                if not isinstance(item, dict):
+                    raise ValueError(f"game {index} decision root move is invalid")
+                try:
+                    move = PegPlacement(
+                        state.side_to_move,
+                        Coordinate(item["x"], item["y"]),
+                    )
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"game {index} decision root move is invalid"
+                    ) from exc
+                visits = item.get("visits")
+                if (
+                    move not in legal_moves
+                    or move in recorded_moves
+                    or isinstance(visits, bool)
+                    or not isinstance(visits, int)
+                    or visits < 0
+                ):
+                    raise ValueError(f"game {index} decision root move is invalid")
+                recorded_moves.add(move)
+            if recorded_moves != legal_moves:
+                raise ValueError(f"game {index} decision does not record every legal move")
             visit_sum = sum(item["visits"] for item in root_moves)
             if visit_sum != simulations:
                 raise ValueError(
@@ -234,10 +347,24 @@ def _validate_outputs(
             if abs(probability_sum - 1.0) > 1e-9:
                 raise ValueError(f"game {index} decision policy target does not sum to 1")
             validated_decisions += 1
+            # Reconstructing every state and terminal winner proves the documented
+            # side-to-move value target is well-defined as exactly -1, 0, or 1.
+            expected_value = (
+                0
+                if record.final_state.winner is None
+                else (1 if record.final_state.winner is state.side_to_move else -1)
+            )
+            if expected_value not in (-1, 0, 1):  # pragma: no cover - defensive
+                raise ValueError(f"game {index} decision value target is invalid")
+            state = apply_move(state, played_move)
     return {
         "all_required_artifacts_valid": True,
+        "all_match_records_replay_valid": True,
         "all_game_seeds_match_contract_derivation": True,
+        "all_decision_seeds_match_contract_derivation": True,
+        "all_search_parameters_match_contract": True,
         "all_policy_root_visit_sums_valid": True,
+        "all_value_targets_valid": True,
         "policy_root_visit_sum_expected": simulations,
         "summary_format": summary["format"],
         "summary_version": summary["version"],
@@ -252,7 +379,128 @@ class BenchmarkOptions:
 
     gpu_sample_interval_seconds: float = 0.1
     phase_sample_interval_seconds: float = 0.005
-    implementation_label: str = "pre-optimization"
+    implementation_label: str = "v0.0.6-default"
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkTuning:
+    """The only workload-neutral optimization variables in contract v2."""
+
+    worker_concurrency: int | None = None
+    inference_batch_size: int | None = None
+    queue_flush_max_wait_seconds: float | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("worker_concurrency", "inference_batch_size"):
+            value = getattr(self, name)
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int) or value < 1
+            ):
+                raise ValueError(f"{name} must be a positive integer")
+        wait = self.queue_flush_max_wait_seconds
+        if wait is not None and (
+            isinstance(wait, bool)
+            or not isinstance(wait, (int, float))
+            or not float("-inf") < float(wait) < float("inf")
+            or wait < 0
+        ):
+            raise ValueError(
+                "queue_flush_max_wait_seconds must be finite and non-negative"
+            )
+
+
+def _resolved_config(
+    contract: dict[str, Any], tuning: BenchmarkTuning
+) -> tuple[dict[str, Any], dict[str, object]]:
+    """Resolve v1's frozen settings or v2's three declared tuning variables."""
+
+    config = json.loads(json.dumps(contract["config"]))
+    version = contract.get("version")
+    if version == 1:
+        if any(
+            getattr(tuning, name) is not None
+            for name in _OPTIMIZATION_VARIABLES
+        ):
+            raise ValueError("contract version 1 does not permit tuning overrides")
+        values = {
+            "worker_concurrency": config["workers"]["count"],
+            "inference_batch_size": config["shared_inference"]["batch_size"],
+            "queue_flush_max_wait_seconds": config["shared_inference"][
+                "max_wait_seconds"
+            ],
+        }
+        return config, values
+    if version != CONTRACT_VERSION:
+        raise ValueError(f"unsupported contract version: {version!r}")
+
+    variables = contract.get("optimization_variables")
+    if not isinstance(variables, dict) or set(variables) != _OPTIMIZATION_VARIABLES:
+        raise ValueError(
+            "contract optimization_variables must contain exactly worker_concurrency, "
+            "inference_batch_size, and queue_flush_max_wait_seconds"
+        )
+    values: dict[str, object] = {}
+    for name in sorted(_OPTIMIZATION_VARIABLES):
+        declaration = variables[name]
+        if not isinstance(declaration, dict) or "default" not in declaration:
+            raise ValueError(f"optimization variable {name} must declare a default")
+        override = getattr(tuning, name)
+        values[name] = declaration["default"] if override is None else override
+    # Re-run type/range validation for defaults as well as CLI overrides.
+    validated = BenchmarkTuning(
+        worker_concurrency=values["worker_concurrency"],  # type: ignore[arg-type]
+        inference_batch_size=values["inference_batch_size"],  # type: ignore[arg-type]
+        queue_flush_max_wait_seconds=values[
+            "queue_flush_max_wait_seconds"
+        ],  # type: ignore[arg-type]
+    )
+    for name, value in values.items():
+        minimum = variables[name].get("minimum")
+        maximum = variables[name].get("maximum")
+        if minimum is not None and value < minimum:
+            raise ValueError(f"{name} must be at least {minimum}")
+        if maximum is not None and value > maximum:
+            raise ValueError(f"{name} must be at most {maximum}")
+    config["workers"]["count"] = validated.worker_concurrency
+    config["shared_inference"]["batch_size"] = validated.inference_batch_size
+    config["shared_inference"][
+        "max_wait_seconds"
+    ] = validated.queue_flush_max_wait_seconds
+    return config, values
+
+
+def _validate_supported_semantics(
+    contract: dict[str, Any], config: dict[str, Any]
+) -> None:
+    """Reject contracts that describe semantics this runner cannot reproduce."""
+
+    if config.get("device") != "cuda":
+        raise ValueError("the CUDA benchmark contract must select device=cuda")
+    if config.get("agents") != {
+        "red": "checkpoint-mcts",
+        "black": "checkpoint-mcts",
+        "guidance": "policy-value",
+    }:
+        raise ValueError("the runner supports only two checkpoint-guided MCTS agents")
+    if config.get("workers", {}).get("mode") != "thread":
+        raise ValueError("shared CUDA inference requires thread worker mode")
+    if config.get("shared_inference", {}).get("model_instances") != 1:
+        raise ValueError("the benchmark requires exactly one shared model instance")
+    if contract.get("board", {}).get("rules") != {
+        "version": "v0.0.1",
+        "move": "peg-placement-only",
+        "links": "automatic",
+        "pie_or_swap": False,
+    }:
+        raise ValueError("contract rules do not match the canonical engine semantics")
+    mcts = config.get("mcts", {})
+    if mcts.get("rollout_evaluator") != "heuristic_rollout_value":
+        raise ValueError("unsupported MCTS rollout evaluator")
+    if mcts.get("progressive_widening") != {
+        "constant": 1.5,
+        "exponent": 0.5,
+    }:
+        raise ValueError("contract progressive widening does not match MCTS")
 
 
 def run_cuda_selfplay_512_benchmark(
@@ -261,6 +509,7 @@ def run_cuda_selfplay_512_benchmark(
     *,
     checkpoint_path: str | Path | None = None,
     options: BenchmarkOptions | None = None,
+    tuning: BenchmarkTuning | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run the exact contract workload once and return a result report.
@@ -275,7 +524,9 @@ def run_cuda_selfplay_512_benchmark(
     contract = _load_json(contract_path)
     if contract.get("format") != CONTRACT_FORMAT:
         raise ValueError("contract has an unexpected format")
-    config = contract["config"]
+    tuning = tuning or BenchmarkTuning()
+    config, tuning_values = _resolved_config(contract, tuning)
+    _validate_supported_semantics(contract, config)
     games = config["games"]
 
     root = Path(repo_root) if repo_root is not None else Path.cwd()
@@ -331,33 +582,45 @@ def run_cuda_selfplay_512_benchmark(
         factory = partial(
             MCTSAgent,
             simulations=mcts_config["simulations"],
+            exploration=mcts_config["exploration"],
             rollout_limit=mcts_config["rollout_limit"],
             policy_value=batcher,
         )
         with gpu_sampler, phase_sampler:
             started = perf_counter()
-            batch = run_batch(
+            batch_config = BatchConfig(
+                games=games,
+                workers=workers_config["count"],
+                seed=config["seeds"]["batch_seed"],
+                board=board,
+                red_agent=config["agents"]["red"],
+                black_agent=config["agents"]["black"],
+                worker_mode=workers_config["mode"],
+            )
+            run_batch(
                 factory,
                 factory,
-                config=BatchConfig(
-                    games=games,
-                    workers=workers_config["count"],
-                    seed=config["seeds"]["batch_seed"],
-                    board=board,
-                    red_agent=config["agents"]["red"],
-                    black_agent=config["agents"]["black"],
-                    worker_mode=workers_config["mode"],
-                ),
+                config=batch_config,
                 output_dir=output_dir,
             )
             torch.cuda.synchronize()
             wall_seconds = perf_counter() - started
     inference_statistics = batcher.statistics.to_dict()
+    batches = inference_statistics["batches"]
+    requests = inference_statistics["requests"]
+    inference_statistics["effective_batch_size_average"] = (
+        requests / batches if batches else 0.0
+    )
+    inference_statistics["effective_batch_capacity_percent"] = (
+        requests / (batches * shared_config["batch_size"]) * 100.0
+        if batches
+        else 0.0
+    )
     peak_allocated_bytes = torch.cuda.max_memory_allocated("cuda")
 
     root_dir = Path(output_dir)
     summary = _load_json(root_dir / "summary.json")
-    validation = _validate_outputs(root_dir, summary, config)
+    validation = _validate_outputs(root_dir, summary, config, batch_config.to_dict())
 
     simulations_per_move = mcts_config["simulations"]
     total_moves = validation["total_moves"]
@@ -394,6 +657,21 @@ def run_cuda_selfplay_512_benchmark(
             "total_inference_positions": inference_statistics["requests"],
             "output_summary_sha256": _sha256(root_dir / "summary.json"),
         },
+        "configuration": {
+            "fixed_workload": {
+                "board": contract["board"],
+                "checkpoint": contract["checkpoint"],
+                "games": games,
+                "device": config["device"],
+                "agents": config["agents"],
+                "mcts": config["mcts"],
+                "seeds": config["seeds"],
+                "worker_mode": workers_config["mode"],
+                "model_instances": shared_config["model_instances"],
+                "output": contract["output"],
+            },
+            "optimization_variables": tuning_values,
+        },
         "timing": {
             "scope": contract["output"]["timing_scope"],
             "end_to_end_wall_seconds": wall_seconds,
@@ -414,7 +692,9 @@ def run_cuda_selfplay_512_benchmark(
 
 __all__ = [
     "BenchmarkOptions",
+    "BenchmarkTuning",
     "CONTRACT_FORMAT",
+    "CONTRACT_VERSION",
     "RESULT_FORMAT",
     "RESULT_VERSION",
     "run_cuda_selfplay_512_benchmark",

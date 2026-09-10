@@ -10,6 +10,7 @@ from .encoding import (
     SYMMETRIES,
     BoardSymmetry,
     encode_position,
+    encode_positions,
     transform_coordinate,
     transform_encoding,
     transform_state,
@@ -51,6 +52,7 @@ from .policy_value import (
 from .versioned_encoding import (
     coordinate_to_action_index_for_version,
     encode_position_for_version,
+    encode_positions_for_version,
     legal_move_mask_for_version,
     move_to_action_index_for_version,
 )
@@ -87,6 +89,8 @@ __all__ = [
     "encode_mini_position",
     "encode_position",
     "encode_position_for_version",
+    "encode_positions",
+    "encode_positions_for_version",
     "game_coordinate_to_normalized_action_index",
     "game_to_normalized_coordinate",
     "legal_move_mask",

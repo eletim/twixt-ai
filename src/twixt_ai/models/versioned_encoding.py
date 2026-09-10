@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 import torch
 from torch import Tensor
 
 from twixt_ai.game import BoardDimensions, Coordinate, GameState, PegPlacement, Player
 
-from .encoding import ENCODING_VERSION, encode_position
+from .encoding import ENCODING_VERSION, encode_position, encode_positions
 from .mini_encoding import (
     MINI_ENCODING_VERSION,
     encode_mini_position,
@@ -29,6 +29,23 @@ def encode_position_for_version(
         return encode_position(state, device=device)
     if encoding_version == MINI_ENCODING_VERSION:
         return encode_mini_position(state, device=device)
+    raise ValueError(f"unsupported encoding version: {encoding_version}")
+
+
+def encode_positions_for_version(
+    states: Sequence[GameState],
+    encoding_version: int,
+    *,
+    device: torch.device | str | None = None,
+) -> Tensor:
+    """Encode a batch with the explicitly selected checkpoint encoding."""
+
+    if encoding_version == ENCODING_VERSION:
+        return encode_positions(states, device=device)
+    if encoding_version == MINI_ENCODING_VERSION:
+        return torch.stack(
+            [encode_mini_position(state, device=device) for state in states]
+        )
     raise ValueError(f"unsupported encoding version: {encoding_version}")
 
 
@@ -113,6 +130,7 @@ def legal_move_mask_for_version(
 __all__ = [
     "coordinate_to_action_index_for_version",
     "encode_position_for_version",
+    "encode_positions_for_version",
     "legal_move_mask_for_version",
     "move_to_action_index_for_version",
 ]

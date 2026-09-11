@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import math
 from random import Random
@@ -355,6 +355,7 @@ class MCTSAgent:
         root = _Node(request.state)
         self._initialize(root, request.legal_moves)
         root_priors = tuple(root.priors)
+        node_count = 1
 
         for _ in range(self.simulations):
             node = root
@@ -362,6 +363,7 @@ class MCTSAgent:
             while not node.state.is_terminal:
                 if self._can_expand(node):
                     node = self._expand(node, random)
+                    node_count += 1
                     path.append(node)
                     break
                 if not node.children:
@@ -384,22 +386,39 @@ class MCTSAgent:
                 -child.move.coordinate.x,  # type: ignore[union-attr]
             ),
         )
-        move_statistics = tuple(
+        move_statistics = [
             MCTSMoveStatistics(move, 0, 0.0, prior)
             for move, prior in zip(request.legal_moves, root_priors)
-        )
-        by_move = {item.move: item for item in root.children}
-        move_statistics = tuple(
-            MCTSMoveStatistics(
-                item.move,
-                by_move[item.move].visits,
-                by_move[item.move].mean_value,
-                item.prior,
+        ]
+        for child in root.children:
+            assert child.move is not None
+            index = request.legal_moves.index(child.move)
+            move_statistics[index] = MCTSMoveStatistics(
+                child.move,
+                child.visits,
+                child.mean_value,
+                root_priors[index],
             )
-            if item.move in by_move
-            else item
+        root_moves = [
+            {
+                "x": item.move.coordinate.x,
+                "y": item.move.coordinate.y,
+                "visits": item.visits,
+                "value": item.value,
+                "prior": item.prior,
+            }
             for item in move_statistics
-        )
+        ]
+        inspection_candidates = [
+            {
+                "x": item.move.coordinate.x,
+                "y": item.move.coordinate.y,
+                "probability": item.visits / self.simulations,
+                "value": item.value,
+                "visits": item.visits,
+            }
+            for item in move_statistics
+        ]
         statistics = MCTSSearchStatistics(
             simulations=self.simulations,
             exploration=self.exploration,
@@ -411,10 +430,10 @@ class MCTSAgent:
             ),
             progressive_widening_constant=self.progressive_widening_constant,
             progressive_widening_exponent=self.progressive_widening_exponent,
-            nodes=1 + sum(1 for _ in self._walk(root)),
+            nodes=node_count,
             rollout_moves=self._rollout_moves,
             maximum_depth=self._maximum_depth,
-            moves=move_statistics,
+            moves=tuple(move_statistics),
         )
         self.last_statistics = statistics
         assert best.move is not None
@@ -430,28 +449,10 @@ class MCTSAgent:
             "nodes": statistics.nodes,
             "rollout_moves": statistics.rollout_moves,
             "maximum_depth": statistics.maximum_depth,
-            "root_moves": [
-                {
-                    "x": item.move.coordinate.x,
-                    "y": item.move.coordinate.y,
-                    "visits": item.visits,
-                    "value": item.value,
-                    "prior": item.prior,
-                }
-                for item in statistics.moves
-            ],
+            "root_moves": root_moves,
             "inspection": {
                 "value": best.mean_value,
-                "candidates": [
-                    {
-                        "x": item.move.coordinate.x,
-                        "y": item.move.coordinate.y,
-                        "probability": item.visits / statistics.simulations,
-                        "value": item.value,
-                        "visits": item.visits,
-                    }
-                    for item in statistics.moves
-                ],
+                "candidates": inspection_candidates,
                 "statistics": {
                     "simulations": statistics.simulations,
                     "nodes": statistics.nodes,
@@ -461,15 +462,6 @@ class MCTSAgent:
             },
         }
         return AgentResult(best.move, metadata)
-
-    @staticmethod
-    def _walk(root: _Node) -> Iterator[_Node]:
-        pending = list(root.children)
-        while pending:
-            node = pending.pop()
-            yield node
-            pending.extend(node.children)
-
 
 __all__ = [
     "DEFAULT_PROGRESSIVE_WIDENING_CONSTANT",

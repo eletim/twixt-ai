@@ -569,3 +569,32 @@ neural output was also rejected because changing floating-point cumulative
 weights could alter choices and canonical output. Complete measurements and
 rejected-approach rationale are in
 [`benchmarks/mini-mcts-expansion-initialization.json`](../benchmarks/mini-mcts-expansion-initialization.json).
+
+## MCTS result and inspection metadata
+
+Root statistics now begin once in canonical legal-move order. Only expanded
+root entries are replaced, using their existing move object's position in the
+original legal-move tuple, so metadata construction no longer hashes every
+legal move into a child dictionary and then hashes every move again to rebuild
+the ordered statistics. `root_moves`, `inspection.candidates`, and the public
+`last_statistics.moves` tuple retain every field, key order, move order, and
+numeric value. Nodes are counted when expansion creates them instead of by a
+separate complete post-search tree walk.
+
+Two adjacent unprofiled canonical runs reduced mean end-to-end time from
+70.617 s to 70.017 s (0.85%); both optimized runs beat both baseline runs.
+All four runs completed 512 games and validated 30,929 decisions, 123,716
+simulations, policy/value targets, search parameters, seeds, records, and
+artifacts. Every run produced the unchanged output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+A same-process 80-move, four-child metadata microbenchmark improved from
+319.61 us to 264.61 us per root (1.21x).
+
+Combining all three public representations in one explicit loop was rejected
+after its 70.671 s canonical mean failed to improve on baseline. A dictionary
+feeding a single statistics comprehension was also rejected because it kept a
+hash lookup for every legal move and regressed the local benchmark. Removing
+or lazily changing the public statistics or inspection views was rejected to
+preserve serialization, type, and observation behavior. Complete measurements
+and rejected-approach rationale are in
+[`benchmarks/mini-mcts-metadata-construction.json`](../benchmarks/mini-mcts-metadata-construction.json).

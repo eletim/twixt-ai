@@ -13,7 +13,8 @@ from twixt_ai.agents import (
     AgentResult,
     evaluate_position,
 )
-from twixt_ai.game import GameState, PegPlacement, Player, apply_move, legal_peg_placements
+from twixt_ai.game import GameState, PegPlacement, Player, legal_peg_placements
+from twixt_ai.game.transitions import _apply_legal_move
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,7 +263,7 @@ class MCTSAgent:
         move = node.unexpanded.pop(index)
         prior = node.priors.pop(index)
         child = _Node(
-            apply_move(node.state, move),
+            _apply_legal_move(node.state, move),
             move=move,
             prior=prior,
             parent=node,
@@ -312,7 +313,7 @@ class MCTSAgent:
             moves = legal_peg_placements(state)
             if not moves:
                 break
-            state = apply_move(state, random.choice(moves))
+            state = _apply_legal_move(state, random.choice(moves))
             steps += 1
         self._rollout_moves += steps
         if state.is_terminal:

@@ -1,0 +1,123 @@
+{
+  "format": "twixt-ai-mini-mcts-state-transitions-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "9a377dcd1579010f3ea64f6c27fc87fd9968609b",
+    "implementation_git_commit": "a266f67456f529455c28dc029c25b66818e81fc5",
+    "branch": "feature/work-item-optimize-mcts-state-transitions",
+    "candidate": "trusted MCTS transitions with ordered peg insertion, derived occupancy reuse, and allocation-free shared-endpoint crossing checks"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "method": "Two adjacent unprofiled runs per implementation on the same host; arithmetic means summarize the recorded runs. The baseline is dev/v0.0.6 after the retained expansion and metadata work.",
+    "baseline": {
+      "implementation_git_commit": "9a377dcd1579010f3ea64f6c27fc87fd9968609b",
+      "end_to_end_wall_seconds": [
+        70.4702761049848,
+        70.63348810304888
+      ],
+      "games_per_hour": [
+        26155.708504023,
+        26095.270805696466
+      ],
+      "positions_per_second": [
+        2166.5020834110287,
+        2161.4959716736666
+      ],
+      "simulations_per_second": [
+        1755.5770579881237,
+        1751.5204660359939
+      ],
+      "mean_end_to_end_wall_seconds": 70.55188210401684,
+      "mean_games_per_hour": 26125.48965485973
+    },
+    "optimized": {
+      "implementation_git_commit": "a266f67456f529455c28dc029c25b66818e81fc5",
+      "end_to_end_wall_seconds": [
+        67.8692930219695,
+        67.93194543616846
+      ],
+      "games_per_hour": [
+        27158.084575941444,
+        27133.037161904092
+      ],
+      "positions_per_second": [
+        2249.5298418767816,
+        2247.4551408726916
+      ],
+      "simulations_per_second": [
+        1822.8567661660002,
+        1821.1755780827511
+      ],
+      "mean_end_to_end_wall_seconds": 67.90061922906898,
+      "mean_games_per_hour": 27145.560868922767
+    },
+    "result": {
+      "speedup": 1.0390462252782051,
+      "wall_time_reduction_percent": 3.7578910666607324,
+      "games_per_hour_increase_percent": 3.9046225278205116,
+      "both_optimized_runs_beat_both_baseline_runs": true,
+      "retained": true
+    }
+  },
+  "equivalence": {
+    "output_summary_sha256_baseline": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "output_summary_sha256_optimized": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "games_completed_per_run": 512,
+    "games_failed_per_run": 0,
+    "validated_decisions_per_run": 30929,
+    "total_simulations_per_run": 123716,
+    "total_inference_positions_per_run": 152674,
+    "golden_test": "The seeded 5x5 sparse-policy search retains the complete serialized move and metadata SHA-256; exhaustive crossing geometry and canonical state/transition tests retain automatic-link, ordering, legality, win, and immutability semantics."
+  },
+  "transition_microbenchmark": {
+    "method": "Nine samples of 3000 repetitions over four deterministic 10x10 transitions at plies 10, 25, 40, and 55; the seeded fixtures are built once outside the timed samples, with PYTHONHASHSEED=0, on CPU. Times are divided by 12000 transitions per sample. The in-process reference reproduces the replaced validated transition, neighbor discovery, shared-endpoint set intersection, tuple sorting, and occupied-set reconstruction.",
+    "fixture_existing_link_counts": [
+      0,
+      10,
+      18,
+      30
+    ],
+    "reference_microseconds_per_transition": 35.586034491037324,
+    "optimized_microseconds_per_transition": 31.13626424844066,
+    "speedup": 1.1429127851399037
+  },
+  "rejected_approaches": [
+    {
+      "implementation": "mutate one board/state object in place during MCTS and roll moves back after each simulation",
+      "reason_rejected": "Policy/value and rollout hooks receive GameState values, so exposing a mutable search state would violate canonical immutability and could let retained callback references change after evaluation."
+    },
+    {
+      "implementation": "append pegs and links without canonical insertion or sorting",
+      "reason_rejected": "Construction order would replace the public canonical peg/link order, changing serialization, encoding traversal, persisted artifacts, and potentially seeded decisions."
+    },
+    {
+      "implementation": "skip automatic-link crossing checks or trust links without constructing validated Link values",
+      "reason_rejected": "Either shortcut weakens the authoritative automatic-link and crossing rules. The retained fast path skips only move revalidation after MCTS selects a placement from the same immutable state's legal list."
+    },
+    {
+      "implementation": "make the public apply_move path assume legal placements",
+      "reason_rejected": "Public callers must retain deterministic legality precedence and IllegalMoveError reasons. Only the private MCTS path uses the already-legal transition entry point."
+    }
+  ]
+}

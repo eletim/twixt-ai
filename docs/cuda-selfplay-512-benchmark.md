@@ -541,3 +541,31 @@ of executable MCTS samples; expansion plus transition and state-copy work is
 Full source anchors, methodology, worker distribution, validation evidence,
 and limitations are recorded in
 [`benchmarks/mini-cpu-mcts-hot-paths.json`](../benchmarks/mini-cpu-mcts-hot-paths.json).
+
+## MCTS expansion and node initialization
+
+Node priors now use a list aligned with the existing ordered unexpanded-move
+list. Uniform initialization no longer hashes every legal move into a
+dictionary, normalized policy weights are produced directly in legal-move
+order, and expansion pops the chosen move and prior at the same index. The
+root takes one prior snapshot before search so its complete legal statistics
+and metadata retain their original order and values.
+
+Two adjacent unprofiled canonical runs per implementation reduced mean
+end-to-end time from 74.025 s to 70.617 s, a reproducible 4.60% reduction;
+both optimized runs beat both baseline runs. All four runs completed 512 games
+and validated 30,929 decisions, 123,716 simulations, policy targets, search
+parameters, seeds, records, and artifacts. Every run produced the unchanged
+output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+A same-process 80-move initialization microbenchmark improved from 63.56 us
+to 46.93 us per node (1.35x).
+
+Policy-specific validation or normalization bypasses were rejected because
+they would weaken the public policy-hook contract. Tail-swap removal was
+rejected because reordering the remaining population would change later
+seeded weighted choices. Conditional normalization for already normalized
+neural output was also rejected because changing floating-point cumulative
+weights could alter choices and canonical output. Complete measurements and
+rejected-approach rationale are in
+[`benchmarks/mini-mcts-expansion-initialization.json`](../benchmarks/mini-mcts-expansion-initialization.json).

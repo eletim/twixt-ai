@@ -1,6 +1,6 @@
 {
   "format": "twixt-ai-mini-final-concurrency-settings-benchmark",
-  "version": 1,
+  "version": 2,
   "recorded_on": "2026-09-11",
   "environment": {
     "gpu": "NVIDIA GeForce RTX 4060",
@@ -20,26 +20,28 @@
     "fixed_fields_and_output_semantics_preserved": true
   },
   "method": {
-    "design": "One-factor sweep around the retained 8-worker, batch-8, 2 ms configuration. The first two rounds used reverse order to reduce ordering and warm-up bias. A third run was added for all flush settings because their paired means were close.",
-    "selection_rule": "Select the lowest arithmetic mean end-to-end wall time across repeated complete runs; do not select an isolated fastest sample.",
+    "design": "An exploratory one-factor sweep around the retained 8-worker, batch-8, 2 ms configuration established worker and batch saturation. Because its three-run flush means were too close to resolve, a separate confirmatory study ran eight adjacent 1 ms/2 ms pairs with four AB and four BA pairs to balance ordering and gradual machine drift.",
+    "selection_rule": "Declared before the confirmatory study: replace the incumbent 2 ms wait with 1 ms only if 1 ms improves the eight-run arithmetic mean by at least 1.0% and the two-sided 95% Student-t confidence interval for paired wall-time differences (1 ms minus 2 ms) lies entirely below zero. Otherwise retain 2 ms as indistinguishable or regressive.",
     "runs_per_worker_or_batch_configuration": 2,
-    "runs_per_flush_configuration": 3,
+    "exploratory_runs_per_flush_configuration": 3,
+    "confirmatory_pairs_for_1ms_vs_2ms": 8,
     "timing_scope": "End-to-end self-play dispatch through all 512 game artifacts and summary.json being written; checkpoint load, setup, and post-run validation are excluded from wall time.",
     "command_template": "PYTHONHASHSEED=0 PYTHONPATH=src python3 -m twixt_ai.evaluation.cuda_selfplay_512_cli --output-dir /path/to/scratch/out --report /path/to/report.json --implementation-label retune-final-<round>-<trial> --worker-concurrency <workers> --inference-batch-size <batch> --queue-flush-max-wait-seconds <seconds>"
   },
   "selected_configuration": {
     "worker_concurrency": 8,
     "inference_batch_size": 8,
-    "queue_flush_max_wait_seconds": 0.001,
-    "end_to_end_wall_seconds": [68.48515890096314, 68.33134200819768, 68.44843124505132],
-    "mean_end_to_end_wall_seconds": 68.42164405140404,
-    "mean_games_per_hour": 26938.86883654431,
-    "mean_positions_per_second": 2231.3719947648474,
-    "mean_simulations_per_second": 1808.1429562618898,
-    "mean_effective_inference_batch_size": 7.47644596109716,
-    "mean_gpu_utilization_percent": 3.204391239724961,
-    "estimated_gpu_idle_percent": 96.79560876027503,
-    "peak_gpu_memory_mib": 448,
+    "queue_flush_max_wait_seconds": 0.002,
+    "confirmatory_end_to_end_wall_seconds": [69.52807421796024, 71.5039199879393, 69.66357696196064, 69.92984800902195, 80.29941767500713, 69.62646522698924, 69.55357158300467, 70.8745468899142],
+    "confirmatory_mean_end_to_end_wall_seconds": 71.37242756897467,
+    "confirmatory_median_end_to_end_wall_seconds": 69.7967124854913,
+    "confirmatory_mean_games_per_hour": 25879.7411599896,
+    "confirmatory_mean_positions_per_second": 2143.643447189807,
+    "confirmatory_mean_simulations_per_second": 1737.0540675723055,
+    "confirmatory_mean_effective_inference_batch_size": 7.826217060390061,
+    "confirmatory_mean_gpu_utilization_percent": 2.6902735546328245,
+    "estimated_gpu_idle_percent": 97.30972644536718,
+    "peak_gpu_memory_mib": 428,
     "pytorch_peak_allocated_memory_bytes": 9790464
   },
   "trials": [
@@ -124,8 +126,8 @@
       "mean_effective_inference_batch_size": 7.47644596109716,
       "mean_gpu_utilization_percent": 3.204391239724961,
       "peak_gpu_memory_mib": 448,
-      "change_vs_selected_percent": 0.0,
-      "outcome": "selected"
+      "change_vs_2ms_exploratory_mean_percent": -0.20770055613403346,
+      "outcome": "exploratory_low_mean_not_confirmed"
     },
     {
       "id": "flush-2ms-center",
@@ -138,8 +140,8 @@
       "mean_effective_inference_batch_size": 7.837474429039247,
       "mean_gpu_utilization_percent": 3.01500136437858,
       "peak_gpu_memory_mib": 445,
-      "change_vs_selected_percent": 0.20813286875178694,
-      "outcome": "superseded"
+      "change_vs_1ms_exploratory_mean_percent": 0.20813286875178694,
+      "outcome": "retained_pending_confirmation"
     },
     {
       "id": "flush-4ms",
@@ -152,12 +154,89 @@
       "mean_effective_inference_batch_size": 7.860070113688085,
       "mean_gpu_utilization_percent": 3.0983821867820986,
       "peak_gpu_memory_mib": 448,
-      "change_vs_selected_percent": 0.6807266550542757,
+      "change_vs_2ms_exploratory_mean_percent": 0.4715856832485259,
       "outcome": "regressive"
     }
   ],
+  "confirmatory_flush_comparison": {
+    "configuration_shared": {
+      "worker_concurrency": 8,
+      "inference_batch_size": 8
+    },
+    "exact_run_order": [
+      {"sequence": 1, "pair": 1, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 70.72859689989127},
+      {"sequence": 2, "pair": 1, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 69.52807421796024},
+      {"sequence": 3, "pair": 2, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 71.5039199879393},
+      {"sequence": 4, "pair": 2, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 70.03769264393486},
+      {"sequence": 5, "pair": 3, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 71.59396551013924},
+      {"sequence": 6, "pair": 3, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 69.66357696196064},
+      {"sequence": 7, "pair": 4, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 69.92984800902195},
+      {"sequence": 8, "pair": 4, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 70.69025808479637},
+      {"sequence": 9, "pair": 5, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 69.7487337780185},
+      {"sequence": 10, "pair": 5, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 80.29941767500713},
+      {"sequence": 11, "pair": 6, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 69.62646522698924},
+      {"sequence": 12, "pair": 6, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 70.17230091197416},
+      {"sequence": 13, "pair": 7, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 72.32978294091299},
+      {"sequence": 14, "pair": 7, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 69.55357158300467},
+      {"sequence": 15, "pair": 8, "flush_wait_seconds": 0.002, "end_to_end_wall_seconds": 70.8745468899142},
+      {"sequence": 16, "pair": 8, "flush_wait_seconds": 0.001, "end_to_end_wall_seconds": 69.78198755090125}
+    ],
+    "summary_by_setting": {
+      "1ms": {
+        "runs": 8,
+        "mean_end_to_end_wall_seconds": 70.63541479007108,
+        "median_end_to_end_wall_seconds": 70.43127949838527,
+        "sample_standard_deviation_seconds": 0.9171135701487398,
+        "mean_games_per_hour": 26098.371376788746,
+        "mean_positions_per_second": 2161.7527949109403,
+        "mean_simulations_per_second": 1751.7285770674894,
+        "mean_effective_inference_batch_size": 7.438381305771495,
+        "mean_gpu_utilization_percent": 2.804286931838399,
+        "peak_gpu_memory_mib": 428
+      },
+      "2ms": {
+        "runs": 8,
+        "mean_end_to_end_wall_seconds": 71.37242756897467,
+        "median_end_to_end_wall_seconds": 69.7967124854913,
+        "sample_standard_deviation_seconds": 3.6784273589332845,
+        "mean_games_per_hour": 25879.7411599896,
+        "mean_positions_per_second": 2143.643447189807,
+        "mean_simulations_per_second": 1737.0540675723055,
+        "mean_effective_inference_batch_size": 7.826217060390061,
+        "mean_gpu_utilization_percent": 2.6902735546328245,
+        "peak_gpu_memory_mib": 428
+      }
+    },
+    "paired_analysis": {
+      "difference_definition": "1 ms wall time minus adjacent 2 ms wall time; negative favors 1 ms",
+      "paired_differences_seconds": [1.2005226819310337, -1.4662273440044373, 1.9303885481785983, 0.7604100757744163, -10.55068389698863, 0.5458356849849224, 2.7762113579083234, -1.0925593390129507],
+      "mean_difference_seconds": -0.7370127789035905,
+      "sample_standard_deviation_seconds": 4.209955900286499,
+      "standard_error_seconds": 1.48844418279445,
+      "degrees_of_freedom": 7,
+      "student_t_critical_two_sided_95_percent": 2.3646242515927844,
+      "confidence_interval_95_percent_seconds": [-4.25662399068155, 2.7825984328743694],
+      "mean_difference_relative_to_2ms_percent": -1.032629551785019,
+      "confidence_interval_95_percent_relative_to_2ms_percent": [-5.963961344271116, 3.8987022407010774],
+      "pairs_favoring_1ms": 3,
+      "pairs_favoring_2ms": 5
+    },
+    "sensitivity": {
+      "pair_5_primary_treatment": "retained in all primary means and confidence calculations; no sample was excluded",
+      "reason_for_reporting": "Its 80.299 s 2 ms half is 8.795 s above the next-slowest 2 ms run and makes the primary arithmetic mean favor 1 ms.",
+      "leave_pair_5_out_mean_difference_seconds": 0.6649402379657009,
+      "interpretation": "Without that pair the direction reverses and 1 ms is slower, demonstrating that the apparent primary mean improvement is not robust."
+    },
+    "decision": {
+      "minimum_practical_improvement_percent": 1.0,
+      "observed_mean_improvement_percent": 1.032629551785019,
+      "confidence_interval_entirely_favors_1ms": false,
+      "both_predeclared_criteria_passed": false,
+      "result": "retain 2 ms; 1 ms is statistically and practically unresolved"
+    }
+  },
   "equivalence": {
-    "runs": 17,
+    "runs": 33,
     "games_completed_per_run": 512,
     "games_failed_per_run": 0,
     "game_artifacts_per_run": 512,
@@ -176,16 +255,16 @@
       "policy root visits and value targets are valid",
       "required artifacts and summary are valid"
     ],
-    "note": "Every repeated configuration produced a stable output summary SHA-256. Worker-count variants have different hashes because scheduling changes floating-point batch grouping, but every output passed the same fixed semantic validators. Batch-size and flush-only variants matched the retained center hash."
+    "note": "Every repeated configuration, including all 16 confirmatory runs, produced a stable output summary SHA-256. Worker-count variants have different hashes because scheduling changes floating-point batch grouping, but every output passed the same fixed semantic validators. Batch-size and flush-only variants matched the retained center hash."
   },
   "analysis": {
-    "selection": "Eight workers and batch size eight remain the final saturation points. A 1 ms flush wait replaces 2 ms on the lowest three-run mean, but the 0.21% difference is modest and individual ranges overlap.",
+    "selection": "Eight workers and batch size eight remain the final saturation points. The retained 2 ms flush wait remains final because the balanced eight-pair confirmation did not establish the predeclared uncertainty criterion for replacing it; 1 ms is indistinguishable, not selected.",
     "worker_saturation": "Sixteen workers made batches slightly fuller (7.948 versus 7.837) but was 1.22% slower than the retained center mean. Four workers capped realized batches near four and was 104.26% slower.",
     "batch_saturation": "Batch four was 15.00% slower. A batch cap of sixteen cannot fill with eight workers; every batch reached the latency flush path and the mean regressed 24.27%.",
-    "flush_regressions": "Four milliseconds was 0.68% slower than the selected 1 ms mean. Two milliseconds was 0.21% slower; because this is within the observed cross-run range, it is superseded rather than characterized as a material regression.",
-    "gpu_saturation": "No setting saturated GPU compute. Mean sampled utilization ranged from 2.74% to 4.43%, leaving at least 95.57% approximate sampled idle time.",
-    "speedup_over_recorded_v005_configuration": 1.6958229070719657,
-    "wall_time_reduction_vs_recorded_v005_percent": 41.031578484417594,
+    "flush_regressions": "Four milliseconds was 0.47% slower than the 2 ms exploratory mean. The exploratory 1 ms mean was 0.21% faster, but the confirmatory paired 95% interval spanned effects favoring either setting and only three of eight pairs favored 1 ms, so it is indistinguishable.",
+    "gpu_saturation": "No setting saturated GPU compute. Across the exploratory and confirmatory measurements, mean sampled utilization remained below 4.43%, leaving more than 95.57% approximate sampled idle time.",
+    "speedup_over_recorded_v005_configuration_using_confirmatory_2ms_mean": 1.6257117107269798,
+    "wall_time_reduction_vs_recorded_v005_percent_using_confirmatory_2ms_mean": 38.48847902111601,
     "implementation_changes": "none"
   }
 }

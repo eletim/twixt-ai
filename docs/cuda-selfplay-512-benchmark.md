@@ -604,27 +604,57 @@ and rejected-approach rationale are in
 After all inference and MCTS optimizations, the three scheduling variables
 were swept again around the retained 8-worker, batch-8, 2 ms configuration.
 Every worker and batch setting received two complete 512-game runs in reversed
-order. Because the flush results were close, all three flush waits received a
-third run before selection. Only the three contract-declared optimization
-variables changed; all 17 runs completed 512 games, validated all 30,929
-decisions and 123,716 simulations, and passed the fixed replay, seed, search,
-artifact, policy-target, and value-target checks.
+order. The exploratory flush results were too close to select 1 ms: three-run
+means differed by only 0.21%, their ranges overlapped, and individual ordering
+was inconsistent. A separate confirmatory study therefore ran eight adjacent
+1 ms/2 ms pairs, alternating AB/BA order across pairs.
 
 | Trial | Workers | Batch | Flush wait | Runs | Mean wall (s) | Range (s) | Mean games/hour | Effective batch | Mean GPU util. | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Worker floor | 4 | 8 | 2 ms | 2 | 140.046 | 139.868–140.224 | 13,161 | 3.965 | 2.83% | regressive |
-| Retained center | 8 | 8 | 2 ms | 3 | 68.564 | 68.149–69.083 | 26,884 | 7.837 | 3.02% | superseded |
+| Retained center | 8 | 8 | 2 ms | 3 | 68.564 | 68.149–69.083 | 26,884 | 7.837 | 3.02% | incumbent |
 | Worker saturation | 16 | 8 | 2 ms | 2 | 69.402 | 69.147–69.657 | 26,559 | 7.948 | 3.04% | saturated |
 | Smaller batch | 8 | 4 | 2 ms | 2 | 78.850 | 78.519–79.180 | 23,377 | 3.984 | 4.43% | regressive |
 | Unreachable batch cap | 8 | 16 | 2 ms | 2 | 85.207 | 85.187–85.227 | 21,632 | 7.832 | 2.74% | regressive |
-| Shorter flush | 8 | 8 | 1 ms | 3 | **68.422** | 68.331–68.485 | **26,939** | 7.476 | 3.20% | **selected** |
+| Shorter flush | 8 | 8 | 1 ms | 3 | 68.422 | 68.331–68.485 | 26,939 | 7.476 | 3.20% | unresolved; confirm |
 | Longer flush | 8 | 8 | 4 ms | 3 | 68.887 | 68.510–69.090 | 26,757 | 7.860 | 3.10% | regressive |
 
-The final configuration is **8 workers, batch size 8, and a 1 ms maximum
-flush wait**. Selection uses repeated-run arithmetic means, not the fastest
-individual run. Its 68.422 s mean is 0.21% below the 2 ms center's 68.564 s
-mean. The individual ranges overlap, so this is a modest final tuning choice,
-not an implementation-speedup claim.
+Before confirmation, the decision rule was fixed: replace 2 ms only if 1 ms
+improved the eight-run arithmetic mean by at least 1% and the two-sided 95%
+Student-t confidence interval for adjacent paired differences (1 ms minus
+2 ms) lay entirely below zero. The exact run order and wall times were:
+
+| Sequence | Pair | Flush wait | Wall (s) |
+| ---: | ---: | ---: | ---: |
+| 1 | 1 | 1 ms | 70.729 |
+| 2 | 1 | 2 ms | 69.528 |
+| 3 | 2 | 2 ms | 71.504 |
+| 4 | 2 | 1 ms | 70.038 |
+| 5 | 3 | 1 ms | 71.594 |
+| 6 | 3 | 2 ms | 69.664 |
+| 7 | 4 | 2 ms | 69.930 |
+| 8 | 4 | 1 ms | 70.690 |
+| 9 | 5 | 1 ms | 69.749 |
+| 10 | 5 | 2 ms | 80.299 |
+| 11 | 6 | 2 ms | 69.626 |
+| 12 | 6 | 1 ms | 70.172 |
+| 13 | 7 | 1 ms | 72.330 |
+| 14 | 7 | 2 ms | 69.554 |
+| 15 | 8 | 2 ms | 70.875 |
+| 16 | 8 | 1 ms | 69.782 |
+
+The confirmatory means were 70.635 s for 1 ms and 71.372 s for 2 ms, an
+apparent 1.03% advantage for 1 ms. It did not pass the uncertainty criterion:
+only three of eight pairs favored 1 ms, and the paired mean difference was
+-0.737 s with a 95% confidence interval of -4.257 to +2.783 s. Pair 5's
+80.299 s 2 ms run is retained in the primary result rather than discarded
+after inspection. A labeled leave-pair-5-out sensitivity check reverses the
+mean difference to +0.665 s, with 1 ms slower. The apparent mean advantage is
+therefore neither statistically resolved nor robust to the single slow run.
+
+The final configuration remains **8 workers, batch size 8, and a 2 ms maximum
+flush wait**. The 1 ms setting is recorded as indistinguishable rather than
+selected from noise.
 
 Scaling remains saturated at eight workers: sixteen workers filled batches
 slightly better but was 1.22% slower than the 2 ms center, while four workers
@@ -633,14 +663,18 @@ was 104.26% slower. Batch size four was 15.00% slower. Batch size sixteen was
 batch waited for the latency flush. No configuration approached GPU compute
 saturation; mean sampled utilization ranged from 2.74% to 4.43%.
 
-No implementation or fixed contract field changed. Reproduce the selected
+Only the three contract-declared optimization variables changed during the
+33 exploratory and confirmatory runs. Every run completed 512 games, validated
+all 30,929 decisions and 123,716 simulations, and passed the fixed replay,
+seed, search, artifact, policy-target, and value-target checks. No
+implementation or fixed contract field changed. Reproduce the selected
 configuration by adding these explicit tuning arguments to the canonical
 runner command:
 
 ```bash
 --worker-concurrency 8 \
 --inference-batch-size 8 \
---queue-flush-max-wait-seconds 0.001
+--queue-flush-max-wait-seconds 0.002
 ```
 
 All individual wall-time samples, rates, effective batches, GPU measurements,

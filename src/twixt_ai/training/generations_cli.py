@@ -18,6 +18,13 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--games-per-generation", type=int, default=100)
     parser.add_argument("--dataset-window", type=int, default=5)
     parser.add_argument("--selfplay-simulations", type=int, default=100)
+    parser.add_argument("--selfplay-exploration", type=float, default=2**0.5)
+    parser.add_argument(
+        "--selfplay-progressive-widening-constant", type=float, default=1.5
+    )
+    parser.add_argument(
+        "--selfplay-progressive-widening-exponent", type=float, default=0.5
+    )
     parser.add_argument("--evaluation-games", type=int, default=20)
     parser.add_argument("--evaluation-simulations", type=int, default=20)
     parser.add_argument("--rollout-limit", type=int, default=4)
@@ -28,6 +35,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument(
+        "--selection-metric", choices=("total", "value"), default="total"
+    )
     parser.add_argument("--validation-fraction", type=float, default=0.1)
     parser.add_argument("--shard-size", type=int, default=10_000)
     parser.add_argument("--promotion-win-rate", type=float, default=0.55)

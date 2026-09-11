@@ -17,9 +17,10 @@ import torch
 from twixt_ai.game import GameState, PegPlacement
 from twixt_ai.models import (
     PolicyValueNetwork,
+    batched_action_indices_for_version,
+    batched_legal_move_mask,
     encode_positions_for_version,
     mask_policy_logits,
-    move_to_action_index_for_version,
 )
 
 from .mcts import PolicyValueEstimate
@@ -184,18 +185,12 @@ class NeuralPolicyValue:
             if observer is not None
             else None
         )
-        action_indices = [
-            [
-                move_to_action_index_for_version(
-                    move,
-                    config.encoding_version,
-                    board_width=config.board_width,
-                    board_height=config.board_height,
-                )
-                for move in moves
-            ]
-            for moves in move_batches
-        ]
+        action_indices = batched_action_indices_for_version(
+            move_batches,
+            config.encoding_version,
+            board_width=config.board_width,
+            board_height=config.board_height,
+        )
         if observer is not None:
             observer.finish_host_phase("action_index_construction", phase_token)
         phase_token = (
@@ -218,9 +213,7 @@ class NeuralPolicyValue:
             else None
         )
         action_count = config.board_width * config.board_height
-        masks = torch.zeros((len(move_batches), action_count), dtype=torch.bool)
-        for row, indices in zip(masks, action_indices):
-            row[indices] = True
+        masks = batched_legal_move_mask(action_indices, action_count)
         if observer is not None:
             observer.finish_host_phase("cpu_mask_construction", phase_token)
             phase_token = observer.start_cuda_phase("host_to_device")

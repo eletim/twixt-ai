@@ -681,3 +681,57 @@ All individual wall-time samples, rates, effective batches, GPU measurements,
 validation counts, methodology, saturation points, and regressive settings are
 recorded in
 [`benchmarks/mini-final-concurrency-settings.json`](../benchmarks/mini-final-concurrency-settings.json).
+
+## Final v0.0.6 canonical result
+
+The final canonical run used the selected **8 workers, batch size 8, and 2 ms
+maximum flush wait** on the unchanged implementation at `5ecd1b2`. It completed
+and wrote all 512 games in **72.112 s**, a **1.609x speedup** and **37.85% wall-time
+reduction** versus 116.031 s. Throughput was **25,560.2 games/hour**, **2,117.2
+positions/s**, and **1,715.6 simulations/s**.
+
+CUDA execution was validated on the NVIDIA GeForce RTX 4060: the fixed
+checkpoint ran 19,512 CUDA inference batches for 152,674 positions, the timed
+path synchronized CUDA, PyTorch reported a 9,790,464-byte allocation peak, and
+`nvidia-smi` sampled 2.70% average utilization (4% peak) and 424.87 MiB average
+memory (425 MiB peak). Low utilization means the small inference workload did
+not saturate GPU compute; it does not indicate a CPU fallback.
+
+The realized average batch size was 7.825 (97.81% of capacity). The complete
+distribution was:
+
+| Effective batch size | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Batch count | 154 | 80 | 72 | 39 | 106 | 225 | 580 | 18,256 |
+
+The final run produced 512 required game artifacts with no failures and the
+stable summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+All records replayed, all game and decision seeds followed the contract, every
+search parameter remained fixed, all 30,929 policy targets covered the complete
+legal root and summed to the four-visit budget, and every side-to-move value
+target was valid.
+
+The representative final scaling study remains the basis for selecting this
+configuration. Four workers averaged 140.046 s; eight averaged 68.564 s; and
+sixteen averaged 69.402 s, so throughput saturated at eight workers. Negative
+attempts included batch 4 at 78.850 s, an unfillable batch-16 cap at 85.207 s,
+and a 4 ms flush at 68.887 s. A balanced eight-pair comparison did not select
+1 ms: its apparent mean advantage had a paired 95% confidence interval spanning
+effects in both directions, and only three pairs favored it. These measurements
+made no implementation or fixed-workload changes.
+
+The 60-second stretch target was **not achieved**: this run was 12.112 s
+(20.19%) over it, while still comfortably beating the acceptance reference.
+Post-optimization stack sampling identifies shared inference service as the
+largest remaining measured bottleneck: `evaluate_batch` accounted for 6,514
+samples, approximately 32.57 s or 58.12% of sampled wall state, consistent with
+the direct 31.961 s batcher timer. CPU MCTS/game-tree work was secondary at
+4,198 samples, approximately 20.99 s or 37.46%. Combined with only 2.70% GPU
+utilization, the primary result points to host/launch and small-workload
+inference service overhead rather than GPU compute saturation.
+
+The complete machine-readable final result, including the fixed configuration,
+timing scope, rates, full batch distribution, CUDA samples, phase measurement,
+and every semantic validation flag, is in
+[`benchmarks/mini-cuda-selfplay-512-v006-final.json`](../benchmarks/mini-cuda-selfplay-512-v006-final.json).

@@ -190,6 +190,30 @@ def test_batched_action_preparation_maps_each_moves_player() -> None:
     ]
 
 
+@pytest.mark.parametrize("action_count", (0, -1))
+def test_batched_legal_move_mask_rejects_non_positive_action_count(
+    action_count: int,
+) -> None:
+    with pytest.raises(ValueError, match="action_count must be a positive integer"):
+        batched_legal_move_mask(((0,),), action_count)
+
+
+@pytest.mark.parametrize("action_index", (-1, 4))
+def test_batched_legal_move_mask_rejects_out_of_range_indices(
+    action_index: int,
+) -> None:
+    with pytest.raises(ValueError, match=r"action indices must be in \[0, 4\)"):
+        batched_legal_move_mask(((action_index,),), 4)
+
+
+@pytest.mark.parametrize("action_index", (1.0, True, "1"))
+def test_batched_legal_move_mask_rejects_non_integer_indices(
+    action_index: object,
+) -> None:
+    with pytest.raises(TypeError, match="action indices must be integers"):
+        batched_legal_move_mask(((action_index,),), 4)  # type: ignore[list-item]
+
+
 @pytest.mark.parametrize(
     ("encoding_version", "input_channels"),
     (

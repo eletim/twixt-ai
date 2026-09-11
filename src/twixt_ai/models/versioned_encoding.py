@@ -211,12 +211,23 @@ def batched_legal_move_mask(
 ) -> Tensor:
     """Build all legal-mask rows with one indexed tensor update."""
 
+    if (
+        isinstance(action_count, bool)
+        or not isinstance(action_count, int)
+        or action_count < 1
+    ):
+        raise ValueError("action_count must be a positive integer")
+    flat_indices: list[int] = []
+    for row_index, indices in enumerate(action_indices):
+        for action_index in indices:
+            if isinstance(action_index, bool) or not isinstance(action_index, int):
+                raise TypeError("action indices must be integers")
+            if not 0 <= action_index < action_count:
+                raise ValueError(
+                    f"action indices must be in [0, {action_count})"
+                )
+            flat_indices.append(row_index * action_count + action_index)
     masks = torch.zeros((len(action_indices), action_count), dtype=torch.bool)
-    flat_indices = [
-        row_index * action_count + action_index
-        for row_index, indices in enumerate(action_indices)
-        for action_index in indices
-    ]
     masks.view(-1)[flat_indices] = True
     return masks
 

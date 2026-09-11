@@ -14,11 +14,11 @@ from typing import Protocol
 
 import torch
 
-from twixt_ai.game import GameState, PegPlacement, Player
+from twixt_ai.game import GameState, PegPlacement
 from twixt_ai.models import (
-    ENCODING_VERSION,
-    MINI_ENCODING_VERSION,
     PolicyValueNetwork,
+    batched_action_indices_for_version,
+    batched_legal_move_mask,
     encode_positions_for_version,
     mask_policy_logits,
 )
@@ -31,50 +31,6 @@ _switch_interval_lock = Lock()
 _switch_interval_users = 0
 _saved_switch_interval_seconds = 0.0
 _installed_switch_interval_seconds = 0.0
-
-
-def _batched_action_indices(
-    move_batches: Sequence[tuple[PegPlacement, ...]],
-    encoding_version: int,
-    *,
-    board_width: int,
-    board_height: int,
-) -> list[list[int]]:
-    """Map validated move batches without repeating invariant validation."""
-
-    if encoding_version == ENCODING_VERSION:
-        return [
-            [move.coordinate.y * board_width + move.coordinate.x for move in moves]
-            for moves in move_batches
-        ]
-    if encoding_version == MINI_ENCODING_VERSION:
-        return [
-            [
-                (
-                    move.coordinate.x * board_height + move.coordinate.y
-                    if move.player is Player.BLACK
-                    else move.coordinate.y * board_width + move.coordinate.x
-                )
-                for move in moves
-            ]
-            for moves in move_batches
-        ]
-    raise ValueError(f"unsupported encoding version: {encoding_version}")
-
-
-def _batched_legal_mask(
-    action_indices: Sequence[Sequence[int]], action_count: int
-) -> torch.Tensor:
-    """Build all mask rows with one indexed tensor update."""
-
-    masks = torch.zeros((len(action_indices), action_count), dtype=torch.bool)
-    flat_indices = [
-        row_index * action_count + action_index
-        for row_index, indices in enumerate(action_indices)
-        for action_index in indices
-    ]
-    masks.view(-1)[flat_indices] = True
-    return masks
 
 
 def _acquire_batcher_switch_interval() -> None:
@@ -229,7 +185,7 @@ class NeuralPolicyValue:
             if observer is not None
             else None
         )
-        action_indices = _batched_action_indices(
+        action_indices = batched_action_indices_for_version(
             move_batches,
             config.encoding_version,
             board_width=config.board_width,
@@ -257,7 +213,7 @@ class NeuralPolicyValue:
             else None
         )
         action_count = config.board_width * config.board_height
-        masks = _batched_legal_mask(action_indices, action_count)
+        masks = batched_legal_move_mask(action_indices, action_count)
         if observer is not None:
             observer.finish_host_phase("cpu_mask_construction", phase_token)
             phase_token = observer.start_cuda_phase("host_to_device")

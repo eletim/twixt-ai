@@ -23,8 +23,11 @@ from twixt_ai.models import (
     ENCODING_VERSION,
     MINI_ENCODING_VERSION,
     MINI_NUM_CHANNELS,
+    NUM_CHANNELS,
     PolicyValueConfig,
     PolicyValueNetwork,
+    batched_action_indices_for_version,
+    batched_legal_move_mask,
     legal_move_mask_for_version,
     move_to_action_index_for_version,
 )
@@ -107,7 +110,7 @@ def test_batched_action_preparation_matches_versioned_reference(
     )
     move_batches = tuple(legal_peg_placements(state) for state in states)
 
-    actual_indices = neural._batched_action_indices(
+    actual_indices = batched_action_indices_for_version(
         move_batches,
         encoding_version,
         board_width=width,
@@ -125,8 +128,7 @@ def test_batched_action_preparation_matches_versioned_reference(
         ]
         for moves in move_batches
     ]
-    actual_masks = neural._batched_legal_mask(actual_indices, width * height)
-
+    actual_masks = batched_legal_move_mask(actual_indices, width * height)
     assert actual_indices == expected_indices
     for actual_mask, moves in zip(actual_masks, move_batches):
         assert torch.equal(
@@ -138,6 +140,93 @@ def test_batched_action_preparation_matches_versioned_reference(
                 board_height=height,
             ),
         )
+
+
+@pytest.mark.parametrize(
+    ("encoding_version", "input_channels"),
+    (
+        (ENCODING_VERSION, NUM_CHANNELS),
+        (MINI_ENCODING_VERSION, MINI_NUM_CHANNELS),
+    ),
+)
+@pytest.mark.parametrize("board_size", (5, 10, 24))
+def test_batched_inference_matches_independent_versioned_reference(
+    encoding_version: int, input_channels: int, board_size: int
+) -> None:
+    class DeterministicPolicyNetwork(PolicyValueNetwork):
+        def forward(
+            self, inputs: torch.Tensor
+        ) -> tuple[torch.Tensor, torch.Tensor]:
+            logits = torch.linspace(
+                -2.0,
+                2.0,
+                self.action_count,
+                dtype=inputs.dtype,
+                device=inputs.device,
+            ).expand(len(inputs), -1)
+            values = torch.linspace(
+                -0.375,
+                0.625,
+                len(inputs),
+                dtype=inputs.dtype,
+                device=inputs.device,
+            )
+            return logits, values
+
+    model = DeterministicPolicyNetwork(
+        PolicyValueConfig(
+            channels=2,
+            residual_blocks=1,
+            value_hidden=4,
+            board_width=board_size,
+            board_height=board_size,
+            input_channels=input_channels,
+            encoding_version=encoding_version,
+        )
+    )
+    states = tuple(
+        GameState(
+            board=BoardDimensions(board_size, board_size),
+            pegs=(Peg(player.opponent, Coordinate(2, 2)),),
+            side_to_move=player,
+        )
+        for player in Player
+    )
+    move_batches = tuple(legal_peg_placements(state) for state in states)
+
+    actual = NeuralPolicyValue(model).evaluate_batch(
+        tuple(zip(states, move_batches))
+    )
+    reference_logits = torch.linspace(-2.0, 2.0, model.action_count)
+    reference_values = torch.linspace(-0.375, 0.625, len(states)).tolist()
+
+    for estimate, state, moves, expected_value in zip(
+        actual, states, move_batches, reference_values
+    ):
+        reference_mask = legal_move_mask_for_version(
+            moves,
+            encoding_version,
+            board_width=board_size,
+            board_height=board_size,
+        )
+        reference_probabilities = torch.softmax(
+            reference_logits.masked_fill(~reference_mask, -torch.inf), dim=0
+        ).tolist()
+        expected_priors = {
+            move: reference_probabilities[
+                move_to_action_index_for_version(
+                    move,
+                    encoding_version,
+                    board_width=state.board.width,
+                    board_height=state.board.height,
+                )
+            ]
+            for move in moves
+        }
+
+        assert tuple(estimate.priors) == moves
+        assert estimate.priors == pytest.approx(expected_priors, abs=1e-8)
+        assert estimate.value == pytest.approx(expected_value, abs=1e-8)
 
 
 def _assert_next_request_waits_for_batch(

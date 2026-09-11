@@ -17,6 +17,26 @@ from .mini_encoding import (
 )
 
 
+def _row_major_action_strides(board_width: int) -> tuple[int, int]:
+    return 1, board_width
+
+
+def _normalized_action_strides(
+    side_to_move: Player,
+    *,
+    board_width: int,
+    board_height: int,
+) -> tuple[int, int]:
+    if side_to_move is Player.BLACK:
+        return board_height, 1
+    return _row_major_action_strides(board_width)
+
+
+def _action_index(coordinate: Coordinate, strides: tuple[int, int]) -> int:
+    x_stride, y_stride = strides
+    return coordinate.x * x_stride + coordinate.y * y_stride
+
+
 def encode_position_for_version(
     state: GameState,
     encoding_version: int,
@@ -67,13 +87,23 @@ def coordinate_to_action_index_for_version(
             raise ValueError(
                 f"coordinate must lie on a {board_width}x{board_height} board"
             )
-        return coordinate.y * board_width + coordinate.x
+        return _action_index(coordinate, _row_major_action_strides(board_width))
     if encoding_version == MINI_ENCODING_VERSION:
-        return game_coordinate_to_normalized_action_index(
+        # Retain the public transform's validation contract while sharing the
+        # actual mapping primitive with batched inference below.
+        game_coordinate_to_normalized_action_index(
             coordinate,
             side_to_move,
             board_width=board_width,
             board_height=board_height,
+        )
+        return _action_index(
+            coordinate,
+            _normalized_action_strides(
+                side_to_move,
+                board_width=board_width,
+                board_height=board_height,
+            ),
         )
     raise ValueError(f"unsupported encoding version: {encoding_version}")
 
@@ -127,7 +157,64 @@ def legal_move_mask_for_version(
     return mask
 
 
+def batched_action_indices_for_version(
+    move_batches: Sequence[Sequence[PegPlacement]],
+    encoding_version: int,
+    *,
+    board_width: int,
+    board_height: int,
+) -> list[list[int]]:
+    """Map batches of validated legal moves with one version dispatch."""
+
+    board = BoardDimensions(board_width, board_height)
+    if encoding_version == ENCODING_VERSION:
+        _, row_stride = _row_major_action_strides(board.width)
+        return [
+            [
+                move.coordinate.y * row_stride + move.coordinate.x
+                for move in moves
+            ]
+            for moves in move_batches
+        ]
+    if encoding_version == MINI_ENCODING_VERSION:
+        action_indices: list[list[int]] = []
+        for moves in move_batches:
+            if not moves:
+                action_indices.append([])
+                continue
+            x_stride, y_stride = _normalized_action_strides(
+                moves[0].player,
+                board_width=board.width,
+                board_height=board.height,
+            )
+            action_indices.append(
+                [
+                    move.coordinate.x * x_stride + move.coordinate.y * y_stride
+                    for move in moves
+                ]
+            )
+        return action_indices
+    raise ValueError(f"unsupported encoding version: {encoding_version}")
+
+
+def batched_legal_move_mask(
+    action_indices: Sequence[Sequence[int]], action_count: int
+) -> Tensor:
+    """Build all legal-mask rows with one indexed tensor update."""
+
+    masks = torch.zeros((len(action_indices), action_count), dtype=torch.bool)
+    flat_indices = [
+        row_index * action_count + action_index
+        for row_index, indices in enumerate(action_indices)
+        for action_index in indices
+    ]
+    masks.view(-1)[flat_indices] = True
+    return masks
+
+
 __all__ = [
+    "batched_action_indices_for_version",
+    "batched_legal_move_mask",
     "coordinate_to_action_index_for_version",
     "encode_position_for_version",
     "encode_positions_for_version",

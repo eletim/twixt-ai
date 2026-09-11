@@ -50,6 +50,8 @@ from .policy_value import (
     save_policy_value_checkpoint,
 )
 from .versioned_encoding import (
+    batched_action_indices_for_version,
+    batched_legal_move_mask,
     coordinate_to_action_index_for_version,
     encode_position_for_version,
     encode_positions_for_version,
@@ -83,6 +85,8 @@ __all__ = [
     "PolicyValueConfig",
     "PolicyValueNetwork",
     "action_index_to_coordinate",
+    "batched_action_indices_for_version",
+    "batched_legal_move_mask",
     "coordinate_to_action_index",
     "coordinate_to_action_index_for_version",
     "decode_mini_position",

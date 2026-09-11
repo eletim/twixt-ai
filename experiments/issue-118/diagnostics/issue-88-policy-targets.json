@@ -1,0 +1,31 @@
+{
+  "dataset": {
+    "path": "experiments/issue-88/5k/dataset",
+    "manifest_sha256": "a47eda5c2bb48fcd103a3380517a91470054170b24c176969d81c33df16290e6",
+    "examples": 302299,
+    "source_games": 5000
+  },
+  "teacher": {
+    "checkpoint": "experiments/issue-57/baseline/best.pt",
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "simulations": 4,
+    "rollout_limit": 4,
+    "progressive_widening_constant": 1.5,
+    "progressive_widening_exponent": 0.5
+  },
+  "policy_target_quality": {
+    "support": {
+      "mean": 2.9809162451744795,
+      "median": 3,
+      "maximum": 3,
+      "histogram": {
+        "1": 1875,
+        "2": 2019,
+        "3": 298405
+      }
+    },
+    "maximum_probability_mean": 0.5032972322104936,
+    "entropy_mean_nats": 1.0308546780789565
+  },
+  "interpretation": "The four-simulation teacher saturated its three-action progressive-widening limit on 98.7% of positions. More games repaired value learning but could not add root policy coverage."
+}

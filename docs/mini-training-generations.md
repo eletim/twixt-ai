@@ -16,6 +16,15 @@ self-play, and requires a 55% candidate win rate. Seeds for every stage are
 derived from the recorded root seed. Set `PYTHONHASHSEED=0` so data ordering and
 the complete schedule are reproducible.
 
+Self-play search strength can be changed independently of the fixed promotion
+evaluation with `--selfplay-exploration` and the two
+`--selfplay-progressive-widening-*` options. The generation report records the
+resolved search settings, dataset manifest SHA-256, policy-target support,
+entropy, and mean maximum probability. These diagnostics make it possible to
+reject a search configuration that plays strongly but emits nearly uniform
+training targets. `--selection-metric` controls whether candidate checkpoint
+selection uses combined policy/value loss or value loss.
+
 ## Run
 
 Start from the measured Issue 57 Mini checkpoint:

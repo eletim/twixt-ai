@@ -21,7 +21,11 @@ from twixt_ai.models import (
     MINI_POLICY_VALUE_CONFIG,
     load_policy_value_checkpoint,
 )
-from twixt_ai.search import MCTSAgent
+from twixt_ai.search import (
+    DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+    DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
+    MCTSAgent,
+)
 from twixt_ai.search.neural import NeuralInferenceBatcher, NeuralPolicyValue
 from twixt_ai.selfplay import BatchConfig, BatchSummary, run_batch
 
@@ -46,6 +50,13 @@ class MiniGenerationConfig:
     games_per_generation: int = 100
     dataset_window: int = 5
     selfplay_simulations: int = 100
+    selfplay_exploration: float = math.sqrt(2.0)
+    selfplay_progressive_widening_constant: float = (
+        DEFAULT_PROGRESSIVE_WIDENING_CONSTANT
+    )
+    selfplay_progressive_widening_exponent: float = (
+        DEFAULT_PROGRESSIVE_WIDENING_EXPONENT
+    )
     evaluation_games: int = 20
     evaluation_simulations: int = 20
     rollout_limit: int = 4
@@ -56,6 +67,7 @@ class MiniGenerationConfig:
     batch_size: int = 64
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
+    selection_metric: str = "total"
     validation_fraction: float = 0.1
     shard_size: int = 10_000
     promotion_win_rate: float = 0.55
@@ -105,6 +117,27 @@ class MiniGenerationConfig:
                 or (name == "learning_rate" and value == 0)
             ):
                 raise ValueError(f"{name} must be a valid finite value")
+        for name in (
+            "selfplay_progressive_widening_constant",
+            "selfplay_progressive_widening_exponent",
+        ):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value <= 0
+            ):
+                raise ValueError(f"{name} must be a finite positive number")
+        if (
+            isinstance(self.selfplay_exploration, bool)
+            or not isinstance(self.selfplay_exploration, (int, float))
+            or not math.isfinite(self.selfplay_exploration)
+            or self.selfplay_exploration < 0
+        ):
+            raise ValueError("selfplay_exploration must be finite and non-negative")
+        if self.selection_metric not in {"total", "value"}:
+            raise ValueError("selection_metric must be 'total' or 'value'")
         if (
             isinstance(self.validation_fraction, bool)
             or not isinstance(self.validation_fraction, (int, float))
@@ -143,6 +176,72 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _policy_target_quality(
+    dataset_root: Path, manifest: dict[str, object]
+) -> dict[str, object]:
+    """Summarize the search distributions actually consumed by training."""
+
+    supports: dict[int, int] = {}
+    examples = 0
+    support_total = 0
+    entropy_total = 0.0
+    normalized_entropy_total = 0.0
+    maximum_probability_total = 0.0
+    splits = manifest.get("splits")
+    if not isinstance(splits, dict):
+        raise ValueError("dataset manifest has no splits object")
+    for split in ("train", "validation"):
+        split_value = splits.get(split)
+        if not isinstance(split_value, dict) or not isinstance(
+            split_value.get("shards"), list
+        ):
+            raise ValueError(f"dataset manifest has no valid {split} split")
+        for shard in split_value["shards"]:
+            if not isinstance(shard, dict) or not isinstance(shard.get("path"), str):
+                raise ValueError("dataset manifest contains an invalid shard")
+            path = dataset_root / shard["path"]
+            if _sha256(path) != shard.get("sha256"):
+                raise ValueError(f"dataset shard hash mismatch: {path}")
+            with path.open(encoding="utf-8") as stream:
+                for line in stream:
+                    example = json.loads(line)
+                    policy = example.get("policy")
+                    if not isinstance(policy, list) or not policy:
+                        raise ValueError("dataset example is missing its policy target")
+                    probabilities = [float(item["probability"]) for item in policy]
+                    if any(
+                        value <= 0 or not math.isfinite(value)
+                        for value in probabilities
+                    ):
+                        raise ValueError("policy target probabilities must be positive")
+                    if not math.isclose(sum(probabilities), 1.0, abs_tol=1e-9):
+                        raise ValueError("policy target probabilities must sum to one")
+                    support = len(probabilities)
+                    entropy = -sum(value * math.log(value) for value in probabilities)
+                    examples += 1
+                    supports[support] = supports.get(support, 0) + 1
+                    support_total += support
+                    entropy_total += entropy
+                    normalized_entropy_total += (
+                        entropy / math.log(support) if support > 1 else 0.0
+                    )
+                    maximum_probability_total += max(probabilities)
+    if not examples:
+        raise ValueError("dataset contains no policy targets")
+    return {
+        "examples": examples,
+        "support": {
+            "mean": support_total / examples,
+            "minimum": min(supports),
+            "maximum": max(supports),
+            "histogram": {str(key): supports[key] for key in sorted(supports)},
+        },
+        "entropy_mean_nats": entropy_total / examples,
+        "normalized_entropy_mean": normalized_entropy_total / examples,
+        "maximum_probability_mean": maximum_probability_total / examples,
+    }
+
+
 def _checkpoint(path: Path) -> dict[str, object]:
     loaded = load_policy_value_checkpoint(path)
     return {
@@ -158,11 +257,17 @@ def _agent(
     simulations: int,
     rollout_limit: int,
     device: str,
+    exploration: float = math.sqrt(2.0),
+    progressive_widening_constant: float = DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+    progressive_widening_exponent: float = DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
 ) -> MCTSAgent:
     loaded = load_policy_value_checkpoint(checkpoint, map_location=device)
     return MCTSAgent(
         simulations=simulations,
         rollout_limit=rollout_limit,
+        exploration=exploration,
+        progressive_widening_constant=progressive_widening_constant,
+        progressive_widening_exponent=progressive_widening_exponent,
         policy_value=NeuralPolicyValue(loaded.model),
     )
 
@@ -202,6 +307,9 @@ def _run_selfplay(
             config.selfplay_simulations,
             config.rollout_limit,
             device.resolved_device,
+            config.selfplay_exploration,
+            config.selfplay_progressive_widening_constant,
+            config.selfplay_progressive_widening_exponent,
         )
         batch = run_batch(
             factory, factory, config=batch_config, output_dir=output_dir
@@ -226,6 +334,13 @@ def _run_selfplay(
             MCTSAgent,
             simulations=config.selfplay_simulations,
             rollout_limit=config.rollout_limit,
+            exploration=config.selfplay_exploration,
+            progressive_widening_constant=(
+                config.selfplay_progressive_widening_constant
+            ),
+            progressive_widening_exponent=(
+                config.selfplay_progressive_widening_exponent
+            ),
             policy_value=inference,
         )
         batch = run_batch(
@@ -366,6 +481,13 @@ def run_mini_training_generations(
                 "games": config.games_per_generation,
                 "dataset_window": config.dataset_window,
                 "selfplay_simulations": config.selfplay_simulations,
+                "selfplay_exploration": config.selfplay_exploration,
+                "selfplay_progressive_widening_constant": (
+                    config.selfplay_progressive_widening_constant
+                ),
+                "selfplay_progressive_widening_exponent": (
+                    config.selfplay_progressive_widening_exponent
+                ),
                 "evaluation_games": config.evaluation_games,
                 "evaluation_simulations": config.evaluation_simulations,
                 "rollout_limit": config.rollout_limit,
@@ -376,6 +498,7 @@ def run_mini_training_generations(
                 "batch_size": config.batch_size,
                 "learning_rate": config.learning_rate,
                 "weight_decay": config.weight_decay,
+                "selection_metric": config.selection_metric,
                 "promotion_win_rate": config.promotion_win_rate,
                 "device": device.to_dict(),
                 "worker_mode": (
@@ -437,19 +560,37 @@ def run_mini_training_generations(
                             range(max(1, number - len(window) + 1), number + 1)
                         ),
                         "champion_sha256": _sha256(champion_before),
+                        "mcts": {
+                            "simulations": config.selfplay_simulations,
+                            "exploration": config.selfplay_exploration,
+                            "rollout_limit": config.rollout_limit,
+                            "progressive_widening_constant": (
+                                config.selfplay_progressive_widening_constant
+                            ),
+                            "progressive_widening_exponent": (
+                                config.selfplay_progressive_widening_exponent
+                            ),
+                            "guidance": "policy-value",
+                        },
                     },
                 ),
             )
+            if not dataset.train_examples:
+                raise ValueError("training split must contain at least one example")
             generation["dataset"] = {
                 "runtime_seconds": perf_counter() - stage_started,
                 "source_generations": list(
                     range(max(1, number - len(window) + 1), number + 1)
                 ),
                 "manifest": dataset.to_dict(),
+                "manifest_sha256": _sha256(
+                    generation_root / "dataset" / "manifest.json"
+                ),
+                "policy_target_quality": _policy_target_quality(
+                    generation_root / "dataset", dataset.to_dict()
+                ),
             }
             _write_json(generation_root / "report.json", generation)
-            if not dataset.train_examples:
-                raise ValueError("training split must contain at least one example")
 
             stage = "training"
             stage_started = perf_counter()
@@ -464,6 +605,7 @@ def run_mini_training_generations(
                     weight_decay=config.weight_decay,
                     seed=config.seed + number * 10 + 1,
                     device=config.device,
+                    selection_metric=config.selection_metric,
                 ),
                 model_config=MINI_POLICY_VALUE_CONFIG,
                 initial_checkpoint=champion_before,

@@ -352,6 +352,43 @@ retained bulk encoder measured 200.4 us (6.53x faster) in the same nine-sample
 microbenchmark. Full machine-readable evidence is in
 [`benchmarks/mini-batched-position-encoding.json`](../benchmarks/mini-batched-position-encoding.json).
 
+## Residual batched version-1 encoding overhead
+
+The retained follow-up collapses the separate peg/link coordinate lists and
+advanced-index conversions into one flattened dynamic-feature update. CPU
+batches clone a bounded, board-size-keyed immutable template for the goal
+borders; the clone preserves independent caller-owned storage, and non-CPU
+devices retain the uncached construction path. The public single-position
+encoder, version 2, channel contract, and supported board dimensions are
+unchanged.
+
+Two adjacent unprofiled canonical runs per implementation used eight workers,
+inference batch eight, and a 2 ms flush wait. Baseline runs measured 77.079 s
+and 76.578 s; optimized runs measured 73.741 s and 73.692 s. Mean end-to-end
+time fell from 76.829 s to 73.716 s (4.05%), and both optimized runs beat both
+baselines. Effective batch size remained 7.820. All five baseline, optimized,
+and diagnostic runs completed 512 games, validated 30,929 decisions, and
+produced the unchanged output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+
+The detailed observer reduced encoding from 13.924 s to 7.545 s, from 0.716
+ms to 0.387 ms per batch, and from 37.64% to 22.85% of profiled evaluator
+time. A same-process representative microbenchmark measured 252.7 us per
+batch for the prior encoder and 122.8 us for the retained encoder (2.06x).
+Complete float-buffer differential tests cover 1x1, 2x3, 10x10, and 24x24
+boards, and a mutation regression proves that cached static planes do not
+alias returned batches.
+
+Flattened indexing without the static template remained slower at 135.5 us.
+Replacing owner-channel tables with identity branches regressed isolated
+index construction by 12.78%. Caching a full tensor for each batch/board shape
+saved only 0.70 us over the spatial template while scaling cached storage with
+batch size. Mutable output-buffer reuse was rejected as unsafe because calls
+own their returned tensors and inference batches may overlap; making that pool
+safe would add synchronization without demonstrated end-to-end value. Full
+measurements and rejection rationale are in
+[`benchmarks/mini-residual-batched-position-encoding.json`](../benchmarks/mini-residual-batched-position-encoding.json).
+
 ## Inference-batcher scheduling latency
 
 The remaining condition-wait tail is reduced by bounding CPython's thread

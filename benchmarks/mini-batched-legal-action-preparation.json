@@ -10,9 +10,9 @@
   },
   "source": {
     "base_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
-    "implementation_git_commit": "e9fda7ad94b282a1aa88d0862a0e427496c8b55e",
+    "implementation_git_commit": "d299b2a1c5d22ce98bdafd05698ad4d0ac02828f",
     "branch": "feature/work-item-optimize-batched-legal-action-preparation",
-    "candidate": "one version dispatch per batch plus one flattened mask update"
+    "candidate": "model-owned one-version-dispatch batch mapping plus one flattened mask update"
   },
   "contract": {
     "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
@@ -31,18 +31,19 @@
       "mean_games_per_hour": 22577.412184239154
     },
     "optimized": {
-      "end_to_end_wall_seconds": [76.57625210983679, 76.25249560782686],
-      "games_per_hour": [24070.12551823788, 24172.32361127872],
-      "mean_end_to_end_wall_seconds": 76.41437385883182,
-      "mean_games_per_hour": 24121.2245647583,
-      "positions_per_second": [1993.751271360379, 2002.2164361047999],
-      "inference_positions_per_second": [4512.755700325888, 4721.301384337967],
-      "effective_batch_size_average": [7.8214139344262295, 7.819010550035849]
+      "implementation_git_commit": "d299b2a1c5d22ce98bdafd05698ad4d0ac02828f",
+      "end_to_end_wall_seconds": [75.9241021501366, 76.27285783505067],
+      "games_per_hour": [24276.87582469072, 24165.87043304637],
+      "mean_end_to_end_wall_seconds": 76.09847999259364,
+      "mean_games_per_hour": 24221.373128868545,
+      "positions_per_second": [2010.8765948669873, 2001.6819132459425],
+      "inference_positions_per_second": [4690.222043216384, 4591.311764450246],
+      "effective_batch_size_average": [7.8194110115236874, 7.826626339262829]
     },
     "result": {
-      "speedup": 1.068386919918538,
-      "wall_time_reduction_percent": 6.400950689638956,
-      "games_per_hour_increase_percent": 6.837862408327067,
+      "speedup": 1.072821921442934,
+      "wall_time_reduction_percent": 6.787885294605965,
+      "games_per_hour_increase_percent": 7.281440987187215,
       "both_optimized_runs_beat_both_baseline_runs": true,
       "retained": true
     }
@@ -55,6 +56,7 @@
       "combined_seconds": 6.469521697144955
     },
     "optimized": {
+      "implementation_git_commit": "e9fda7ad94b282a1aa88d0862a0e427496c8b55e",
       "batches": 19510,
       "positions": 152674,
       "action_index_construction_seconds": 0.32728926301933825,
@@ -77,9 +79,11 @@
   },
   "representative_batch_microbenchmark": {
     "method": "Nine samples of 1000 calls after warmup; median for eight deterministic 10x10 legal-play positions at plies 8 through 64, seed 2401, on CPU.",
+    "reference_source_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
     "reference_microseconds_per_batch": 275.8845230564475,
-    "retained_microseconds_per_batch": 50.628734985366464,
-    "retained_speedup": 5.449168799816707,
+    "retained_measurement_git_commit": "d299b2a1c5d22ce98bdafd05698ad4d0ac02828f",
+    "retained_microseconds_per_batch": 51.896943943575025,
+    "retained_speedup": 5.316007111255011,
     "rejected_approaches": [
       {
         "implementation": "direct indices with one indexed mask update per row",

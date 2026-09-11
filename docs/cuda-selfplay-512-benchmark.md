@@ -393,9 +393,10 @@ and the probability-to-move mapping. All mask rows are populated through one
 flattened indexed update instead of one Python-to-tensor index conversion per
 row.
 
-Two unprofiled canonical runs measured 76.576 s and 76.252 s end to end. The
+Two unprofiled canonical runs on the reviewed implementation commit
+`d299b2a` measured 75.924 s and 76.273 s end to end. The
 retained post-scheduling baseline runs measured 81.354 s and 81.926 s, so the
-mean fell from 81.640 s to 76.414 s (6.40%); both optimized runs beat both
+mean fell from 81.640 s to 76.098 s (6.79%); both optimized runs beat both
 baseline runs. Every run completed all 512 games, validated all 30,929
 decisions, and produced the unchanged output summary SHA-256
 `f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
@@ -407,7 +408,9 @@ Differential tests compare every ordered index and the complete Boolean mask
 against the original versioned helpers for both encodings, both players, and
 5x5, 10x10, and 24x24 boards. A deterministic eight-position microbenchmark
 measured 275.9 us per batch for the reference path and 50.6 us for the retained
-path (5.45x). Keeping per-row mask updates after direct index construction was
+path before the model-boundary review. Remeasuring the reviewed `d299b2a`
+implementation produced 51.9 us (5.32x faster than the reference). Keeping
+per-row mask updates after direct index construction was
 rejected at 68.2 us and a 77.358 s canonical trial. Caching by complete legal
 move tuple was rejected because canonical tuples change at every position and
 would retain large masks without meaningful reuse. Full measurements and

@@ -107,7 +107,7 @@ class _Node:
         self.parent = parent
         self.children: list[_Node] = []
         self.unexpanded: list[PegPlacement] = []
-        self.priors: dict[PegPlacement, float] = {}
+        self.priors: list[float] = []
         self.estimated_value: float | None = None
         self.visits = 0
         self.value_sum = 0.0
@@ -117,11 +117,11 @@ class _Node:
         return self.value_sum / self.visits if self.visits else 0.0
 
 
-def _uniform_priors(moves: tuple[PegPlacement, ...]) -> dict[PegPlacement, float]:
+def _uniform_priors(moves: tuple[PegPlacement, ...]) -> list[float]:
     if not moves:
-        return {}
+        return []
     probability = 1.0 / len(moves)
-    return {move: probability for move in moves}
+    return [probability] * len(moves)
 
 
 class MCTSAgent:
@@ -216,10 +216,10 @@ class MCTSAgent:
             raise TypeError("policy priors must be a mapping")
         if any(not isinstance(move, PegPlacement) for move in estimate.priors):
             raise TypeError("policy priors must use PegPlacement keys")
-        illegal = set(estimate.priors) - set(moves)
-        if illegal:
+        legal_moves = set(moves)
+        if any(move not in legal_moves for move in estimate.priors):
             raise ValueError("policy priors must not contain illegal moves")
-        weights: dict[PegPlacement, float] = {}
+        weights: list[float] = []
         for move in moves:
             weight = estimate.priors.get(move, 0.0)
             if (
@@ -229,10 +229,10 @@ class MCTSAgent:
                 or weight < 0
             ):
                 raise ValueError("policy priors must be finite non-negative numbers")
-            weights[move] = float(weight)
-        total = sum(weights.values())
+            weights.append(float(weight))
+        total = sum(weights)
         if total > 0:
-            node.priors = {move: weight / total for move, weight in weights.items()}
+            node.priors = [weight / total for weight in weights]
 
         value = estimate.value
         if value is not None:
@@ -254,16 +254,17 @@ class MCTSAgent:
         return 0.0
 
     def _expand(self, node: _Node, random: Random) -> _Node:
-        weights = [node.priors[move] for move in node.unexpanded]
+        weights = node.priors
         if sum(weights) > 0:
             index = random.choices(range(len(node.unexpanded)), weights=weights, k=1)[0]
         else:
             index = random.randrange(len(node.unexpanded))
         move = node.unexpanded.pop(index)
+        prior = node.priors.pop(index)
         child = _Node(
             apply_move(node.state, move),
             move=move,
-            prior=node.priors[move],
+            prior=prior,
             parent=node,
         )
         self._initialize(child)
@@ -353,6 +354,7 @@ class MCTSAgent:
         self._maximum_depth = 0
         root = _Node(request.state)
         self._initialize(root, request.legal_moves)
+        root_priors = tuple(root.priors)
 
         for _ in range(self.simulations):
             node = root
@@ -383,8 +385,8 @@ class MCTSAgent:
             ),
         )
         move_statistics = tuple(
-            MCTSMoveStatistics(move, 0, 0.0, root.priors[move])
-            for move in request.legal_moves
+            MCTSMoveStatistics(move, 0, 0.0, prior)
+            for move, prior in zip(request.legal_moves, root_priors)
         )
         by_move = {item.move: item for item in root.children}
         move_statistics = tuple(

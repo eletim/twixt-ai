@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -117,6 +118,34 @@ def test_policy_and_value_hook_guides_the_same_tree() -> None:
         "value": -0.25,
         "prior": 1.0,
     }
+
+
+def test_seeded_sparse_policy_search_preserves_canonical_output() -> None:
+    def guidance(
+        state: GameState, moves: tuple[PegPlacement, ...]
+    ) -> PolicyValueEstimate:
+        priors = {
+            move: float((move.coordinate.x * 3 + move.coordinate.y * 5) % 7)
+            for move in moves[::2]
+        }
+        value = ((len(state.pegs) % 5) - 2) / 2
+        return PolicyValueEstimate(priors, value)
+
+    result = MCTSAgent(simulations=24, policy_value=guidance).choose_move(
+        AgentRequest(GameState.initial(BoardDimensions(5, 5)), seed=8675309)
+    )
+    payload = json.dumps(
+        {
+            "move": result.move.coordinate.to_dict(),
+            "metadata": dict(result.metadata),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    assert hashlib.sha256(payload.encode()).hexdigest() == (
+        "015de731b2d45bd332a377735b19fdb120148bd2d637c7ff19679e42b97af388"
+    )
 
 
 @pytest.mark.parametrize("simulations", [0, -1, True, 1.5])

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import platform
 import statistics as statistics_module
@@ -189,6 +190,7 @@ class _PhaseSampler:
 
 
 def _gpu_stats(sampler: _GpuSampler, peak_allocated_bytes: int) -> dict[str, object]:
+    sampler_summary = sampler.to_dict()
     utilization = [sample[0] for sample in sampler.samples]
     memory = [sample[1] for sample in sampler.samples]
     return {
@@ -205,6 +207,8 @@ def _gpu_stats(sampler: _GpuSampler, peak_allocated_bytes: int) -> dict[str, obj
         "average_memory_mib": sum(memory) / len(memory) if memory else None,
         "peak_memory_mib": max(memory, default=None),
         "pytorch_peak_allocated_memory_bytes": peak_allocated_bytes,
+        "sampler_failures": sampler_summary["sampler_failures"],
+        "sampler_failure_details": sampler_summary["sampler_failure_details"],
     }
 
 
@@ -339,6 +343,21 @@ class BenchmarkOptions:
     phase_sample_interval_seconds: float = 0.005
     implementation_label: str = "v0.0.6-default"
     detailed_inference_profile: bool = False
+
+    def __post_init__(self) -> None:
+        for name in (
+            "gpu_sample_interval_seconds",
+            "phase_sample_interval_seconds",
+        ):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value <= 0
+            ):
+                raise ValueError(f"{name} must be a positive finite number")
+            object.__setattr__(self, name, float(value))
 
 
 @dataclass(frozen=True, slots=True)

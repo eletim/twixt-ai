@@ -142,6 +142,54 @@ def test_batched_action_preparation_matches_versioned_reference(
         )
 
 
+@pytest.mark.parametrize("encoding_version", (ENCODING_VERSION, MINI_ENCODING_VERSION))
+def test_batched_action_preparation_rejects_out_of_board_coordinates(
+    encoding_version: int,
+) -> None:
+    move = PegPlacement(Player.RED, Coordinate(10, 2))
+
+    with pytest.raises(ValueError) as expected:
+        move_to_action_index_for_version(
+            move,
+            encoding_version,
+            board_width=10,
+            board_height=10,
+        )
+    with pytest.raises(ValueError, match=str(expected.value)):
+        batched_action_indices_for_version(
+            ((move,),),
+            encoding_version,
+            board_width=10,
+            board_height=10,
+        )
+
+
+def test_batched_action_preparation_maps_each_moves_player() -> None:
+    moves = (
+        PegPlacement(Player.RED, Coordinate(2, 3)),
+        PegPlacement(Player.BLACK, Coordinate(2, 3)),
+    )
+
+    actual = batched_action_indices_for_version(
+        (moves,),
+        MINI_ENCODING_VERSION,
+        board_width=10,
+        board_height=10,
+    )
+
+    assert actual == [
+        [
+            move_to_action_index_for_version(
+                move,
+                MINI_ENCODING_VERSION,
+                board_width=10,
+                board_height=10,
+            )
+            for move in moves
+        ]
+    ]
+
+
 @pytest.mark.parametrize(
     ("encoding_version", "input_channels"),
     (

@@ -164,35 +164,44 @@ def batched_action_indices_for_version(
     board_width: int,
     board_height: int,
 ) -> list[list[int]]:
-    """Map batches of validated legal moves with one version dispatch."""
+    """Map batches of legal moves with one encoding-version dispatch."""
 
     board = BoardDimensions(board_width, board_height)
     if encoding_version == ENCODING_VERSION:
         _, row_stride = _row_major_action_strides(board.width)
-        return [
-            [
-                move.coordinate.y * row_stride + move.coordinate.x
-                for move in moves
-            ]
-            for moves in move_batches
-        ]
+        action_indices: list[list[int]] = []
+        for moves in move_batches:
+            indices: list[int] = []
+            for move in moves:
+                if not isinstance(move, PegPlacement):
+                    raise TypeError("move must be a PegPlacement")
+                if not board.contains(move.coordinate):
+                    raise ValueError(
+                        f"coordinate must lie on a {board_width}x{board_height} board"
+                    )
+                indices.append(move.coordinate.y * row_stride + move.coordinate.x)
+            action_indices.append(indices)
+        return action_indices
     if encoding_version == MINI_ENCODING_VERSION:
         action_indices: list[list[int]] = []
         for moves in move_batches:
-            if not moves:
-                action_indices.append([])
-                continue
-            x_stride, y_stride = _normalized_action_strides(
-                moves[0].player,
-                board_width=board.width,
-                board_height=board.height,
-            )
-            action_indices.append(
-                [
-                    move.coordinate.x * x_stride + move.coordinate.y * y_stride
-                    for move in moves
-                ]
-            )
+            indices = []
+            for move in moves:
+                if not isinstance(move, PegPlacement):
+                    raise TypeError("move must be a PegPlacement")
+                if not board.contains(move.coordinate):
+                    raise ValueError("coordinate is outside the board")
+                indices.append(
+                    _action_index(
+                        move.coordinate,
+                        _normalized_action_strides(
+                            move.player,
+                            board_width=board.width,
+                            board_height=board.height,
+                        ),
+                    )
+                )
+            action_indices.append(indices)
         return action_indices
     raise ValueError(f"unsupported encoding version: {encoding_version}")
 

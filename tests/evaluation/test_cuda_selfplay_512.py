@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 from functools import partial
 from pathlib import Path
 
 import pytest
 import torch
 
+from twixt_ai.evaluation import cuda_selfplay_512_cli
 from twixt_ai.evaluation.cuda_selfplay_512 import (
     BenchmarkOptions,
     CONTRACT_FORMAT,
@@ -166,6 +168,41 @@ def test_detailed_profile_is_an_explicit_non_workload_option() -> None:
     options = BenchmarkOptions(detailed_inference_profile=True)
 
     assert options.detailed_inference_profile is True
+
+
+@pytest.mark.parametrize("value", (0, -0.1, math.inf, -math.inf, math.nan))
+@pytest.mark.parametrize(
+    "name", ("gpu_sample_interval_seconds", "phase_sample_interval_seconds")
+)
+def test_benchmark_options_reject_invalid_sampler_intervals(
+    name: str, value: float
+) -> None:
+    with pytest.raises(ValueError, match=name):
+        BenchmarkOptions(**{name: value})
+
+
+@pytest.mark.parametrize(
+    "argument",
+    ("--gpu-sample-interval-seconds", "--phase-sample-interval-seconds"),
+)
+@pytest.mark.parametrize("value", ("0", "-0.1", "inf", "-inf", "nan"))
+def test_cli_rejects_invalid_sampler_intervals(
+    argument: str,
+    value: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit, match="2"):
+        cuda_selfplay_512_cli.main(
+            [
+                "--output-dir",
+                str(tmp_path / "output"),
+                "--report",
+                str(tmp_path / "report.json"),
+                f"{argument}={value}",
+            ]
+        )
+    assert "must be a positive finite number" in capsys.readouterr().err
 
 
 def test_detailed_profile_ranks_host_phases_and_keeps_cuda_separate() -> None:

@@ -143,6 +143,8 @@ class _GpuSampler:
         self.gpu_id = uuid if uuid.startswith(("GPU-", "MIG-")) else f"GPU-{uuid}"
         self.interval = interval
         self.samples: list[tuple[float, float]] = []
+        self.failure_count = 0
+        self.failure_details: list[str] = []
         self._stop = Event()
         self._thread: Thread | None = None
 
@@ -166,15 +168,33 @@ class _GpuSampler:
                     text=True,
                     timeout=2,
                 )
-                utilization, memory = result.stdout.strip().splitlines()[0].split(",")
-                self.samples.append((float(utilization), float(memory)))
+                utilization_text, memory_text = (
+                    result.stdout.strip().splitlines()[0].split(",")
+                )
+                utilization = float(utilization_text)
+                memory = float(memory_text)
+                if (
+                    not math.isfinite(utilization)
+                    or not 0 <= utilization <= 100
+                    or not math.isfinite(memory)
+                    or memory < 0
+                ):
+                    raise ValueError("nvidia-smi returned invalid GPU metrics")
+                self.samples.append((utilization, memory))
             except (
-                FileNotFoundError,
+                OSError,
+                AttributeError,
                 IndexError,
+                TypeError,
                 subprocess.SubprocessError,
                 ValueError,
-            ):
-                pass
+            ) as exc:
+                self.failure_count += 1
+                detail = f"{type(exc).__name__}: {exc}"
+                if isinstance(exc, subprocess.CalledProcessError) and exc.stderr:
+                    detail = f"{detail}; stderr: {exc.stderr.strip()}"
+                if detail not in self.failure_details and len(self.failure_details) < 10:
+                    self.failure_details.append(detail)
             self._stop.wait(self.interval)
 
     def __exit__(self, *args: object) -> None:
@@ -183,6 +203,12 @@ class _GpuSampler:
         self._thread.join(timeout=3)
 
     def to_dict(self) -> dict[str, object]:
+        if not self.samples:
+            details = "; ".join(self.failure_details) or "no sampler result"
+            raise RuntimeError(
+                "GPU telemetry failed: no valid nvidia-smi sample was collected "
+                f"after {self.failure_count} failure(s): {details}"
+            )
         utilization = [sample[0] for sample in self.samples]
         memory = [sample[1] for sample in self.samples]
         return {
@@ -194,6 +220,8 @@ class _GpuSampler:
             else None,
             "peak_utilization_percent": max(utilization, default=None),
             "peak_memory_mib": max(memory, default=None),
+            "sampler_failures": self.failure_count,
+            "sampler_failure_details": list(self.failure_details),
         }
 
 

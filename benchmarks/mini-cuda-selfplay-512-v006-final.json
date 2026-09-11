@@ -76,89 +76,91 @@
   },
   "format": "twixt-ai-mini-cuda-selfplay-benchmark-result",
   "gpu_sampling": {
-    "average_memory_mib": 424.87346221441123,
-    "average_utilization_percent": 2.6977152899824253,
-    "median_utilization_percent": 3,
+    "average_memory_mib": 424.87279151943466,
+    "average_utilization_percent": 2.706713780918728,
+    "median_utilization_percent": 3.0,
     "method": "nvidia-smi samples during the complete timed scope",
-    "peak_memory_mib": 425,
-    "peak_utilization_percent": 4,
+    "peak_memory_mib": 425.0,
+    "peak_utilization_percent": 4.0,
     "pytorch_peak_allocated_memory_bytes": 9790464,
     "sample_interval_seconds": 0.1,
-    "samples": 569
+    "sampler_failure_details": [],
+    "sampler_failures": 0,
+    "samples": 566
   },
   "inference": {
-    "average_queue_wait_seconds": 0.0010267488630136053,
+    "average_queue_wait_seconds": 0.0010157642269407545,
     "batch_size_distribution": {
-      "1": 154,
-      "2": 80,
-      "3": 72,
-      "4": 39,
-      "5": 106,
-      "6": 225,
-      "7": 580,
-      "8": 18256
+      "1": 144,
+      "2": 83,
+      "3": 52,
+      "4": 53,
+      "5": 99,
+      "6": 240,
+      "7": 499,
+      "8": 18321
     },
-    "batches": 19512,
-    "effective_batch_capacity_percent": 97.80775932759327,
-    "effective_batch_size_average": 7.824620746207462,
+    "batches": 19491,
+    "effective_batch_capacity_percent": 97.91313939767072,
+    "effective_batch_size_average": 7.833051151813658,
     "flushes": {
       "forced": 0,
-      "full_batch": 18256,
-      "latency": 1256
+      "full_batch": 18321,
+      "latency": 1170
     },
-    "inference_seconds": 31.961032652063295,
+    "inference_seconds": 31.794310413999483,
     "maximum_batch_size": 8,
-    "positions_per_second": 4776.879447608959,
+    "positions_per_second": 4801.928332837044,
     "requests": 152674,
-    "total_queue_wait_seconds": 156.75785591173917
+    "total_queue_wait_seconds": 155.08078758395277
   },
   "phase_breakdown": {
     "method": "5 ms exclusive wall-state sampling; priority serialization/I/O, GPU inference, CPU/MCTS, batching/queueing, idle",
     "phases": {
       "batching_queueing": {
         "estimated_wall_seconds": 0.03,
-        "percent": 0.05353319057815846,
+        "percent": 0.05413208228076506,
         "samples": 6
       },
       "cpu_mcts": {
-        "estimated_wall_seconds": 20.990000000000002,
-        "percent": 37.45538900785154,
-        "samples": 4198
+        "estimated_wall_seconds": 20.490000000000002,
+        "percent": 36.97221219776254,
+        "samples": 4098
       },
       "gpu_inference": {
-        "estimated_wall_seconds": 32.57,
-        "percent": 58.1192005710207,
-        "samples": 6514
+        "estimated_wall_seconds": 32.46,
+        "percent": 58.57091302778781,
+        "samples": 6492
       },
       "idle": {
-        "estimated_wall_seconds": 0,
-        "percent": 0,
+        "estimated_wall_seconds": 0.0,
+        "percent": 0.0,
         "samples": 0
       },
       "serialization_io": {
-        "estimated_wall_seconds": 2.45,
-        "percent": 4.371877230549607,
-        "samples": 490
+        "estimated_wall_seconds": 2.44,
+        "percent": 4.402742692168892,
+        "samples": 488
       }
     },
     "sample_interval_seconds": 0.005,
-    "samples": 11208,
+    "samples": 11084,
     "synchronization_note": "No separately observable synchronization-only phase; Future waits before dispatch are batching/queueing and waits during execution are attributed to the phase of the code actually running."
   },
   "rates": {
-    "games_per_hour": 25560.15748647305,
-    "positions_per_second": 2117.1720291285733,
-    "simulations_per_second": 1715.603539277615
+    "games_per_hour": 25847.124184163422,
+    "positions_per_second": 2140.9417522205763,
+    "simulations_per_second": 1734.864808793382
   },
   "source": {
-    "branch_base": "feature/work-item-record-final-v006-performance-result",
-    "git_commit": "5ecd1b272f26aa9c3173f3bee23f1b0e7729d961",
-    "implementation": "final-v0.0.6-canonical"
+    "branch_base": "dev/v0.0.6",
+    "git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "implementation": "final-v0.0.6-canonical-reviewed-validation"
   },
   "timing": {
-    "end_to_end_wall_seconds": 72.11223174096085,
+    "end_to_end_wall_seconds": 71.31160847400315,
     "scope": "End-to-end wall time from immediately before self-play dispatch until all 512 per-game artifacts and summary.json have been written; checkpoint load and one-time process setup are reported separately and excluded.",
-    "setup_seconds_excluded": 0.07791356393136084
+    "setup_seconds_excluded": 0.07289883494377136
   },
   "validation": {
     "all_decision_seeds_match_contract_derivation": true,
@@ -189,19 +191,19 @@
   "analysis": {
     "comparison_to_recorded_116_031_seconds": {
       "reference_end_to_end_wall_seconds": 116.031,
-      "speedup": 1.609033546719268,
-      "wall_time_reduction_percent": 37.85089179532983
+      "speedup": 1.627098343214337,
+      "wall_time_reduction_percent": 38.54089986813597
     },
     "stretch_target": {
       "target_end_to_end_wall_seconds": 60,
       "achieved": false,
-      "seconds_over_target": 12.112231740960851,
-      "percent_over_target": 20.18705290160141,
+      "seconds_over_target": 11.311608474003151,
+      "percent_over_target": 18.85268079000525,
       "outcome": "not achieved; the canonical final run remains materially below the 116.031 s acceptance reference"
     },
     "cuda_execution": {
       "validated": true,
-      "evidence": "The runner resolved device=cuda, loaded the fixed checkpoint on the NVIDIA GeForce RTX 4060, executed 19,512 model batches for 152,674 positions, synchronized CUDA inside the timed scope, sampled nonzero GPU utilization and memory, and reported a nonzero PyTorch CUDA allocation peak."
+      "evidence": "The runner resolved device=cuda, loaded the fixed checkpoint on the NVIDIA GeForce RTX 4060, executed 19,491 model batches for 152,674 positions, synchronized CUDA inside the timed scope, collected 566 valid nvidia-smi samples with zero sampler failures, and reported a nonzero PyTorch CUDA allocation peak."
     },
     "representative_scaling_and_negative_attempts": {
       "source_path": "benchmarks/mini-final-concurrency-settings.json",
@@ -275,15 +277,15 @@
     "post_optimization_remaining_bottleneck": {
       "measurement": "The canonical final run's non-instrumenting 5 ms stack sampler and direct batcher timer.",
       "primary": "shared inference service",
-      "primary_phase_samples": 6514,
-      "primary_phase_percent": 58.1192005710207,
-      "primary_phase_estimated_wall_seconds": 32.57,
-      "direct_inference_seconds": 31.961032652063295,
-      "interpretation": "The inference thread remained inside evaluate_batch for the largest measured wall-time share, while only 2.70% average GPU utilization shows this is host/launch and small-workload inference service time rather than saturated RTX 4060 compute.",
+      "primary_phase_samples": 6492,
+      "primary_phase_percent": 58.57091302778781,
+      "primary_phase_estimated_wall_seconds": 32.46,
+      "direct_inference_seconds": 31.794310413999483,
+      "interpretation": "The inference thread remained inside evaluate_batch for the largest measured wall-time share, while only 2.71% average GPU utilization shows this is host/launch and small-workload inference service time rather than saturated RTX 4060 compute.",
       "secondary": "CPU MCTS/game-tree work",
-      "secondary_phase_samples": 4198,
-      "secondary_phase_percent": 37.45538900785154,
-      "secondary_phase_estimated_wall_seconds": 20.990000000000002
+      "secondary_phase_samples": 4098,
+      "secondary_phase_percent": 36.97221219776254,
+      "secondary_phase_estimated_wall_seconds": 20.490000000000002
     }
   }
 }

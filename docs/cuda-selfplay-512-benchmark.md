@@ -430,7 +430,7 @@ and the probability-to-move mapping. All mask rows are populated through one
 flattened indexed update instead of one Python-to-tensor index conversion per
 row.
 
-Two unprofiled canonical runs on the reviewed implementation commit
+Two historical unprofiled canonical runs on the original implementation commit
 `d299b2a` measured 75.924 s and 76.273 s end to end. The
 retained post-scheduling baseline runs measured 81.354 s and 81.926 s, so the
 mean fell from 81.640 s to 76.098 s (6.79%); both optimized runs beat both
@@ -443,10 +443,13 @@ the throughput claim.
 
 Differential tests compare every ordered index and the complete Boolean mask
 against the original versioned helpers for both encodings, both players, and
-5x5, 10x10, and 24x24 boards. A deterministic eight-position microbenchmark
-measured 275.9 us per batch for the reference path and 50.6 us for the retained
-path before the model-boundary review. Remeasuring the reviewed `d299b2a`
-implementation produced 51.9 us (5.32x faster than the reference). Keeping
+5x5, 10x10, and 24x24 boards. They also cover malformed coordinates,
+mixed-player batches, invalid action counts, and negative, non-integer, and
+out-of-range action indices. Remeasuring both sides of the deterministic
+eight-position microbenchmark at the retained validation implementation
+`e0f6ef1` produced 316.2 us for the reference path and 109.2 us for the
+validated batched path, a 2.895x speedup and 65.46% time reduction. The exact
+8/8/2 ms canonical confirmation recorded below completed in 71.312 s. Keeping
 per-row mask updates after direct index construction was
 rejected at 68.2 us and a 77.358 s canonical trial. Caching by complete legal
 move tuple was rejected because canonical tuples change at every position and
@@ -685,24 +688,25 @@ recorded in
 ## Final v0.0.6 canonical result
 
 The final canonical run used the selected **8 workers, batch size 8, and 2 ms
-maximum flush wait** on the unchanged implementation at `5ecd1b2`. It completed
-and wrote all 512 games in **72.112 s**, a **1.609x speedup** and **37.85% wall-time
-reduction** versus 116.031 s. Throughput was **25,560.2 games/hour**, **2,117.2
-positions/s**, and **1,715.6 simulations/s**.
+maximum flush wait** on the retained validation implementation at `e0f6ef1`.
+It completed and wrote all 512 games in **71.312 s**, a **1.627x speedup** and
+**38.54% wall-time reduction** versus 116.031 s. Throughput was **25,847.1
+games/hour**, **2,140.9 positions/s**, and **1,734.9 simulations/s**.
 
 CUDA execution was validated on the NVIDIA GeForce RTX 4060: the fixed
-checkpoint ran 19,512 CUDA inference batches for 152,674 positions, the timed
+checkpoint ran 19,491 CUDA inference batches for 152,674 positions, the timed
 path synchronized CUDA, PyTorch reported a 9,790,464-byte allocation peak, and
-`nvidia-smi` sampled 2.70% average utilization (4% peak) and 424.87 MiB average
-memory (425 MiB peak). Low utilization means the small inference workload did
-not saturate GPU compute; it does not indicate a CPU fallback.
+`nvidia-smi` collected 566 valid samples with no sampler failures, measuring
+2.71% average utilization (4% peak) and 424.87 MiB average memory (425 MiB
+peak). Low utilization means the small inference workload did not saturate GPU
+compute; it does not indicate a CPU fallback.
 
-The realized average batch size was 7.825 (97.81% of capacity). The complete
+The realized average batch size was 7.833 (97.91% of capacity). The complete
 distribution was:
 
 | Effective batch size | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Batch count | 154 | 80 | 72 | 39 | 106 | 225 | 580 | 18,256 |
+| Batch count | 144 | 83 | 52 | 53 | 99 | 240 | 499 | 18,321 |
 
 The final run produced 512 required game artifacts with no failures and the
 stable summary SHA-256
@@ -721,13 +725,13 @@ and a 4 ms flush at 68.887 s. A balanced eight-pair comparison did not select
 effects in both directions, and only three pairs favored it. These measurements
 made no implementation or fixed-workload changes.
 
-The 60-second stretch target was **not achieved**: this run was 12.112 s
-(20.19%) over it, while still comfortably beating the acceptance reference.
+The 60-second stretch target was **not achieved**: this run was 11.312 s
+(18.85%) over it, while still comfortably beating the acceptance reference.
 Post-optimization stack sampling identifies shared inference service as the
-largest remaining measured bottleneck: `evaluate_batch` accounted for 6,514
-samples, approximately 32.57 s or 58.12% of sampled wall state, consistent with
-the direct 31.961 s batcher timer. CPU MCTS/game-tree work was secondary at
-4,198 samples, approximately 20.99 s or 37.46%. Combined with only 2.70% GPU
+largest remaining measured bottleneck: `evaluate_batch` accounted for 6,492
+samples, approximately 32.46 s or 58.57% of sampled wall state, consistent with
+the direct 31.794 s batcher timer. CPU MCTS/game-tree work was secondary at
+4,098 samples, approximately 20.49 s or 36.97%. Combined with only 2.71% GPU
 utilization, the primary result points to host/launch and small-workload
 inference service overhead rather than GPU compute saturation.
 

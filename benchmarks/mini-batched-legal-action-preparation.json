@@ -10,9 +10,9 @@
   },
   "source": {
     "base_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
-    "implementation_git_commit": "d299b2a1c5d22ce98bdafd05698ad4d0ac02828f",
-    "branch": "feature/work-item-optimize-batched-legal-action-preparation",
-    "candidate": "model-owned one-version-dispatch batch mapping plus one flattened mask update"
+    "implementation_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "branch": "dev/v0.0.6",
+    "candidate": "validated model-owned one-version-dispatch batch mapping plus one validated flattened mask update"
   },
   "contract": {
     "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
@@ -23,6 +23,7 @@
     "encoding_version": 1
   },
   "canonical_throughput": {
+    "note": "Historical action-preparation comparison retained for context; the current reviewed implementation is covered by current_reviewed_canonical and the remeasured microbenchmark below.",
     "baseline": {
       "source": "benchmarks/mini-inference-batcher-scheduling.json optimized canonical runs",
       "end_to_end_wall_seconds": [81.35434772609733, 81.92588732298464],
@@ -75,15 +76,32 @@
     "games_completed_per_run": 512,
     "games_failed_per_run": 0,
     "validated_decisions_per_run": 30929,
-    "differential_test_scope": "Both supported encodings, both players, and 5x5, 10x10, and 24x24 boards; ordered indices and complete Boolean masks are compared with the pre-optimization versioned mapping and mask implementations."
+    "differential_test_scope": "Both supported encodings, both players, and 5x5, 10x10, and 24x24 boards; ordered indices and complete Boolean masks are compared with the pre-optimization versioned mapping and mask implementations. Public boundaries additionally reject malformed coordinates, mixed-player transform errors, non-positive action counts, and negative, non-integer, or out-of-range action indices."
+  },
+  "current_reviewed_canonical": {
+    "implementation_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "result_artifact": "benchmarks/mini-cuda-selfplay-512-v006-final.json",
+    "end_to_end_wall_seconds": 71.31160847400315,
+    "games_per_hour": 25847.124184163422,
+    "positions_per_second": 2140.9417522205763,
+    "effective_batch_size_average": 7.833051151813658,
+    "games_completed": 512,
+    "games_failed": 0,
+    "validated_decisions": 30929,
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
   },
   "representative_batch_microbenchmark": {
     "method": "Nine samples of 1000 calls after warmup; median for eight deterministic 10x10 legal-play positions at plies 8 through 64, seed 2401, on CPU.",
-    "reference_source_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
-    "reference_microseconds_per_batch": 275.8845230564475,
-    "retained_measurement_git_commit": "d299b2a1c5d22ce98bdafd05698ad4d0ac02828f",
-    "retained_microseconds_per_batch": 51.896943943575025,
-    "retained_speedup": 5.316007111255011,
+    "reference_algorithm_source_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
+    "measurement_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "legal_move_counts": [72, 66, 58, 51, 43, 35, 28, 21],
+    "reference_samples_microseconds_per_batch": [322.1607238519937, 318.0460201110691, 316.1995729897171, 315.4974018689245, 319.9761169962585, 313.6427290737629, 315.08174794726074, 316.2821400910616, 315.52220205776393],
+    "reference_microseconds_per_batch": 316.1995729897171,
+    "retained_measurement_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "retained_samples_microseconds_per_batch": [128.2925868872553, 108.51472709327936, 110.04831199534237, 109.01514114812016, 109.23054511658847, 108.22862293571234, 108.68939384818077, 113.30364202149212, 109.42155215889215],
+    "retained_microseconds_per_batch": 109.23054511658847,
+    "retained_speedup": 2.8947907625309193,
+    "retained_time_reduction_percent": 65.45518892268059,
     "rejected_approaches": [
       {
         "implementation": "direct indices with one indexed mask update per row",

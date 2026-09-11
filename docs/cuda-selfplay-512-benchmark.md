@@ -598,3 +598,52 @@ or lazily changing the public statistics or inspection views was rejected to
 preserve serialization, type, and observation behavior. Complete measurements
 and rejected-approach rationale are in
 [`benchmarks/mini-mcts-metadata-construction.json`](../benchmarks/mini-mcts-metadata-construction.json).
+
+## Final concurrency retuning
+
+After all inference and MCTS optimizations, the three scheduling variables
+were swept again around the retained 8-worker, batch-8, 2 ms configuration.
+Every worker and batch setting received two complete 512-game runs in reversed
+order. Because the flush results were close, all three flush waits received a
+third run before selection. Only the three contract-declared optimization
+variables changed; all 17 runs completed 512 games, validated all 30,929
+decisions and 123,716 simulations, and passed the fixed replay, seed, search,
+artifact, policy-target, and value-target checks.
+
+| Trial | Workers | Batch | Flush wait | Runs | Mean wall (s) | Range (s) | Mean games/hour | Effective batch | Mean GPU util. | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Worker floor | 4 | 8 | 2 ms | 2 | 140.046 | 139.868–140.224 | 13,161 | 3.965 | 2.83% | regressive |
+| Retained center | 8 | 8 | 2 ms | 3 | 68.564 | 68.149–69.083 | 26,884 | 7.837 | 3.02% | superseded |
+| Worker saturation | 16 | 8 | 2 ms | 2 | 69.402 | 69.147–69.657 | 26,559 | 7.948 | 3.04% | saturated |
+| Smaller batch | 8 | 4 | 2 ms | 2 | 78.850 | 78.519–79.180 | 23,377 | 3.984 | 4.43% | regressive |
+| Unreachable batch cap | 8 | 16 | 2 ms | 2 | 85.207 | 85.187–85.227 | 21,632 | 7.832 | 2.74% | regressive |
+| Shorter flush | 8 | 8 | 1 ms | 3 | **68.422** | 68.331–68.485 | **26,939** | 7.476 | 3.20% | **selected** |
+| Longer flush | 8 | 8 | 4 ms | 3 | 68.887 | 68.510–69.090 | 26,757 | 7.860 | 3.10% | regressive |
+
+The final configuration is **8 workers, batch size 8, and a 1 ms maximum
+flush wait**. Selection uses repeated-run arithmetic means, not the fastest
+individual run. Its 68.422 s mean is 0.21% below the 2 ms center's 68.564 s
+mean. The individual ranges overlap, so this is a modest final tuning choice,
+not an implementation-speedup claim.
+
+Scaling remains saturated at eight workers: sixteen workers filled batches
+slightly better but was 1.22% slower than the 2 ms center, while four workers
+was 104.26% slower. Batch size four was 15.00% slower. Batch size sixteen was
+24.27% slower because eight producers can never fill it, so every inference
+batch waited for the latency flush. No configuration approached GPU compute
+saturation; mean sampled utilization ranged from 2.74% to 4.43%.
+
+No implementation or fixed contract field changed. Reproduce the selected
+configuration by adding these explicit tuning arguments to the canonical
+runner command:
+
+```bash
+--worker-concurrency 8 \
+--inference-batch-size 8 \
+--queue-flush-max-wait-seconds 0.001
+```
+
+All individual wall-time samples, rates, effective batches, GPU measurements,
+validation counts, methodology, saturation points, and regressive settings are
+recorded in
+[`benchmarks/mini-final-concurrency-settings.json`](../benchmarks/mini-final-concurrency-settings.json).

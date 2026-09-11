@@ -126,6 +126,17 @@ def _cpu_goal_plane_template(height: int, width: int) -> Tensor:
     return encoded
 
 
+def _resolve_device(device: torch.device | str | None) -> torch.device:
+    if device is not None:
+        return torch.device(device)
+    get_default_device = getattr(torch, "get_default_device", None)
+    if get_default_device is not None:
+        return get_default_device()
+    # torch.get_default_device was added in 2.3. An unplaced tensor still
+    # resolves through the configured default device on older supported Torch.
+    return torch.empty(0).device
+
+
 def encode_positions(
     states: Sequence[GameState], *, device: torch.device | str | None = None
 ) -> Tensor:
@@ -144,9 +155,7 @@ def encode_positions(
     if any(state.board != board for state in states[1:]):
         raise ValueError("states must use the same board dimensions")
 
-    resolved_device = (
-        torch.get_default_device() if device is None else torch.device(device)
-    )
+    resolved_device = _resolve_device(device)
     if resolved_device.type == "cpu":
         # Clone before adding position features: callers own the returned
         # storage and concurrent batches never mutate the cached template.

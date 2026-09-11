@@ -129,7 +129,7 @@ def test_batched_encodings_do_not_alias_cached_static_planes() -> None:
 
 def test_batched_encoding_respects_default_device_across_cpu_cache_reuse() -> None:
     states = [GameState.initial(BoardDimensions(10, 10))]
-    original_default = torch.get_default_device()
+    original_default = torch.empty(0).device
     non_cpu_device = torch.device("cuda" if torch.cuda.is_available() else "meta")
 
     try:
@@ -147,6 +147,24 @@ def test_batched_encoding_respects_default_device_across_cpu_cache_reuse() -> No
         explicit_cpu,
         torch.stack([encode_position(states[0], device="cpu")]),
     )
+
+
+def test_batched_encoding_resolves_default_device_without_torch_2_3_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    states = [GameState.initial(BoardDimensions(10, 10))]
+    original_default = torch.empty(0).device
+    non_cpu_device = torch.device("cuda" if torch.cuda.is_available() else "meta")
+
+    try:
+        torch.set_default_device(non_cpu_device)
+        with monkeypatch.context() as context:
+            context.delattr(torch, "get_default_device", raising=False)
+            encoded = encode_positions(states)
+    finally:
+        torch.set_default_device(original_default)
+
+    assert encoded.device.type == non_cpu_device.type
 
 
 @pytest.mark.parametrize("symmetry", SYMMETRIES)

@@ -6,7 +6,9 @@ Changing it requires a new ``ENCODING_VERSION``.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import Enum
+from functools import lru_cache
 
 import torch
 from torch import Tensor
@@ -107,6 +109,104 @@ def encode_position(state: GameState, *, device: torch.device | str | None = Non
     encoded[_GOAL_CHANNEL[Player.RED], -1, 1:-1] = 1.0
     encoded[_GOAL_CHANNEL[Player.BLACK], 1:-1, 0] = 1.0
     encoded[_GOAL_CHANNEL[Player.BLACK], 1:-1, -1] = 1.0
+    return encoded
+
+
+@lru_cache(maxsize=16)
+def _cpu_goal_plane_template(height: int, width: int) -> Tensor:
+    """Return an internal immutable template for board-size-only features."""
+
+    encoded = torch.zeros(
+        (NUM_CHANNELS, height, width), dtype=torch.float32, device="cpu"
+    )
+    encoded[_GOAL_CHANNEL[Player.RED], 0, 1:-1] = 1.0
+    encoded[_GOAL_CHANNEL[Player.RED], -1, 1:-1] = 1.0
+    encoded[_GOAL_CHANNEL[Player.BLACK], 1:-1, 0] = 1.0
+    encoded[_GOAL_CHANNEL[Player.BLACK], 1:-1, -1] = 1.0
+    return encoded
+
+
+def _resolve_device(device: torch.device | str | None) -> torch.device:
+    if device is not None:
+        return torch.device(device)
+    get_default_device = getattr(torch, "get_default_device", None)
+    if get_default_device is not None:
+        return get_default_device()
+    # torch.get_default_device was added in 2.3. An unplaced tensor still
+    # resolves through the configured default device on older supported Torch.
+    return torch.empty(0).device
+
+
+def encode_positions(
+    states: Sequence[GameState], *, device: torch.device | str | None = None
+) -> Tensor:
+    """Encode a non-empty, same-sized batch without per-position tensors.
+
+    This is the batch form of encoding version 1.  Dynamic features are
+    collected as tensor indices and written in bulk, avoiding both one tensor
+    allocation per position and the subsequent ``torch.stack`` copy.
+    """
+
+    if not states:
+        raise ValueError("states must be non-empty")
+    for state in states:
+        _require_game_state(state)
+    board = states[0].board
+    if any(state.board != board for state in states[1:]):
+        raise ValueError("states must use the same board dimensions")
+
+    resolved_device = _resolve_device(device)
+    if resolved_device.type == "cpu":
+        # Clone before adding position features: callers own the returned
+        # storage and concurrent batches never mutate the cached template.
+        encoded = _cpu_goal_plane_template(
+            board.height, board.width
+        ).expand(len(states), -1, -1, -1).clone()
+    else:
+        encoded = torch.zeros(
+            (len(states), NUM_CHANNELS, board.height, board.width),
+            dtype=torch.float32,
+            device=resolved_device,
+        )
+
+    spatial_size = board.height * board.width
+    turn_channels: list[int] = []
+    feature_indices: list[int] = []
+    for batch, state in enumerate(states):
+        turn_channels.append(_TURN_CHANNEL[state.side_to_move])
+        batch_channel_offset = batch * NUM_CHANNELS
+        for peg in state.pegs:
+            feature_indices.append(
+                (batch_channel_offset + _PEG_CHANNEL[peg.owner]) * spatial_size
+                + peg.coordinate.y * board.width
+                + peg.coordinate.x
+            )
+        for link in state.links:
+            dx = link.end.x - link.start.x
+            dy = link.end.y - link.start.y
+            base = batch_channel_offset + _LINK_BASE[link.owner]
+            feature_indices.extend(
+                (
+                    (base + _DIRECTION_INDEX[(dx, dy)]) * spatial_size
+                    + link.start.y * board.width
+                    + link.start.x,
+                    (base + _DIRECTION_INDEX[(-dx, -dy)]) * spatial_size
+                    + link.end.y * board.width
+                    + link.end.x,
+                )
+            )
+
+    if feature_indices:
+        encoded.view(-1)[feature_indices] = 1.0
+    encoded[range(len(states)), turn_channels] = 1.0
+
+    if resolved_device.type != "cpu":
+        # CPU batches clone the cached board-size template above. Other
+        # devices retain the uncached path to avoid holding device memory.
+        encoded[:, _GOAL_CHANNEL[Player.RED], 0, 1:-1] = 1.0
+        encoded[:, _GOAL_CHANNEL[Player.RED], -1, 1:-1] = 1.0
+        encoded[:, _GOAL_CHANNEL[Player.BLACK], 1:-1, 0] = 1.0
+        encoded[:, _GOAL_CHANNEL[Player.BLACK], 1:-1, -1] = 1.0
     return encoded
 
 

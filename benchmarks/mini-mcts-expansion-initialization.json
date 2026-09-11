@@ -1,0 +1,113 @@
+{
+  "format": "twixt-ai-mini-mcts-expansion-initialization-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "d9fa201243f64e957b7ad1e2e759e37feefce55d",
+    "implementation_git_commit": "97ea91e79247e50ed4b8f98d972bd2cd4dab26e6",
+    "branch": "feature/work-item-optimize-mcts-expansion-initialization",
+    "candidate": "parallel ordered move and prior lists for node initialization and expansion"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "method": "Two adjacent unprofiled runs per implementation on the same host; arithmetic means summarize the recorded runs.",
+    "baseline": {
+      "implementation_git_commit": "d9fa201243f64e957b7ad1e2e759e37feefce55d",
+      "end_to_end_wall_seconds": [
+        74.02629091590643,
+        74.0231322098989
+      ],
+      "games_per_hour": [
+        24899.261832446366,
+        24900.32433068962
+      ],
+      "positions_per_second": [
+        2062.4294167789258,
+        2062.5174245137296
+      ],
+      "simulations_per_second": [
+        1671.2440738188664,
+        1671.3153889407533
+      ],
+      "mean_end_to_end_wall_seconds": 74.02471156290267,
+      "mean_games_per_hour": 24899.793081567993
+    },
+    "optimized": {
+      "implementation_git_commit": "97ea91e79247e50ed4b8f98d972bd2cd4dab26e6",
+      "end_to_end_wall_seconds": [
+        70.39255006681196,
+        70.84130011382513
+      ],
+      "games_per_hour": [
+        26184.58911135562,
+        26018.72067619335
+      ],
+      "positions_per_second": [
+        2168.8942914426584,
+        2155.1552520166792
+      ],
+      "simulations_per_second": [
+        1757.5155308704818,
+        1746.3824040668057
+      ],
+      "mean_end_to_end_wall_seconds": 70.61692509031855,
+      "mean_games_per_hour": 26101.654893774485
+    },
+    "result": {
+      "speedup": 1.0482573613652193,
+      "wall_time_reduction_percent": 4.603579535312808,
+      "games_per_hour_increase_percent": 4.82573613652193,
+      "both_optimized_runs_beat_both_baseline_runs": true,
+      "retained": true
+    }
+  },
+  "equivalence": {
+    "output_summary_sha256_baseline": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "output_summary_sha256_optimized": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "games_completed_per_run": 512,
+    "games_failed_per_run": 0,
+    "validated_decisions_per_run": 30929,
+    "total_simulations_per_run": 123716,
+    "total_inference_positions_per_run": 152674,
+    "golden_test": "A seeded 5x5 sparse-policy search fixes the complete serialized move and metadata SHA-256, including normalized priors, visits, values, progressive-widening statistics, and inspection output."
+  },
+  "initialization_microbenchmark": {
+    "method": "Nine samples of 10000 calls after 100 warmups; median for one policy-guided initial 10x10 node with 80 legal moves and deterministic nonuniform weights, PYTHONHASHSEED=0, on CPU. The reference reproduces the replaced dictionary implementation in the same process.",
+    "reference_microseconds_per_node": 63.559861620888114,
+    "optimized_microseconds_per_node": 46.93381760735065,
+    "speedup": 1.3542444416653108
+  },
+  "rejected_approaches": [
+    {
+      "implementation": "trust neural-policy mappings and bypass generic policy validation or normalization",
+      "reason_rejected": "PolicyValueFunction is a public extension point. Skipping mapping, key, legality, finite non-negative weight, or value validation would change its error contract; skipping normalization would change sparse and caller-supplied policies."
+    },
+    {
+      "implementation": "remove expanded moves by swapping with the list tail",
+      "reason_rejected": "Constant-time removal would reorder the remaining moves, changing later random.choices population order and therefore seeded expansion choices and the canonical output hash."
+    },
+    {
+      "implementation": "skip normalization when supplied weights appear to sum to one",
+      "reason_rejected": "Conditional normalization would change floating-point priors and random.choices cumulative weights for neural output, risking seeded choices, statistics, metadata, and canonical artifacts."
+    }
+  ]
+}

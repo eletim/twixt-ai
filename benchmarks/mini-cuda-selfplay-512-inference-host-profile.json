@@ -1,0 +1,144 @@
+{
+  "format": "twixt-ai-mini-cuda-selfplay-inference-host-profile",
+  "version": 2,
+  "recorded_on": "2026-09-11",
+  "source": {
+    "git_commit": "5f2dc6f32398e5e4c56ac872270e8696cb6072bd",
+    "implementation": "v0.0.6-profile-w8-b8-f2ms-source-observer",
+    "inference_source_of_truth": "NeuralPolicyValue.evaluate_batch with opt-in observers; no alternate evaluator or copied inference pipeline"
+  },
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "verified_unchanged": true
+  },
+  "configuration": {
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002
+  },
+  "workload": {
+    "games": 512,
+    "completed": 512,
+    "failed": 0,
+    "total_moves": 30929,
+    "total_simulations": 123716,
+    "total_inference_positions": 152674,
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+  },
+  "measurement": {
+    "method": "Opt-in observer spans execute inside the source-of-truth evaluator and batcher. Host phases use perf_counter; device phases use CUDA events; Condition acquisition, lock-held sections, batch formation, and wait deadline overshoot are measured directly.",
+    "diagnostic_end_to_end_wall_seconds": 112.69049978186376,
+    "total_profiled_evaluate_batch_seconds": 59.99018825148232,
+    "batches": 19425,
+    "positions": 152674,
+    "caveats": [
+      "CUDA event and host wall durations overlap and must not be added together.",
+      "Event recording, observer calls, phase clocks, and profiler sample recording add diagnostic overhead; profiled wall time is not optimized throughput.",
+      "Producer totals sum concurrent per-request times and must not be added to end-to-end wall time.",
+      "Condition wait deadline overshoot includes delayed GIL/OS scheduling and lock reacquisition; it cannot attribute the delay to one of those causes alone.",
+      "nvidia-smi utilization is corroborating coarse telemetry, not standalone bottleneck proof."
+    ]
+  },
+  "batching": {
+    "effective_batch_size_average": 7.85966537966538,
+    "effective_batch_capacity_percent": 98.24581724581725,
+    "full_batches": 18610,
+    "latency_flushes": 815,
+    "forced_flushes": 0,
+    "average_queue_wait_milliseconds_per_request": 1.3560717209265502,
+    "aggregate_queue_wait_seconds_non_additive": 207.0368939207401,
+    "formation_delay_milliseconds": {
+      "all": {"samples": 19425, "total_seconds": 25.27734331251122, "average": 1.3012789350070126, "p50": 1.2123310007154942, "p95": 2.532326150685549, "p99": 8.98799393326044, "maximum": 189.88351593725383},
+      "full_batch": {"samples": 18610, "total_seconds": 17.771008988376707, "average": 0.9549171944318489, "p50": 1.147296978160739, "p95": 2.3152739740908146, "p99": 2.9916269704699516, "maximum": 168.23690687306225},
+      "latency": {"samples": 815, "total_seconds": 7.506334324134514, "average": 9.210226164582224, "p50": 6.691266084089875, "p95": 15.412075212225318, "p99": 116.82861507870257, "maximum": 189.88351593725383}
+    },
+    "interpretation": "Most batches filled before the 2 ms cap, but latency-flushed batches exceeded the configured deadline substantially. Formation delay is reported independently and is not labeled as lock contention."
+  },
+  "condition_contention": {
+    "units": {
+      "lock_and_critical_section_statistics": "microseconds",
+      "wait_deadline_overshoot_statistics": "milliseconds"
+    },
+    "producer_queue_lock_acquisition": {"samples": 152674, "total_seconds": 0.49359704460948706, "average": 3.233013116899322, "p50": 0.5508773028850555, "p95": 1.0919757187366486, "p99": 1.7629936337471008, "maximum": 156482.4520610273},
+    "producer_queue_critical_section": {"samples": 152674, "total_seconds": 0.22017620224505663, "average": 1.4421329253511184, "p50": 1.0021030902862549, "p95": 3.156019374728203, "p99": 4.558125510811806, "maximum": 34.285010769963264},
+    "worker_dispatch_lock_acquisition": {"samples": 19425, "total_seconds": 0.005022046389058232, "average": 0.2585352066439245, "p50": 0.24097971618175507, "p95": 0.34016557037830353, "p99": 0.45099295675754547, "maximum": 23.49400892853737},
+    "worker_dispatch_critical_section_excluding_wait": {"samples": 19425, "total_seconds": 0.1680405808147043, "average": 8.65073775107873, "p50": 7.595168426632881, "p95": 15.169614925980568, "p99": 21.731015294790268, "maximum": 163.85107301175594},
+    "worker_completion_lock_acquisition": {"samples": 19425, "total_seconds": 0.010613436345010996, "average": 0.5463802494214155, "p50": 0.5010515451431274, "p95": 0.8521601557731628, "p99": 1.3820827007293701, "maximum": 14.357035979628563},
+    "worker_completion_critical_section": {"samples": 19425, "total_seconds": 0.07557174493558705, "average": 3.8904373197213413, "p50": 3.7569552659988403, "p95": 5.480833351612091, "p99": 7.573980838060379, "maximum": 46.47788591682911},
+    "condition_wait_deadline_overshoot": {"samples": 19425, "total_seconds": 7.298896640539169, "average": 0.37574757480253124, "p50": 0, "p95": 0.525512034073472, "p99": 6.978465942665935, "maximum": 187.86034267395735},
+    "interpretation": "Typical Condition acquisition and critical sections are microsecond-scale, so ordinary lock ownership is not the primary cost. A rare 156 ms producer acquisition outlier and 7.299 s of aggregate wait-deadline overshoot show a real scheduling/reacquisition tail; this measurement does not distinguish GIL, OS scheduling, and Condition reacquisition within that tail."
+  },
+  "host_phase_ranking": [
+    {"rank": 1, "phase": "cpu_encoding_and_stack", "seconds": 38.230223167454824, "milliseconds_per_batch": 1.968093856754431, "percent_of_evaluate_batch": 63.72745990926304},
+    {"rank": 2, "phase": "model_submission", "seconds": 6.471267947927117, "milliseconds_per_batch": 0.3331412071004951, "percent_of_evaluate_batch": 10.787210603172621},
+    {"rank": 3, "phase": "action_index_construction", "seconds": 4.934821860631928, "milliseconds_per_batch": 0.2540448834302151, "percent_of_evaluate_batch": 8.22604829967339},
+    {"rank": 4, "phase": "model_mode_management", "seconds": 1.9966504755429924, "milliseconds_per_batch": 0.10278766926862251, "percent_of_evaluate_batch": 3.3282950658079598},
+    {"rank": 5, "phase": "host_to_device_submission", "seconds": 1.8973712611477822, "milliseconds_per_batch": 0.09767677020065803, "percent_of_evaluate_batch": 3.1628026456491396},
+    {"rank": 6, "phase": "python_result_extraction", "seconds": 1.7424755909014493, "milliseconds_per_batch": 0.08970273312233973, "percent_of_evaluate_batch": 2.9046009717403973},
+    {"rank": 7, "phase": "cpu_mask_construction", "seconds": 1.5346998365130275, "milliseconds_per_batch": 0.07900642659011724, "percent_of_evaluate_batch": 2.5582514095129647},
+    {"rank": 8, "phase": "device_to_host_transfer", "seconds": 0.7948406690265983, "milliseconds_per_batch": 0.04091843855992784, "percent_of_evaluate_batch": 1.3249511164968852},
+    {"rank": 9, "phase": "policy_mask_submission", "seconds": 0.7758730535861105, "milliseconds_per_batch": 0.03994198474059771, "percent_of_evaluate_batch": 1.2933332536540907},
+    {"rank": 10, "phase": "softmax_submission", "seconds": 0.3566080774180591, "milliseconds_per_batch": 0.018358202183683867, "percent_of_evaluate_batch": 0.5944440046147839},
+    {"rank": 11, "phase": "request_validation", "seconds": 0.26102337380871177, "milliseconds_per_batch": 0.013437496721169203, "percent_of_evaluate_batch": 0.4351101095307232},
+    {"rank": 12, "phase": "cuda_synchronization_wait", "seconds": 0.06613491172902286, "milliseconds_per_batch": 0.0034046286604387573, "percent_of_evaluate_batch": 0.11024288080541021}
+  ],
+  "cuda_event_phase_ranking": [
+    {"rank": 1, "phase": "model_execution", "seconds": 6.315240321625046, "milliseconds_per_batch": 0.3251088968661542},
+    {"rank": 2, "phase": "host_to_device_transfer", "seconds": 1.335729760877797, "milliseconds_per_batch": 0.06876343685342584},
+    {"rank": 3, "phase": "policy_mask", "seconds": 0.6313017584434822, "milliseconds_per_batch": 0.032499447024117493},
+    {"rank": 4, "phase": "device_to_host_transfer", "seconds": 0.5684628159943996, "milliseconds_per_batch": 0.029264495031886724},
+    {"rank": 5, "phase": "softmax", "seconds": 0.24456668701300308, "milliseconds_per_batch": 0.012590305637735034}
+  ],
+  "corroborating_observations": {
+    "nvidia_smi_average_utilization_percent": 2.232300884955752,
+    "nvidia_smi_peak_utilization_percent": 4,
+    "nvidia_smi_samples": 904,
+    "stack_sampled_inference_percent": 81.45408021360628,
+    "stack_sampled_cpu_mcts_percent": 15.836902709017078,
+    "stack_sampled_serialization_io_percent": 2.6812037603604604
+  },
+  "ranked_evidence_for_next_change": [
+    {
+      "rank": 1,
+      "target": "CPU position encoding and stacking",
+      "evidence": "38.230 s, 63.73% of profiled inference wall time and 1.968 ms per batch; it is 6.05x the CUDA-event model-execution total.",
+      "next_experiment": "Reduce repeated Python/tensor construction in canonical CPU encoding while keeping encoding version 1 byte-for-byte equivalent."
+    },
+    {
+      "rank": 2,
+      "target": "Condition wake/reacquisition scheduling tail",
+      "evidence": "Wait calls overshot their remaining deadlines by 7.299 s total; p50 was zero but p99 was 6.978 ms and latency-flush formation had a 6.691 ms median against the 2 ms setting.",
+      "next_experiment": "After encoding, isolate GIL scheduling from OS wake and Condition reacquisition before changing worker architecture."
+    },
+    {
+      "rank": 3,
+      "target": "Model invocation and execution",
+      "evidence": "CUDA-event model execution totals 6.315 s (0.325 ms per batch), while model-call host spans total 6.471 s.",
+      "next_experiment": "Only after encoding work, evaluate safe launch/static-shape techniques against identical outputs."
+    },
+    {
+      "rank": 4,
+      "target": "CPU action-index and mask construction",
+      "evidence": "Action-index and CPU mask construction total 6.470 s, while Python result extraction is 1.742 s and explicit synchronization wait is only 0.066 s.",
+      "next_experiment": "Measure reuse or direct construction of unchanged legal-move indices and masks without changing policy semantics."
+    }
+  ],
+  "conclusion": "The exact shared-inference implementation is dominated by CPU encoding/stacking. Typical Condition lock ownership is not dominant, but deadline overshoot exposes a secondary scheduling/reacquisition tail that the earlier evidence missed. This ranking follows direct observer spans, Condition timings, and CUDA events; nvidia-smi is corroboration only.",
+  "validation": {
+    "all_required_artifacts_valid": true,
+    "all_match_records_replay_valid": true,
+    "all_game_and_decision_seeds_match_contract_derivation": true,
+    "all_search_parameters_match_contract": true,
+    "all_policy_root_visit_sums_valid": true,
+    "all_value_targets_valid": true,
+    "validated_decisions": 30929
+  }
+}

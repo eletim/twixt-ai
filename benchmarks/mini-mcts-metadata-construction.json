@@ -1,0 +1,113 @@
+{
+  "format": "twixt-ai-mini-mcts-metadata-construction-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "ed212a5e651d5522fc4717fd3955c2f74ac93f35",
+    "implementation_git_commit": "13df028aa122b475226f6492b106d48b85472293",
+    "branch": "feature/work-item-optimize-mcts-metadata-construction",
+    "candidate": "ordered root-statistics updates and simulation-time node counting"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "method": "Two adjacent unprofiled runs per implementation on the same host; arithmetic means summarize the recorded runs. The baseline is the immediately preceding retained expansion implementation recorded in mini-mcts-expansion-initialization.json.",
+    "baseline": {
+      "implementation_git_commit": "97ea91e79247e50ed4b8f98d972bd2cd4dab26e6",
+      "end_to_end_wall_seconds": [
+        70.39255006681196,
+        70.84130011382513
+      ],
+      "games_per_hour": [
+        26184.58911135562,
+        26018.72067619335
+      ],
+      "positions_per_second": [
+        2168.8942914426584,
+        2155.1552520166792
+      ],
+      "simulations_per_second": [
+        1757.5155308704818,
+        1746.3824040668057
+      ],
+      "mean_end_to_end_wall_seconds": 70.61692509031855,
+      "mean_games_per_hour": 26101.654893774485
+    },
+    "optimized": {
+      "implementation_git_commit": "13df028aa122b475226f6492b106d48b85472293",
+      "end_to_end_wall_seconds": [
+        69.86899957899004,
+        70.16566253686324
+      ],
+      "games_per_hour": [
+        26380.798510163,
+        26269.259540329007
+      ],
+      "positions_per_second": [
+        2185.146501595392,
+        2175.907623188037
+      ],
+      "simulations_per_second": [
+        1770.6851500018045,
+        1763.1986291728206
+      ],
+      "mean_end_to_end_wall_seconds": 70.01733105792664,
+      "mean_games_per_hour": 26325.029025246004
+    },
+    "result": {
+      "speedup": 1.0085635088246345,
+      "wall_time_reduction_percent": 0.849079780272266,
+      "games_per_hour_increase_percent": 0.8557853223505552,
+      "both_optimized_runs_beat_both_baseline_runs": true,
+      "retained": true
+    }
+  },
+  "equivalence": {
+    "output_summary_sha256_baseline": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "output_summary_sha256_optimized": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "games_completed_per_run": 512,
+    "games_failed_per_run": 0,
+    "validated_decisions_per_run": 30929,
+    "total_simulations_per_run": 123716,
+    "total_inference_positions_per_run": 152674,
+    "golden_test": "The seeded 5x5 sparse-policy search retains the complete serialized move and metadata SHA-256, and an ordered-view regression compares every public root statistic with root_moves and inspection.candidates."
+  },
+  "metadata_microbenchmark": {
+    "method": "Seven samples of 20000 calls on one synthetic 80-move root with four expanded children, PYTHONHASHSEED=0, on CPU; median time includes ordered MCTSMoveStatistics, root_moves, and inspection.candidates construction. The reference reproduces the replaced root-child dictionary and per-legal-move hash lookup.",
+    "reference_microseconds_per_root": 319.60778654320166,
+    "optimized_microseconds_per_root": 264.6136775496416,
+    "speedup": 1.2078279154078995
+  },
+  "rejected_approaches": [
+    {
+      "implementation": "build statistics, root_moves, and inspection candidates together in one explicit Python loop",
+      "reason_rejected": "Two canonical trials took 70.566 s and 70.776 s (70.671 s mean), slower than the 70.617 s baseline mean. Replacing the list comprehensions with repeated append calls erased the intended saving."
+    },
+    {
+      "implementation": "map every legal root move through a root-child dictionary in a single statistics comprehension",
+      "reason_rejected": "It removed one statistics pass but retained a PegPlacement hash lookup for every legal move. The local 80-move benchmark was 0.93x the reference, while updating only expanded entries by their identity-preserving tuple index measured 1.21x."
+    },
+    {
+      "implementation": "remove or lazily expose last_statistics, root_moves, or inspection.candidates",
+      "reason_rejected": "All three are public inspection surfaces. Deferring or changing their concrete construction could alter mutation timing, serialization behavior, or caller-observed types instead of preserving the existing contract."
+    }
+  ]
+}

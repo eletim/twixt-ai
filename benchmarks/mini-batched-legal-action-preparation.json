@@ -1,0 +1,118 @@
+{
+  "format": "twixt-ai-mini-batched-legal-action-preparation-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
+    "implementation_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "branch": "dev/v0.0.6",
+    "candidate": "validated model-owned one-version-dispatch batch mapping plus one validated flattened mask update"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "note": "Historical action-preparation comparison retained for context; the current reviewed implementation is covered by current_reviewed_canonical and the remeasured microbenchmark below.",
+    "baseline": {
+      "source": "benchmarks/mini-inference-batcher-scheduling.json optimized canonical runs",
+      "end_to_end_wall_seconds": [81.35434772609733, 81.92588732298464],
+      "games_per_hour": [22656.441253830217, 22498.383114648095],
+      "mean_end_to_end_wall_seconds": 81.64011752454098,
+      "mean_games_per_hour": 22577.412184239154
+    },
+    "optimized": {
+      "implementation_git_commit": "d299b2a1c5d22ce98bdafd05698ad4d0ac02828f",
+      "end_to_end_wall_seconds": [75.9241021501366, 76.27285783505067],
+      "games_per_hour": [24276.87582469072, 24165.87043304637],
+      "mean_end_to_end_wall_seconds": 76.09847999259364,
+      "mean_games_per_hour": 24221.373128868545,
+      "positions_per_second": [2010.8765948669873, 2001.6819132459425],
+      "inference_positions_per_second": [4690.222043216384, 4591.311764450246],
+      "effective_batch_size_average": [7.8194110115236874, 7.826626339262829]
+    },
+    "result": {
+      "speedup": 1.072821921442934,
+      "wall_time_reduction_percent": 6.787885294605965,
+      "games_per_hour_increase_percent": 7.281440987187215,
+      "both_optimized_runs_beat_both_baseline_runs": true,
+      "retained": true
+    }
+  },
+  "detailed_source_observer": {
+    "baseline": {
+      "source_artifact": "benchmarks/mini-cuda-selfplay-512-inference-host-profile.json",
+      "action_index_construction_seconds": 4.934821860631928,
+      "cpu_mask_construction_seconds": 1.5346998365130275,
+      "combined_seconds": 6.469521697144955
+    },
+    "optimized": {
+      "implementation_git_commit": "e9fda7ad94b282a1aa88d0862a0e427496c8b55e",
+      "batches": 19510,
+      "positions": 152674,
+      "action_index_construction_seconds": 0.32728926301933825,
+      "cpu_mask_construction_seconds": 2.697816135827452,
+      "combined_seconds": 3.0251053988467902
+    },
+    "combined_time_reduction_percent": 53.240663831735965,
+    "note": "Observer overhead makes this diagnostic; only the two unprofiled canonical runs support the throughput claim."
+  },
+  "equivalence": {
+    "output_summary_sha256_baseline": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "output_summary_sha256_optimized": [
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+      "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+    ],
+    "games_completed_per_run": 512,
+    "games_failed_per_run": 0,
+    "validated_decisions_per_run": 30929,
+    "differential_test_scope": "Both supported encodings, both players, and 5x5, 10x10, and 24x24 boards; ordered indices and complete Boolean masks are compared with the pre-optimization versioned mapping and mask implementations. Public boundaries additionally reject malformed coordinates, mixed-player transform errors, non-positive action counts, and negative, non-integer, or out-of-range action indices."
+  },
+  "current_reviewed_canonical": {
+    "implementation_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "result_artifact": "benchmarks/mini-cuda-selfplay-512-v006-final.json",
+    "end_to_end_wall_seconds": 71.31160847400315,
+    "games_per_hour": 25847.124184163422,
+    "positions_per_second": 2140.9417522205763,
+    "effective_batch_size_average": 7.833051151813658,
+    "games_completed": 512,
+    "games_failed": 0,
+    "validated_decisions": 30929,
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f"
+  },
+  "representative_batch_microbenchmark": {
+    "method": "Nine samples of 1000 calls after warmup; median for eight deterministic 10x10 legal-play positions at plies 8 through 64, seed 2401, on CPU.",
+    "reference_algorithm_source_git_commit": "f8bf691b9364c2db01477c69b17c0f64d8afaa55",
+    "measurement_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "legal_move_counts": [72, 66, 58, 51, 43, 35, 28, 21],
+    "reference_samples_microseconds_per_batch": [322.1607238519937, 318.0460201110691, 316.1995729897171, 315.4974018689245, 319.9761169962585, 313.6427290737629, 315.08174794726074, 316.2821400910616, 315.52220205776393],
+    "reference_microseconds_per_batch": 316.1995729897171,
+    "retained_measurement_git_commit": "e0f6ef15f85cf853942a863e436accea13647313",
+    "retained_samples_microseconds_per_batch": [128.2925868872553, 108.51472709327936, 110.04831199534237, 109.01514114812016, 109.23054511658847, 108.22862293571234, 108.68939384818077, 113.30364202149212, 109.42155215889215],
+    "retained_microseconds_per_batch": 109.23054511658847,
+    "retained_speedup": 2.8947907625309193,
+    "retained_time_reduction_percent": 65.45518892268059,
+    "rejected_approaches": [
+      {
+        "implementation": "direct indices with one indexed mask update per row",
+        "microseconds_per_batch": 68.1568868458271,
+        "canonical_trial_wall_seconds": 77.35827074595727,
+        "reason_rejected": "It preserved eight Python-to-tensor index conversions per full batch and was slower than the retained flattened update in both the controlled microbenchmark and canonical trial."
+      },
+      {
+        "implementation": "cache prepared actions by legal-move tuple",
+        "reason_rejected": "Canonical legal-move tuples change at every position, so caching would retain large masks with negligible reuse and add cross-request ownership to a stateless preparation step."
+      }
+    ]
+  }
+}

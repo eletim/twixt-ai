@@ -1,44 +1,73 @@
-# Fixed 512-game CUDA self-play benchmark
+# v0.0.6 512-game CUDA self-play performance contract
 
 Issue 98 optimizes end-to-end wall-clock time for one fixed, reproducible
 512-game Mini Twixt neural self-play workload without weakening it. The
 workload — board/rules, checkpoint identity, encoding version, MCTS
-simulation budget and search parameters, seeds, worker/batching settings, and
-required outputs — is locked in
-[`benchmarks/mini-cuda-selfplay-512-contract.json`](../benchmarks/mini-cuda-selfplay-512-contract.json).
-Every baseline, profiling, and optimized measurement must run that exact
-contract; only the self-play *implementation* may change between runs.
+simulation budget and every other search-quality parameter, seeds, CUDA model
+path, and required outputs — is locked in
+[`benchmarks/mini-cuda-selfplay-512-v006-contract.json`](../benchmarks/mini-cuda-selfplay-512-v006-contract.json).
+
+Exactly three settings are optimization variables because they affect how
+fixed requests are scheduled, not what any game or training target means:
+`worker_concurrency`, `inference_batch_size`, and
+`queue_flush_max_wait_seconds`. No other contract field may vary between
+comparable v0.0.6 runs. Version 1 contracts are historical artifacts and are
+not executable through this v0.0.6 runner. `--contract` may select another
+path for portability, but the runner compares its full JSON content with the
+committed canonical contract and rejects any fixed-field or declaration
+change. The older
+`mini-cuda-selfplay-512-contract.json` remains the immutable v0.0.5 contract
+referenced by the recorded baseline and optimized result files below.
 
 ## Running the benchmark
 
 ```bash
 PYTHONHASHSEED=0 python -m twixt_ai.evaluation.cuda_selfplay_512_cli \
-  --contract benchmarks/mini-cuda-selfplay-512-contract.json \
   --output-dir /path/to/scratch/selfplay-out \
   --report /path/to/report.json \
-  --implementation-label "pre-optimization"
+  --implementation-label "v0.0.6-default"
 ```
+
+The CLI defaults to the v0.0.6 contract. To compare scheduling choices, add
+any combination of `--worker-concurrency`, `--inference-batch-size`, and
+`--queue-flush-max-wait-seconds`. Those are the only workload overrides the
+runner accepts; sampler intervals and the implementation label affect only
+measurement/report metadata.
 
 `twixt_ai.evaluation.cuda_selfplay_512.run_cuda_selfplay_512_benchmark` is the
 underlying implementation. It:
 
-- loads the contract file unmodified and verifies the checkpoint's SHA-256
-  and `PYTHONHASHSEED` against it before running anything;
+- requires every field in the supplied v2 contract to equal the committed
+  canonical contract, verifies the checkpoint's SHA-256 and
+  `PYTHONHASHSEED`, and resolves only its three declared optimization variables
+  from explicit runner inputs before running anything;
 - builds the shared-model inference path with the contract's exact
-  `NeuralInferenceBatcher`/`MCTSAgent` settings and runs `selfplay.batch.run_batch`
-  with the contract's worker count, seed, and board — the same primitives
-  `selfplay.large_experiment` uses for staged dataset generation;
+  `NeuralInferenceBatcher` settings and explicitly binds every `MCTSAgent`
+  search parameter: simulations, exploration, rollout limit, rollout
+  evaluator, and both progressive-widening values. It runs
+  `selfplay.batch.run_batch` with the contract's worker count, seed, and board
+  — the same primitives `selfplay.large_experiment` uses for staged dataset
+  generation;
 - measures end-to-end wall time over the same scope the contract defines
-  (dispatch through durable artifact/summary writes; checkpoint load and
+  (dispatch through artifact/summary writes; checkpoint load and
   sampler setup are excluded and reported separately);
-- validates every required artifact: exactly the contract's game count
-  completed with zero failures, every game's derived seed matches
-  `Random(batch_seed).getrandbits(64)` in index order, and every recorded
-  decision's root-move visit counts sum to the contract's simulation budget
-  (so policy targets are a valid probability distribution);
+- validates every required artifact and its semantics: exact paths/counts,
+  summary and match schema versions, resolved batch and per-game
+  configurations, replay-valid terminal records, game and per-decision seed
+  derivations, recorded decisions matching the replay, unchanged simulation
+  budget, exploration, rollout limit/evaluator, and progressive-widening
+  values recorded by every decision, a complete legal root-move set whose
+  visits sum to the fixed budget, normalized policy targets, and terminal
+  side-to-move value targets in `{-1, 0, 1}`. Match/replay/decision and
+  policy/value validation
+  uses `selfplay.trajectory.trajectory_from_match`, the shared persisted-match
+  and trajectory-target boundary also used to build training datasets, rather
+  than defining benchmark-local targets or depending on the training layer;
 - reports GPU utilization/memory (`nvidia-smi` sampling, reusing
   `cuda_tuning._GpuSampler`), effective inference batch-size distribution
-  (`NeuralInferenceBatcher.statistics`), and an approximate phase breakdown.
+  (`NeuralInferenceBatcher.statistics`), throughput rates, an approximate
+  phase breakdown, the complete fixed configuration, and resolved values for
+  all three optimization variables.
 
 ### Phase breakdown method
 
@@ -51,7 +80,7 @@ CPU/MCTS (`search/mcts.py`), then batching/queueing wait; a sample matching
 none of those is `idle`. It adds no locking or synchronization to the timed
 path and can be read as an approximate, not exact, wall-time split.
 
-## Recorded baseline
+## Historical v0.0.5 recorded baseline
 
 [`benchmarks/mini-cuda-selfplay-512-baseline.json`](../benchmarks/mini-cuda-selfplay-512-baseline.json)
 is the pre-optimization measurement on an RTX 4060: 265.357 s wall time for
@@ -132,3 +161,581 @@ per-position batches directly on the CUDA device the same way
 when run on a CUDA-capable machine; it is a separate training-diagnostics
 tool outside this self-play benchmark's scope and was left for a follow-up
 issue rather than fixed here.
+
+## Concurrency, batch, and queue scaling on the RTX 4060
+
+The v0.0.5 optimized configuration was reproduced on 2026-09-11 from the
+v0.0.6 contract runner before varying any scheduling input. The reproduction
+used 4 workers, batch size 8, and a 0.5 ms maximum queue wait and completed in
+119.423 s, within 2.93% of the recorded 116.031 s result. It produced the same
+summary SHA-256 as the recorded run and passed every artifact, replay, seed,
+search-parameter, policy-target, and value-target check.
+
+Each sweep row below is one complete 512-game run. Only the three declared
+optimization variables changed; the checkpoint, seeds, board/rules, MCTS
+parameters, thread worker mode, single shared CUDA model, required artifacts,
+and target semantics remained fixed. No multiprocessing or implementation
+optimization was introduced. `GPU idle` is the approximate complement of
+average `nvidia-smi` utilization over the timed scope; it is different from
+the stack sampler's `idle` phase because CPU or inference-host work can run
+while the GPU is inactive. The complete machine-readable results, including
+all ineffective and regressive trials, are in
+[`benchmarks/mini-cuda-selfplay-512-concurrency-scaling.json`](../benchmarks/mini-cuda-selfplay-512-concurrency-scaling.json).
+
+| Trial | Workers | Batch | Flush wait | Wall (s) | Games/hour | Effective batch | GPU util. | GPU idle | CPU/MCTS phase | Inference phase | Result vs reproduction |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Reproduction | 4 | 8 | 0.5 ms | 119.423 | 15,434 | 3.87 | 2.96% | 97.04% | 29.80% | 67.86% | reference |
+| Worker floor | 1 | 8 | 0.5 ms | 252.974 | 7,286 | 1.00 | 4.74% | 95.26% | 51.08% | 45.91% | 111.83% slower |
+| Worker scale-up | 8 | 8 | 0.5 ms | 110.469 | 16,685 | 7.32 | 1.99% | 98.01% | 16.06% | 81.17% | 7.50% faster |
+| Worker saturation | 16 | 8 | 0.5 ms | 110.700 | 16,650 | 7.94 | 1.93% | 98.07% | 1.63% | 95.46% | 7.30% faster |
+| No batching | 8 | 1 | 0.5 ms | 178.516 | 10,325 | 1.00 | 6.42% | 93.58% | 1.16% | 97.32% | 49.48% slower |
+| Smaller batch | 8 | 4 | 0.5 ms | 122.311 | 15,070 | 3.98 | 2.86% | 97.14% | 1.46% | 96.08% | 2.42% slower |
+| Unreachable batch cap | 8 | 16 | 0.5 ms | 110.353 | 16,703 | 7.31 | 2.00% | 98.00% | 20.08% | 77.18% | 7.59% faster |
+| Immediate flush | 8 | 8 | 0 ms | 121.342 | 15,190 | 3.97 | 2.90% | 97.10% | 1.00% | 96.55% | 1.61% slower |
+| Longer coalescing | 8 | 8 | 2 ms | **108.075** | **17,055** | **7.83** | 1.95% | 98.05% | 22.23% | 75.01% | **9.50% faster** |
+
+Worker scaling is substantial through eight threads, but saturates there:
+sixteen workers made batches 99.2% full yet was 0.21% slower than eight
+workers. At eight workers, batch size 1 was 61.60% slower than batch size 8,
+and batch size 4 was 10.72% slower. Raising the cap to 16 was ineffective
+because eight producers cannot make a batch larger than eight. Immediate
+flush was also regressive: it reduced the realized batch from 7.83 to 3.97
+and was 12.28% slower than the 2 ms endpoint. The 2 ms result was 2.22% faster
+than the matching 0.5 ms trial, but this single-run profiling sweep is not
+enough evidence to change the canonical default.
+
+The best measured configuration completed in 108.075 s (17,054.8
+games/hour), a 1.074x speedup over the recorded 116.031 s configuration and
+1.105x over this run's reproduction. It still averaged only 1.95% sampled GPU
+utilization (approximately 98.05% GPU idle) while realizing a 7.83-position
+batch. The RTX 4060 is therefore not compute-saturated. The remaining primary
+bottleneck is the host/launch side of batched inference—CPU encoding and
+result extraction around small CUDA operations—with CPU game/MCTS work the
+secondary bottleneck (22.23% of best-run wall-state samples). Implementation
+changes for either path are intentionally outside this measurement task.
+
+To reproduce any row, start with the documented benchmark command and pass
+the row's values, for example:
+
+```bash
+PYTHONHASHSEED=0 python -m twixt_ai.evaluation.cuda_selfplay_512_cli \
+  --output-dir /path/to/scratch/selfplay-out \
+  --report /path/to/report.json \
+  --implementation-label "v0.0.6-profile-w8-b8-f2ms" \
+  --worker-concurrency 8 \
+  --inference-batch-size 8 \
+  --queue-flush-max-wait-seconds 0.002
+```
+
+## Detailed inference-host profile
+
+The best measured scheduling configuration above was profiled again on the
+same RTX 4060 with all 512 canonical games: eight workers, batch size eight,
+and a 2 ms maximum flush wait. The run used the unchanged canonical contract,
+completed all games, validated all 30,929 decisions and policy/value targets,
+and reproduced output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+The full ranked evidence is in
+[`benchmarks/mini-cuda-selfplay-512-inference-host-profile.json`](../benchmarks/mini-cuda-selfplay-512-inference-host-profile.json).
+
+The opt-in `--detailed-inference-profile` observers measure the source-of-truth
+`NeuralPolicyValue.evaluate_batch` and `NeuralInferenceBatcher` directly;
+there is no benchmark evaluator or copied inference pipeline. Host phases use
+`perf_counter`; CUDA transfers, model execution, mask application, and softmax
+use CUDA events. At the point where production `Tensor.tolist()` must
+synchronize and copy results, the observer explicitly separates that boundary
+into synchronization, device-to-host copy, then CPU conversion. Its 112.690 s
+end-to-end time includes event, observer, and clock overhead and is diagnostic,
+not a new optimized throughput claim.
+
+| Cost | Total (s) | Per batch (ms) | Share of profiled inference wall |
+| --- | ---: | ---: | ---: |
+| CPU encoding + stack | **38.230** | **1.968** | **63.73%** |
+| CPU action-index construction | 4.935 | 0.254 | 8.23% |
+| CPU legal-mask construction | 1.535 | 0.079 | 2.56% |
+| Python result extraction | 1.742 | 0.090 | 2.90% |
+| Explicit CUDA synchronization wait | 0.066 | 0.003 | 0.11% |
+
+CUDA-event timings are a separate, overlapping view and must not be added to
+the host wall spans. Across 19,425 inference batches, model execution used
+6.315 device seconds (0.325 ms/batch), H2D copies 1.336 s, policy mask
+application 0.631 s, D2H copies 0.568 s, and softmax 0.245 s. CPU encoding
+alone therefore consumed 6.05 times the aggregate CUDA model-execution time.
+The earlier inference label was too broad: it included this 38.230 s of host
+encoding and other submission/extraction work around only 6.315 s of model
+device work.
+
+Batching and contention are measured independently. The average batch
+contained 7.860 positions (98.25% of capacity), and 18,610 of 19,425 batches
+were full. Batch formation from the first observed request to dispatch took
+1.301 ms on average; full batches took 0.955 ms on average. The 815
+latency-flushed batches took 9.210 ms on average and 6.691 ms at p50, showing
+that the configured 2 ms timeout was not a hard observed dispatch bound.
+
+Direct `Condition` measurements explain what can and cannot be called
+contention:
+
+| Condition measurement | p50 | p95 | p99 | Aggregate |
+| --- | ---: | ---: | ---: | ---: |
+| Producer lock acquisition | 0.551 us | 1.092 us | 1.763 us | 0.494 s across 152,674 calls |
+| Producer lock-held section | 1.002 us | 3.156 us | 4.558 us | 0.220 s across 152,674 calls |
+| Worker dispatch acquisition | 0.241 us | 0.340 us | 0.451 us | 0.005 s across 19,425 batches |
+| Worker completion acquisition | 0.501 us | 0.852 us | 1.382 us | 0.011 s across 19,425 batches |
+| Wait deadline overshoot | 0 ms | 0.526 ms | 6.978 ms | 7.299 s across 19,425 batches |
+
+Typical lock acquisition and critical sections are therefore microsecond-scale,
+although one producer acquisition reached 156 ms. Separately, wait calls
+overshot their remaining timeout by 7.299 s in aggregate. That tail includes
+delayed GIL/OS scheduling and `Condition` lock reacquisition; this profiler
+cannot assign it to only one of those causes. The earlier interpretation of
+queue wait as primarily coalescing was unsupported and is withdrawn. Aggregate
+per-request queue wait likewise sums concurrent waits and is not additive wall
+time.
+
+The ranked next target remains CPU position encoding and stacking. The
+condition wake/reacquisition scheduling tail is second, ahead of model
+execution and action-index/mask construction. Result extraction and explicit
+synchronization are smaller. `nvidia-smi` averaged 2.23%
+utilization during this run, but that coarse sample is only corroboration: the
+source-of-truth observer spans, direct Condition timings, CUDA events,
+near-full batches, and validated fixed workload support the ranking. No
+production optimization was attempted in this work item.
+
+Reproduce the diagnostic profile with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.cuda_selfplay_512_cli \
+  --output-dir /path/to/scratch/selfplay-profile-out \
+  --report /path/to/scratch/inference-profile-report.json \
+  --implementation-label "v0.0.6-profile-w8-b8-f2ms-source-observer" \
+  --worker-concurrency 8 \
+  --inference-batch-size 8 \
+  --queue-flush-max-wait-seconds 0.002 \
+  --detailed-inference-profile
+```
+
+## Batched version-1 position encoding
+
+The next optimization replaces per-position version-1 tensor allocation plus
+`torch.stack` with one batch allocation and bulk indexed writes for pegs and
+links. The public single-position encoder and encoding version remain
+unchanged. Version 2 continues to use its prior path.
+
+Both unprofiled measurements used the exact 512-game contract with eight
+workers, inference batch eight, and a 2 ms maximum flush wait:
+
+| Measurement | Baseline | Batched encoder | Change |
+| --- | ---: | ---: | ---: |
+| End-to-end wall time | 108.409 s | **83.773 s** | **-22.72%** |
+| Games/hour | 17,002.3 | **22,002.2** | **+29.41%** |
+| Positions/second | 1,408.3 | **1,822.5** | **+29.41%** |
+| Simulations/second | 1,141.2 | **1,476.8** | **+29.41%** |
+| Inference positions/second | 2,595.1 | **4,365.6** | **+68.22%** |
+
+The detailed source observer measured CPU encoding and stacking at 13.924 s,
+or 0.716 ms per batch, down 63.58% from the earlier 38.230 s and 1.968 ms per
+batch. Observer overhead is diagnostic and is not used for the throughput
+claim.
+
+Both throughput runs completed all 512 games and validated all 30,929
+decisions. Their output summary SHA-256 values are byte-identical at
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+Differential regression tests also compare the complete batch byte buffer
+against the single-position version-1 encoder across deterministic legal
+trajectories on tiny, rectangular, Mini, and standard board dimensions.
+
+An alternative that replaced `stack` with `unsqueeze` plus `torch.cat` was
+rejected. It retained every per-position allocation and measured 1,316.9 us
+per representative batch, 0.57% slower than the 1,309.4 us legacy median. The
+retained bulk encoder measured 200.4 us (6.53x faster) in the same nine-sample
+microbenchmark. Full machine-readable evidence is in
+[`benchmarks/mini-batched-position-encoding.json`](../benchmarks/mini-batched-position-encoding.json).
+
+## Residual batched version-1 encoding overhead
+
+The retained follow-up collapses the separate peg/link coordinate lists and
+advanced-index conversions into one flattened dynamic-feature update. CPU
+batches clone a bounded, board-size-keyed immutable template for the goal
+borders; the clone preserves independent caller-owned storage, and non-CPU
+devices retain the uncached construction path. The public single-position
+encoder, version 2, channel contract, and supported board dimensions are
+unchanged.
+
+Two adjacent unprofiled canonical runs per implementation used eight workers,
+inference batch eight, and a 2 ms flush wait. Baseline runs measured 77.079 s
+and 76.578 s; optimized runs measured 73.741 s and 73.692 s. Mean end-to-end
+time fell from 76.829 s to 73.716 s (4.05%), and both optimized runs beat both
+baselines. Effective batch size remained 7.820. All five baseline, optimized,
+and diagnostic runs completed 512 games, validated 30,929 decisions, and
+produced the unchanged output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+
+The detailed observer reduced encoding from 13.924 s to 7.545 s, from 0.716
+ms to 0.387 ms per batch, and from 37.64% to 22.85% of profiled evaluator
+time. A same-process representative microbenchmark measured 252.7 us per
+batch for the prior encoder and 122.8 us for the retained encoder (2.06x).
+Complete float-buffer differential tests cover 1x1, 2x3, 10x10, and 24x24
+boards, and a mutation regression proves that cached static planes do not
+alias returned batches.
+
+Flattened indexing without the static template remained slower at 135.5 us.
+Replacing owner-channel tables with identity branches regressed isolated
+index construction by 12.78%. Caching a full tensor for each batch/board shape
+saved only 0.70 us over the spatial template while scaling cached storage with
+batch size. Mutable output-buffer reuse was rejected as unsafe because calls
+own their returned tensors and inference batches may overlap; making that pool
+safe would add synchronization without demonstrated end-to-end value. Full
+measurements and rejection rationale are in
+[`benchmarks/mini-residual-batched-position-encoding.json`](../benchmarks/mini-residual-batched-position-encoding.json).
+
+## Inference-batcher scheduling latency
+
+The remaining condition-wait tail is reduced by bounding CPython's thread
+switch interval at 1 ms while at least one timeout-based dynamic inference
+batcher is active. This gives the inference worker more frequent opportunities
+to run after a notification or deadline without changing the configured 2 ms
+formation wait, batch contents, or synchronous caller interface. The process
+setting is reference-counted across overlapping batchers, never lengthens an
+already shorter interval, and restores the prior value when the final timed
+batcher closes if no other component changed it in the meantime. Batch-size-one
+and zero-wait paths leave it unchanged. This remains threaded; no
+multiprocessing path was introduced.
+
+Two unprofiled canonical runs per implementation measured mean end-to-end time
+of 82.438 s at CPython's 5 ms default and 81.640 s with the scoped 1 ms
+interval, a reproducible 0.97% reduction. Both optimized runs beat both
+baseline runs. Mean aggregate queue wait fell 9.63%. A controlled detailed
+observer pair measured aggregate deadline overshoot falling from 8.371 s to
+6.465 s (22.77%) and p99 overshoot from 7.386 ms to 2.147 ms (70.93%). All
+nine canonical runs used for baseline, retained, detailed, and rejected trials
+completed and validated 512 games and 30,929 decisions with the unchanged
+output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+
+Producer-assisted full-batch dispatch with first-request deadline accounting
+was rejected after regressing the adjacent baseline by 0.91%. A 0.5 ms interval
+improved wall time but was weaker than 1 ms and produced more latency flushes;
+a 2 ms interval was effectively tied with its adjacent baseline.
+Machine-readable results and negative-trial reasons are in
+[`benchmarks/mini-inference-batcher-scheduling.json`](../benchmarks/mini-inference-batcher-scheduling.json).
+
+## Batched legal-action preparation
+
+The shared evaluator now dispatches the encoding version once per batch when
+mapping legal moves to policy indices. Version 1 uses its row-major formula
+directly; version 2 retains the same Black transpose and player-specific
+policy frame. The resulting ordered indices still drive both the legal mask
+and the probability-to-move mapping. All mask rows are populated through one
+flattened indexed update instead of one Python-to-tensor index conversion per
+row.
+
+Two historical unprofiled canonical runs on the original implementation commit
+`d299b2a` measured 75.924 s and 76.273 s end to end. The
+retained post-scheduling baseline runs measured 81.354 s and 81.926 s, so the
+mean fell from 81.640 s to 76.098 s (6.79%); both optimized runs beat both
+baseline runs. Every run completed all 512 games, validated all 30,929
+decisions, and produced the unchanged output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+An observer-instrumented diagnostic reduced the combined action-index and mask
+span from 6.470 s to 3.025 s (53.24%); observer overhead excludes that run from
+the throughput claim.
+
+Differential tests compare every ordered index and the complete Boolean mask
+against the original versioned helpers for both encodings, both players, and
+5x5, 10x10, and 24x24 boards. They also cover malformed coordinates,
+mixed-player batches, invalid action counts, and negative, non-integer, and
+out-of-range action indices. Remeasuring both sides of the deterministic
+eight-position microbenchmark at the retained validation implementation
+`e0f6ef1` produced 316.2 us for the reference path and 109.2 us for the
+validated batched path, a 2.895x speedup and 65.46% time reduction. The exact
+8/8/2 ms canonical confirmation recorded below completed in 71.312 s. Keeping
+per-row mask updates after direct index construction was
+rejected at 68.2 us and a 77.358 s canonical trial. Caching by complete legal
+move tuple was rejected because canonical tuples change at every position and
+would retain large masks without meaningful reuse. Full measurements and
+rejected-approach rationale are in
+[`benchmarks/mini-batched-legal-action-preparation.json`](../benchmarks/mini-batched-legal-action-preparation.json).
+
+## CPU MCTS and game-tree hot paths
+
+The unchanged post-encoding, post-scheduling implementation was profiled on
+the exact contract with the retained eight workers, inference batch eight,
+and 2 ms flush wait. An external 100 Hz `py-spy --gil --threads` run ranks
+executable Python paths. A complementary nonblocking 50 Hz
+`py-spy --threads --idle` run accounts for all worker residence, inference
+futures, and the inference thread while it is inside native work. MCTS
+attribution requires a game-worker stack containing `MCTSAgent.choose_move`,
+so post-timing main-thread replay validation is excluded. Both runs completed
+and validated all 512 games and 30,929 decisions with the canonical output
+SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+The GIL-ranking run's 84.851 s wall time is 3.93% above the retained 81.640 s
+two-run unprofiled mean. The all-thread run measured 81.880 s, only 0.29%
+above that mean, with effective batch size 7.815. Profiled wall times remain
+diagnostic, not replacement throughput claims.
+
+The 2,733 GIL-held samples inside `choose_move` rank as follows. Categories
+are exclusive: nested win and legal-move functions take precedence,
+automatic-link rules are transitions, direct tuple sorting and
+`GameState._from_canonical` are allocation/copy, and source lines 371-373 and
+375-461 in `search/mcts.py` identify backup and metadata respectively.
+
+| Rank | CPU/game-tree category | GIL samples | Share |
+| ---: | --- | ---: | ---: |
+| 1 | Expansion and initialization | 1,149 | **42.04%** |
+| 2 | Metadata construction | 508 | **18.59%** |
+| 3 | State transitions | 430 | **15.73%** |
+| 4 | Allocation and copy | 244 | **8.93%** |
+| 5 | Legal-move generation | 173 | **6.33%** |
+| 6 | Win checks | 150 | **5.49%** |
+| 7 | Other MCTS orchestration | 69 | 2.52% |
+| 8 | Selection | 6 | 0.22% |
+| 9 | Backup | 4 | 0.15% |
+
+Expansion is concentrated in `mcts.py:208-271`: uniform-prior creation,
+policy-key validation and normalization, unexpanded-move selection, child
+allocation, and child initialization. Peg-placement/coordinate hashing below
+lines 124, 219, 235, and 257 alone contributed 411 samples. Metadata is not a
+rounding error: `mcts.py:385-400` constructs then reconstructs statistics for
+every legal root move, and lines 419-460 build both `root_moves` and the second
+`inspection.candidates` representation. The comprehensions beginning at
+lines 385 and 444 contributed 277 samples, 54.53% of metadata construction.
+
+Within transitions, link-intersection orientation/tests in
+`game/rules.py:185-212` contributed 135 samples, while
+`rules.py:215-241` creates and crossing-filters automatic links. Direct peg
+and link tuple extension/sorting in `game/transitions.py:60-87` plus canonical
+state construction in `game/state.py:246-269` form the separate 8.93%
+allocation/copy category. Legal-move filtering is at `game/rules.py:120-133`;
+win checks rebuild owned-coordinate and adjacency collections at
+`game/win.py:100-128`. Selection and backup together are only 0.37%, so
+neither is a credible next target under this workload.
+
+All eight game workers contributed between 10.98% and 14.01% of GIL-held MCTS
+samples, confirming balanced participation but not measuring contention. The
+all-thread run instead found 601.84 aggregate worker thread-seconds explicitly
+blocked in `Future.result()` for inference: 91.19% of worker residence and an
+average 7.35 of eight workers across end-to-end wall time. After excluding
+those waits, only 25.16 aggregate thread-seconds were resident in MCTS, or
+0.31 worker on average. The inference worker was inside `evaluate_batch` for
+34.96 sampled seconds (42.70% of wall); its direct runner timer measured
+37.845 s (46.22%).
+
+The GIL-only profile represents 27.33 sampled execution-seconds, close to the
+25.16 all-thread MCTS-resident seconds only within separate-run and sampling
+variation; their difference is not a wait estimate. The latter provides a
+conservative bound: even if every non-inference-wait MCTS sample were waiting
+on a GIL held by another worker, the inference thread, or the main thread,
+GIL wait and its possible end-to-end impact cannot exceed 25.16 seconds
+(30.73% of wall). This deliberately loose ceiling includes actual MCTS
+execution, and the profile does not resolve a positive GIL-wait cost.
+
+The runner's priority sampler reported a near-even inference/CPU-MCTS split,
+but it classifies a worker blocked inside `NeuralInferenceBatcher.__call__` as
+CPU/MCTS whenever the inference thread is not in `evaluate_batch`; it cannot
+support a CPU co-dominance claim. The complementary evidence instead identifies
+the shared synchronous inference path as the largest measured end-to-end
+limiter. The next end-to-end change should target inference service/wait rather
+than GIL scheduling, selection, or backup. If CPU MCTS is revisited after
+inference, expansion/initialization remains its source-ranked target at 42.04%
+of executable MCTS samples; expansion plus transition and state-copy work is
+66.70%. No production optimization was made in this work item.
+Full source anchors, methodology, worker distribution, validation evidence,
+and limitations are recorded in
+[`benchmarks/mini-cpu-mcts-hot-paths.json`](../benchmarks/mini-cpu-mcts-hot-paths.json).
+
+## MCTS expansion and node initialization
+
+Node priors now use a list aligned with the existing ordered unexpanded-move
+list. Uniform initialization no longer hashes every legal move into a
+dictionary, normalized policy weights are produced directly in legal-move
+order, and expansion pops the chosen move and prior at the same index. The
+root takes one prior snapshot before search so its complete legal statistics
+and metadata retain their original order and values.
+
+Two adjacent unprofiled canonical runs per implementation reduced mean
+end-to-end time from 74.025 s to 70.617 s, a reproducible 4.60% reduction;
+both optimized runs beat both baseline runs. All four runs completed 512 games
+and validated 30,929 decisions, 123,716 simulations, policy targets, search
+parameters, seeds, records, and artifacts. Every run produced the unchanged
+output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+A same-process 80-move initialization microbenchmark improved from 63.56 us
+to 46.93 us per node (1.35x).
+
+Policy-specific validation or normalization bypasses were rejected because
+they would weaken the public policy-hook contract. Tail-swap removal was
+rejected because reordering the remaining population would change later
+seeded weighted choices. Conditional normalization for already normalized
+neural output was also rejected because changing floating-point cumulative
+weights could alter choices and canonical output. Complete measurements and
+rejected-approach rationale are in
+[`benchmarks/mini-mcts-expansion-initialization.json`](../benchmarks/mini-mcts-expansion-initialization.json).
+
+## MCTS result and inspection metadata
+
+Root statistics now begin once in canonical legal-move order. Only expanded
+root entries are replaced, using their existing move object's position in the
+original legal-move tuple, so metadata construction no longer hashes every
+legal move into a child dictionary and then hashes every move again to rebuild
+the ordered statistics. `root_moves`, `inspection.candidates`, and the public
+`last_statistics.moves` tuple retain every field, key order, move order, and
+numeric value. Nodes are counted when expansion creates them instead of by a
+separate complete post-search tree walk.
+
+Two adjacent unprofiled canonical runs reduced mean end-to-end time from
+70.617 s to 70.017 s (0.85%); both optimized runs beat both baseline runs.
+All four runs completed 512 games and validated 30,929 decisions, 123,716
+simulations, policy/value targets, search parameters, seeds, records, and
+artifacts. Every run produced the unchanged output summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+A same-process 80-move, four-child metadata microbenchmark improved from
+319.61 us to 264.61 us per root (1.21x).
+
+Combining all three public representations in one explicit loop was rejected
+after its 70.671 s canonical mean failed to improve on baseline. A dictionary
+feeding a single statistics comprehension was also rejected because it kept a
+hash lookup for every legal move and regressed the local benchmark. Removing
+or lazily changing the public statistics or inspection views was rejected to
+preserve serialization, type, and observation behavior. Complete measurements
+and rejected-approach rationale are in
+[`benchmarks/mini-mcts-metadata-construction.json`](../benchmarks/mini-mcts-metadata-construction.json).
+
+## Final concurrency retuning
+
+After all inference and MCTS optimizations, the three scheduling variables
+were swept again around the retained 8-worker, batch-8, 2 ms configuration.
+Every worker and batch setting received two complete 512-game runs in reversed
+order. The exploratory flush results were too close to select 1 ms: three-run
+means differed by only 0.21%, their ranges overlapped, and individual ordering
+was inconsistent. A separate confirmatory study therefore ran eight adjacent
+1 ms/2 ms pairs, alternating AB/BA order across pairs.
+
+| Trial | Workers | Batch | Flush wait | Runs | Mean wall (s) | Range (s) | Mean games/hour | Effective batch | Mean GPU util. | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Worker floor | 4 | 8 | 2 ms | 2 | 140.046 | 139.868–140.224 | 13,161 | 3.965 | 2.83% | regressive |
+| Retained center | 8 | 8 | 2 ms | 3 | 68.564 | 68.149–69.083 | 26,884 | 7.837 | 3.02% | incumbent |
+| Worker saturation | 16 | 8 | 2 ms | 2 | 69.402 | 69.147–69.657 | 26,559 | 7.948 | 3.04% | saturated |
+| Smaller batch | 8 | 4 | 2 ms | 2 | 78.850 | 78.519–79.180 | 23,377 | 3.984 | 4.43% | regressive |
+| Unreachable batch cap | 8 | 16 | 2 ms | 2 | 85.207 | 85.187–85.227 | 21,632 | 7.832 | 2.74% | regressive |
+| Shorter flush | 8 | 8 | 1 ms | 3 | 68.422 | 68.331–68.485 | 26,939 | 7.476 | 3.20% | unresolved; confirm |
+| Longer flush | 8 | 8 | 4 ms | 3 | 68.887 | 68.510–69.090 | 26,757 | 7.860 | 3.10% | regressive |
+
+Before confirmation, the decision rule was fixed: replace 2 ms only if 1 ms
+improved the eight-run arithmetic mean by at least 1% and the two-sided 95%
+Student-t confidence interval for adjacent paired differences (1 ms minus
+2 ms) lay entirely below zero. The exact run order and wall times were:
+
+| Sequence | Pair | Flush wait | Wall (s) |
+| ---: | ---: | ---: | ---: |
+| 1 | 1 | 1 ms | 70.729 |
+| 2 | 1 | 2 ms | 69.528 |
+| 3 | 2 | 2 ms | 71.504 |
+| 4 | 2 | 1 ms | 70.038 |
+| 5 | 3 | 1 ms | 71.594 |
+| 6 | 3 | 2 ms | 69.664 |
+| 7 | 4 | 2 ms | 69.930 |
+| 8 | 4 | 1 ms | 70.690 |
+| 9 | 5 | 1 ms | 69.749 |
+| 10 | 5 | 2 ms | 80.299 |
+| 11 | 6 | 2 ms | 69.626 |
+| 12 | 6 | 1 ms | 70.172 |
+| 13 | 7 | 1 ms | 72.330 |
+| 14 | 7 | 2 ms | 69.554 |
+| 15 | 8 | 2 ms | 70.875 |
+| 16 | 8 | 1 ms | 69.782 |
+
+The confirmatory means were 70.635 s for 1 ms and 71.372 s for 2 ms, an
+apparent 1.03% advantage for 1 ms. It did not pass the uncertainty criterion:
+only three of eight pairs favored 1 ms, and the paired mean difference was
+-0.737 s with a 95% confidence interval of -4.257 to +2.783 s. Pair 5's
+80.299 s 2 ms run is retained in the primary result rather than discarded
+after inspection. A labeled leave-pair-5-out sensitivity check reverses the
+mean difference to +0.665 s, with 1 ms slower. The apparent mean advantage is
+therefore neither statistically resolved nor robust to the single slow run.
+
+The final configuration remains **8 workers, batch size 8, and a 2 ms maximum
+flush wait**. The 1 ms setting is recorded as indistinguishable rather than
+selected from noise.
+
+Scaling remains saturated at eight workers: sixteen workers filled batches
+slightly better but was 1.22% slower than the 2 ms center, while four workers
+was 104.26% slower. Batch size four was 15.00% slower. Batch size sixteen was
+24.27% slower because eight producers can never fill it, so every inference
+batch waited for the latency flush. No configuration approached GPU compute
+saturation; mean sampled utilization ranged from 2.74% to 4.43%.
+
+Only the three contract-declared optimization variables changed during the
+33 exploratory and confirmatory runs. Every run completed 512 games, validated
+all 30,929 decisions and 123,716 simulations, and passed the fixed replay,
+seed, search, artifact, policy-target, and value-target checks. No
+implementation or fixed contract field changed. Reproduce the selected
+configuration by adding these explicit tuning arguments to the canonical
+runner command:
+
+```bash
+--worker-concurrency 8 \
+--inference-batch-size 8 \
+--queue-flush-max-wait-seconds 0.002
+```
+
+All individual wall-time samples, rates, effective batches, GPU measurements,
+validation counts, methodology, saturation points, and regressive settings are
+recorded in
+[`benchmarks/mini-final-concurrency-settings.json`](../benchmarks/mini-final-concurrency-settings.json).
+
+## Final v0.0.6 canonical result
+
+The final canonical run used the selected **8 workers, batch size 8, and 2 ms
+maximum flush wait** on the retained validation implementation at `e0f6ef1`.
+It completed and wrote all 512 games in **71.312 s**, a **1.627x speedup** and
+**38.54% wall-time reduction** versus 116.031 s. Throughput was **25,847.1
+games/hour**, **2,140.9 positions/s**, and **1,734.9 simulations/s**.
+
+CUDA execution was validated on the NVIDIA GeForce RTX 4060: the fixed
+checkpoint ran 19,491 CUDA inference batches for 152,674 positions, the timed
+path synchronized CUDA, PyTorch reported a 9,790,464-byte allocation peak, and
+`nvidia-smi` collected 566 valid samples with no sampler failures, measuring
+2.71% average utilization (4% peak) and 424.87 MiB average memory (425 MiB
+peak). Low utilization means the small inference workload did not saturate GPU
+compute; it does not indicate a CPU fallback.
+
+The realized average batch size was 7.833 (97.91% of capacity). The complete
+distribution was:
+
+| Effective batch size | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Batch count | 144 | 83 | 52 | 53 | 99 | 240 | 499 | 18,321 |
+
+The final run produced 512 required game artifacts with no failures and the
+stable summary SHA-256
+`f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f`.
+All records replayed, all game and decision seeds followed the contract, every
+search parameter remained fixed, all 30,929 policy targets covered the complete
+legal root and summed to the four-visit budget, and every side-to-move value
+target was valid.
+
+The representative final scaling study remains the basis for selecting this
+configuration. Four workers averaged 140.046 s; eight averaged 68.564 s; and
+sixteen averaged 69.402 s, so throughput saturated at eight workers. Negative
+attempts included batch 4 at 78.850 s, an unfillable batch-16 cap at 85.207 s,
+and a 4 ms flush at 68.887 s. A balanced eight-pair comparison did not select
+1 ms: its apparent mean advantage had a paired 95% confidence interval spanning
+effects in both directions, and only three pairs favored it. These measurements
+made no implementation or fixed-workload changes.
+
+The 60-second stretch target was **not achieved**: this run was 11.312 s
+(18.85%) over it, while still comfortably beating the acceptance reference.
+Post-optimization stack sampling identifies shared inference service as the
+largest remaining measured bottleneck: `evaluate_batch` accounted for 6,492
+samples, approximately 32.46 s or 58.57% of sampled wall state, consistent with
+the direct 31.794 s batcher timer. CPU MCTS/game-tree work was secondary at
+4,098 samples, approximately 20.49 s or 36.97%. Combined with only 2.71% GPU
+utilization, the primary result points to host/launch and small-workload
+inference service overhead rather than GPU compute saturation.
+
+The complete machine-readable final result, including the fixed configuration,
+timing scope, rates, full batch distribution, CUDA samples, phase measurement,
+and every semantic validation flag, is in
+[`benchmarks/mini-cuda-selfplay-512-v006-final.json`](../benchmarks/mini-cuda-selfplay-512-v006-final.json).

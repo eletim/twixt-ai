@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import math
 from random import Random
@@ -13,7 +13,8 @@ from twixt_ai.agents import (
     AgentResult,
     evaluate_position,
 )
-from twixt_ai.game import GameState, PegPlacement, Player, apply_move, legal_peg_placements
+from twixt_ai.game import GameState, PegPlacement, Player, legal_peg_placements
+from twixt_ai.game.transitions import _apply_legal_move
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,8 +40,8 @@ DEFAULT_ROLLOUT_LIMIT = 4
 """Default playout horizon, chosen to keep standard-board decisions practical."""
 
 _HEURISTIC_VALUE_SCALE = 100.0
-_PROGRESSIVE_WIDENING_CONSTANT = 1.5
-_PROGRESSIVE_WIDENING_EXPONENT = 0.5
+DEFAULT_PROGRESSIVE_WIDENING_CONSTANT = 1.5
+DEFAULT_PROGRESSIVE_WIDENING_EXPONENT = 0.5
 
 
 RolloutEvaluationFunction = Callable[[GameState, Player], float]
@@ -68,7 +69,11 @@ class MCTSSearchStatistics:
     """Inspectable summary of a completed MCTS decision."""
 
     simulations: int
+    exploration: float
     rollout_limit: int | None
+    rollout_evaluator: str
+    progressive_widening_constant: float
+    progressive_widening_exponent: float
     nodes: int
     rollout_moves: int
     maximum_depth: int
@@ -103,7 +108,7 @@ class _Node:
         self.parent = parent
         self.children: list[_Node] = []
         self.unexpanded: list[PegPlacement] = []
-        self.priors: dict[PegPlacement, float] = {}
+        self.priors: list[float] = []
         self.estimated_value: float | None = None
         self.visits = 0
         self.value_sum = 0.0
@@ -113,11 +118,11 @@ class _Node:
         return self.value_sum / self.visits if self.visits else 0.0
 
 
-def _uniform_priors(moves: tuple[PegPlacement, ...]) -> dict[PegPlacement, float]:
+def _uniform_priors(moves: tuple[PegPlacement, ...]) -> list[float]:
     if not moves:
-        return {}
+        return []
     probability = 1.0 / len(moves)
-    return {move: probability for move in moves}
+    return [probability] * len(moves)
 
 
 class MCTSAgent:
@@ -144,6 +149,8 @@ class MCTSAgent:
         exploration: float = math.sqrt(2.0),
         rollout_limit: int | None = DEFAULT_ROLLOUT_LIMIT,
         rollout_evaluator: RolloutEvaluationFunction = heuristic_rollout_value,
+        progressive_widening_constant: float = DEFAULT_PROGRESSIVE_WIDENING_CONSTANT,
+        progressive_widening_exponent: float = DEFAULT_PROGRESSIVE_WIDENING_EXPONENT,
         policy_value: PolicyValueFunction | None = None,
     ) -> None:
         if (
@@ -169,10 +176,23 @@ class MCTSAgent:
             raise TypeError("policy_value must be callable or None")
         if not callable(rollout_evaluator):
             raise TypeError("rollout_evaluator must be callable")
+        for name, value in (
+            ("progressive_widening_constant", progressive_widening_constant),
+            ("progressive_widening_exponent", progressive_widening_exponent),
+        ):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value <= 0
+            ):
+                raise ValueError(f"{name} must be a finite positive number")
         self.simulations = simulations
         self.exploration = float(exploration)
         self.rollout_limit = rollout_limit
         self.rollout_evaluator = rollout_evaluator
+        self.progressive_widening_constant = float(progressive_widening_constant)
+        self.progressive_widening_exponent = float(progressive_widening_exponent)
         self.policy_value = policy_value
         self.last_statistics: MCTSSearchStatistics | None = None
         self._rollout_moves = 0
@@ -197,10 +217,10 @@ class MCTSAgent:
             raise TypeError("policy priors must be a mapping")
         if any(not isinstance(move, PegPlacement) for move in estimate.priors):
             raise TypeError("policy priors must use PegPlacement keys")
-        illegal = set(estimate.priors) - set(moves)
-        if illegal:
+        legal_moves = set(moves)
+        if any(move not in legal_moves for move in estimate.priors):
             raise ValueError("policy priors must not contain illegal moves")
-        weights: dict[PegPlacement, float] = {}
+        weights: list[float] = []
         for move in moves:
             weight = estimate.priors.get(move, 0.0)
             if (
@@ -210,10 +230,10 @@ class MCTSAgent:
                 or weight < 0
             ):
                 raise ValueError("policy priors must be finite non-negative numbers")
-            weights[move] = float(weight)
-        total = sum(weights.values())
+            weights.append(float(weight))
+        total = sum(weights)
         if total > 0:
-            node.priors = {move: weight / total for move, weight in weights.items()}
+            node.priors = [weight / total for weight in weights]
 
         value = estimate.value
         if value is not None:
@@ -235,16 +255,17 @@ class MCTSAgent:
         return 0.0
 
     def _expand(self, node: _Node, random: Random) -> _Node:
-        weights = [node.priors[move] for move in node.unexpanded]
+        weights = node.priors
         if sum(weights) > 0:
             index = random.choices(range(len(node.unexpanded)), weights=weights, k=1)[0]
         else:
             index = random.randrange(len(node.unexpanded))
         move = node.unexpanded.pop(index)
+        prior = node.priors.pop(index)
         child = _Node(
-            apply_move(node.state, move),
+            _apply_legal_move(node.state, move),
             move=move,
-            prior=node.priors[move],
+            prior=prior,
             parent=node,
         )
         self._initialize(child)
@@ -271,8 +292,7 @@ class MCTSAgent:
 
         return max(node.children, key=score)
 
-    @staticmethod
-    def _can_expand(node: _Node) -> bool:
+    def _can_expand(self, node: _Node) -> bool:
         """Return whether progressive widening admits another action."""
 
         if not node.unexpanded:
@@ -280,8 +300,8 @@ class MCTSAgent:
         if not node.children:
             return True
         child_limit = math.ceil(
-            _PROGRESSIVE_WIDENING_CONSTANT
-            * node.visits**_PROGRESSIVE_WIDENING_EXPONENT
+            self.progressive_widening_constant
+            * node.visits**self.progressive_widening_exponent
         )
         return len(node.children) < child_limit
 
@@ -293,7 +313,7 @@ class MCTSAgent:
             moves = legal_peg_placements(state)
             if not moves:
                 break
-            state = apply_move(state, random.choice(moves))
+            state = _apply_legal_move(state, random.choice(moves))
             steps += 1
         self._rollout_moves += steps
         if state.is_terminal:
@@ -335,6 +355,8 @@ class MCTSAgent:
         self._maximum_depth = 0
         root = _Node(request.state)
         self._initialize(root, request.legal_moves)
+        root_priors = tuple(root.priors)
+        node_count = 1
 
         for _ in range(self.simulations):
             node = root
@@ -342,6 +364,7 @@ class MCTSAgent:
             while not node.state.is_terminal:
                 if self._can_expand(node):
                     node = self._expand(node, random)
+                    node_count += 1
                     path.append(node)
                     break
                 if not node.children:
@@ -364,60 +387,73 @@ class MCTSAgent:
                 -child.move.coordinate.x,  # type: ignore[union-attr]
             ),
         )
-        move_statistics = tuple(
-            MCTSMoveStatistics(move, 0, 0.0, root.priors[move])
-            for move in request.legal_moves
-        )
-        by_move = {item.move: item for item in root.children}
-        move_statistics = tuple(
-            MCTSMoveStatistics(
-                item.move,
-                by_move[item.move].visits,
-                by_move[item.move].mean_value,
-                item.prior,
+        move_statistics = [
+            MCTSMoveStatistics(move, 0, 0.0, prior)
+            for move, prior in zip(request.legal_moves, root_priors)
+        ]
+        for child in root.children:
+            assert child.move is not None
+            index = request.legal_moves.index(child.move)
+            move_statistics[index] = MCTSMoveStatistics(
+                child.move,
+                child.visits,
+                child.mean_value,
+                root_priors[index],
             )
-            if item.move in by_move
-            else item
+        root_moves = [
+            {
+                "x": item.move.coordinate.x,
+                "y": item.move.coordinate.y,
+                "visits": item.visits,
+                "value": item.value,
+                "prior": item.prior,
+            }
             for item in move_statistics
-        )
+        ]
+        inspection_candidates = [
+            {
+                "x": item.move.coordinate.x,
+                "y": item.move.coordinate.y,
+                "probability": item.visits / self.simulations,
+                "value": item.value,
+                "visits": item.visits,
+            }
+            for item in move_statistics
+        ]
         statistics = MCTSSearchStatistics(
             simulations=self.simulations,
+            exploration=self.exploration,
             rollout_limit=self.rollout_limit,
-            nodes=1 + sum(1 for _ in self._walk(root)),
+            rollout_evaluator=getattr(
+                self.rollout_evaluator,
+                "__name__",
+                type(self.rollout_evaluator).__name__,
+            ),
+            progressive_widening_constant=self.progressive_widening_constant,
+            progressive_widening_exponent=self.progressive_widening_exponent,
+            nodes=node_count,
             rollout_moves=self._rollout_moves,
             maximum_depth=self._maximum_depth,
-            moves=move_statistics,
+            moves=tuple(move_statistics),
         )
         self.last_statistics = statistics
         assert best.move is not None
         metadata = {
             "simulations": statistics.simulations,
+            "exploration": statistics.exploration,
             "rollout_limit": statistics.rollout_limit,
+            "rollout_evaluator": statistics.rollout_evaluator,
+            "progressive_widening": {
+                "constant": statistics.progressive_widening_constant,
+                "exponent": statistics.progressive_widening_exponent,
+            },
             "nodes": statistics.nodes,
             "rollout_moves": statistics.rollout_moves,
             "maximum_depth": statistics.maximum_depth,
-            "root_moves": [
-                {
-                    "x": item.move.coordinate.x,
-                    "y": item.move.coordinate.y,
-                    "visits": item.visits,
-                    "value": item.value,
-                    "prior": item.prior,
-                }
-                for item in statistics.moves
-            ],
+            "root_moves": root_moves,
             "inspection": {
                 "value": best.mean_value,
-                "candidates": [
-                    {
-                        "x": item.move.coordinate.x,
-                        "y": item.move.coordinate.y,
-                        "probability": item.visits / statistics.simulations,
-                        "value": item.value,
-                        "visits": item.visits,
-                    }
-                    for item in statistics.moves
-                ],
+                "candidates": inspection_candidates,
                 "statistics": {
                     "simulations": statistics.simulations,
                     "nodes": statistics.nodes,
@@ -428,16 +464,9 @@ class MCTSAgent:
         }
         return AgentResult(best.move, metadata)
 
-    @staticmethod
-    def _walk(root: _Node) -> Iterator[_Node]:
-        pending = list(root.children)
-        while pending:
-            node = pending.pop()
-            yield node
-            pending.extend(node.children)
-
-
 __all__ = [
+    "DEFAULT_PROGRESSIVE_WIDENING_CONSTANT",
+    "DEFAULT_PROGRESSIVE_WIDENING_EXPONENT",
     "DEFAULT_ROLLOUT_LIMIT",
     "MCTSAgent",
     "MCTSMoveStatistics",

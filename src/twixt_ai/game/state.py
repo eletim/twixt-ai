@@ -249,6 +249,8 @@ class GameState:
         links: tuple[Link, ...],
         side_to_move: Player,
         result: GameResult = GameResult.IN_PROGRESS,
+        *,
+        occupied: frozenset[Coordinate] | None = None,
     ) -> GameState:
         """Build an internally derived state without repeating validation.
 
@@ -265,7 +267,11 @@ class GameState:
         object.__setattr__(state, "side_to_move", side_to_move)
         object.__setattr__(state, "result", result)
         object.__setattr__(
-            state, "_occupied", frozenset(peg.coordinate for peg in pegs)
+            state,
+            "_occupied",
+            occupied
+            if occupied is not None
+            else frozenset(peg.coordinate for peg in pegs),
         )
         return state
 

@@ -116,6 +116,17 @@ def test_batched_encoding_rejects_empty_or_mixed_board_batches() -> None:
         )
 
 
+def test_batched_encodings_do_not_alias_cached_static_planes() -> None:
+    states = [GameState.initial(BoardDimensions(10, 10))]
+
+    first = encode_positions(states)
+    first.zero_()
+    second = encode_positions(states)
+
+    assert second.count_nonzero() > 0
+    assert torch.equal(second, torch.stack([encode_position(states[0])]))
+
+
 @pytest.mark.parametrize("symmetry", SYMMETRIES)
 def test_encoded_and_state_symmetry_transforms_agree(symmetry: BoardSymmetry) -> None:
     state = sample_state()

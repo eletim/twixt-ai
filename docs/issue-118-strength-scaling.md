@@ -63,6 +63,32 @@ search. Policy-only scored 19-0-1, 15-3-2, and 1-19-0 respectively. This is a
 material improvement over the old champion and matched MCTS, but it does not
 solve the heuristic gap.
 
+## Generation 2
+
+Because generation 1 cleared its promotion threshold and still had a large
+heuristic gap, a second 1,000-game generation reused the matched teacher
+settings with fresh root seed 1187000. It warm-started from generation 1. The
+smaller shard size of 5,000 preserves every derived dataset shard below
+GitHub's per-file limit.
+
+All games completed in 475.696 seconds (7,567.9 games/hour) and produced 27,469
+positions. The manifest SHA-256 is
+`9b6fca3d3c08f08e5eccccfba67ca0e09c809dcaeaf9ed9ac73024f4b8a72fad`.
+Mean policy support was 23.53, mean maximum probability was 0.371, and mean
+entropy was 2.311 nats. Training used the same CUDA optimizer settings with
+seed 1187011 and selected epoch 4 at combined validation loss 3.901. Validation
+loss later regressed to 3.974 at epoch 20. The candidate SHA-256 is
+`742229c59caf251a07c7ecac6dc77ff75cbf09643a22cca16b92fe083df5a5ec`.
+
+Generation 2 scored 28-8-4 against generation 1 and was promoted at 70.0%.
+It scored 39-0-1 against the immutable Issue 57 baseline. Under the standard
+protocol, policy+value scored 18-1-1 against Random, 14-1-5 against matched
+non-neural MCTS, and 6-14-0 against heuristic search. Policy-only scored
+20-0-0, 17-2-1, and 5-15-0 respectively; value-only scored 17-0-3, 9-4-7, and
+0-19-1. The fixed heuristic result improved from 0-20 at baseline and 1-19 in
+generation 1 to 6-14, while the value-only result shows that value guidance
+remains the principal bottleneck.
+
 ## Reproduction
 
 Run generation 1 from a source checkout with CUDA:
@@ -87,3 +113,7 @@ PYTHONHASHSEED=0 PYTHONPATH=src python3 -m twixt_ai.training.generations_cli \
 CUDA kernels can produce small floating-point differences across runs. The
 recorded checkpoint hash identifies the exact model used for all reported
 head-to-head results.
+
+Generation 2 used the same command with the generation-1 candidate as
+`--initial-champion`, output directory `experiments/issue-118/generation-2`,
+root seed 1187000, and shard size 5000.

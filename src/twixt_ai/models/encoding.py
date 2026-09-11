@@ -116,7 +116,9 @@ def encode_position(state: GameState, *, device: torch.device | str | None = Non
 def _cpu_goal_plane_template(height: int, width: int) -> Tensor:
     """Return an internal immutable template for board-size-only features."""
 
-    encoded = torch.zeros((NUM_CHANNELS, height, width), dtype=torch.float32)
+    encoded = torch.zeros(
+        (NUM_CHANNELS, height, width), dtype=torch.float32, device="cpu"
+    )
     encoded[_GOAL_CHANNEL[Player.RED], 0, 1:-1] = 1.0
     encoded[_GOAL_CHANNEL[Player.RED], -1, 1:-1] = 1.0
     encoded[_GOAL_CHANNEL[Player.BLACK], 1:-1, 0] = 1.0
@@ -142,7 +144,9 @@ def encode_positions(
     if any(state.board != board for state in states[1:]):
         raise ValueError("states must use the same board dimensions")
 
-    resolved_device = torch.device("cpu") if device is None else torch.device(device)
+    resolved_device = (
+        torch.get_default_device() if device is None else torch.device(device)
+    )
     if resolved_device.type == "cpu":
         # Clone before adding position features: callers own the returned
         # storage and concurrent batches never mutate the cached template.

@@ -101,7 +101,7 @@ def test_batched_encoding_is_byte_exact_for_deterministic_trajectories(
 
     assert actual.shape == expected.shape
     assert actual.dtype is expected.dtype is torch.float32
-    assert actual.numpy().tobytes() == expected.numpy().tobytes()
+    assert torch.equal(actual.view(torch.uint8), expected.view(torch.uint8))
 
 
 def test_batched_encoding_rejects_empty_or_mixed_board_batches() -> None:
@@ -125,6 +125,28 @@ def test_batched_encodings_do_not_alias_cached_static_planes() -> None:
 
     assert second.count_nonzero() > 0
     assert torch.equal(second, torch.stack([encode_position(states[0])]))
+
+
+def test_batched_encoding_respects_default_device_across_cpu_cache_reuse() -> None:
+    states = [GameState.initial(BoardDimensions(10, 10))]
+    original_default = torch.get_default_device()
+    non_cpu_device = torch.device("cuda" if torch.cuda.is_available() else "meta")
+
+    try:
+        torch.set_default_device(non_cpu_device)
+        default_encoded = encode_positions(states)
+        explicit_cpu = encode_positions(states, device="cpu")
+        default_encoded_again = encode_positions(states)
+    finally:
+        torch.set_default_device(original_default)
+
+    assert default_encoded.device.type == non_cpu_device.type
+    assert default_encoded_again.device.type == non_cpu_device.type
+    assert explicit_cpu.device.type == "cpu"
+    assert torch.equal(
+        explicit_cpu,
+        torch.stack([encode_position(states[0], device="cpu")]),
+    )
 
 
 @pytest.mark.parametrize("symmetry", SYMMETRIES)

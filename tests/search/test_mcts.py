@@ -46,6 +46,35 @@ def test_seeded_search_is_reproducible_and_reports_root_statistics() -> None:
     json.dumps(dict(first.metadata))
 
 
+def test_public_statistics_and_metadata_retain_the_same_ordered_root_values() -> None:
+    agent = MCTSAgent(simulations=12)
+    result = agent.choose_move(
+        AgentRequest(GameState.initial(BoardDimensions(4, 4)), seed=1729)
+    )
+
+    assert agent.last_statistics is not None
+    assert [
+        {
+            "x": item.move.coordinate.x,
+            "y": item.move.coordinate.y,
+            "visits": item.visits,
+            "value": item.value,
+            "prior": item.prior,
+        }
+        for item in agent.last_statistics.moves
+    ] == result.metadata["root_moves"]
+    assert [
+        {
+            "x": item.move.coordinate.x,
+            "y": item.move.coordinate.y,
+            "probability": item.visits / agent.last_statistics.simulations,
+            "value": item.value,
+            "visits": item.visits,
+        }
+        for item in agent.last_statistics.moves
+    ] == result.metadata["inspection"]["candidates"]
+
+
 def test_simulation_budget_is_hard_even_with_a_large_tree() -> None:
     agent = MCTSAgent(simulations=7, rollout_limit=1)
 

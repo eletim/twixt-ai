@@ -76,9 +76,9 @@ Probe set: `mini-fixed-positions-v1`
 
 ## Training loss components
 
-| Gen | Train total | Train policy | Train value | Validation total | Validation policy | Validation value | Best validation epoch/loss |
+| Gen | Train total | Train policy | Train value | Validation total | Validation policy | Validation value | Selected checkpoint epoch/loss (metric) |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 3.345→3.109 | 2.942→2.834 | 0.404→0.275 | 3.275→3.248 | 2.933→2.931 | 0.341→0.317 | 9 / 3.218 |
+| 1 | 3.345→3.109 | 2.942→2.834 | 0.404→0.275 | 3.275→3.248 | 2.933→2.931 | 0.341→0.317 | 9 / 0.299410 (value) |
 
 ## Scaling evidence
 

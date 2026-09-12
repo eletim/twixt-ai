@@ -192,3 +192,68 @@ def test_documented_matched_1k_command_resolves_the_complete_contract(
     assert f"--games-per-generation {stage['games']}" in documentation
     assert f"--seed {stage['root_seed']}" in documentation
     assert command["initial_champion"] in documentation
+
+
+def test_issue_128_5k_stage_preserves_protocol_and_negative_results() -> None:
+    one_k = json.loads(
+        Path("experiments/issue-128/matched-1k/report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    five_k = json.loads(
+        Path("experiments/issue-128/5k/report.json").read_text(encoding="utf-8")
+    )
+    one_k_config = one_k["config"]
+    five_k_config = five_k["config"]
+
+    differing = {
+        key for key in one_k_config if one_k_config[key] != five_k_config[key]
+    }
+    assert differing == {"artifact_uri", "games_per_generation", "seed"}
+    assert five_k_config["games_per_generation"] == 5_000
+    assert five_k_config["seed"] == 1_285_000
+
+    generation = five_k["generations"][0]
+    teacher_sha256 = "aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9"
+    assert generation["champion_before"]["sha256"] == teacher_sha256
+    assert generation["training"]["initialized_from_sha256"] == teacher_sha256
+    assert generation["dataset"]["manifest"]["source_games"] == 5_000
+    assert generation["evaluation"]["promotion"]["candidate_wins"] == 29
+    assert generation["evaluation"]["promotion"]["promoted"] is True
+
+    previous_stage = generation["fixed_opponent_evaluations"][0]
+    assert previous_stage["opponent"] == "previous retained stage candidate"
+    assert previous_stage["candidate_wins"] == 19
+    assert previous_stage["minimum_wins"] == 22
+    assert previous_stage["meaningful_scaling_gain"] is False
+    assert generation["scaling_decision"]["decision"] == "saturated"
+    assert generation["scaling_decision"]["next_optional_stage"] == "not run"
+
+
+@pytest.mark.parametrize("stage", ("matched-1k", "5k"))
+def test_issue_128_retained_stage_has_matching_storage_attestation(
+    stage: str,
+) -> None:
+    report = json.loads(
+        Path(f"experiments/issue-128/{stage}/report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    retention = report["generations"][0]["retention_manifest"]
+    payload = {
+        "categories": retention["categories"],
+        "files": retention["files"],
+        "bytes": retention["bytes"],
+    }
+    inventory_sha256 = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    attestation = retention["storage_attestation"]
+
+    assert retention["inventory_complete"] is True
+    assert inventory_sha256 == retention["inventory_sha256"]
+    assert attestation["verified"] is True
+    assert attestation["external_uri"] == retention["external_uri"]
+    assert attestation["inventory_sha256"] == inventory_sha256
+    assert attestation["verified_at"]
+    assert attestation["verifier"]

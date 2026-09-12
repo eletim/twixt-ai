@@ -31,13 +31,13 @@ previous-stage comparison is not applicable to the first 1k stage.
 [`report.md`](report.md) renders the complete configuration, hashes, lineage,
 timings, losses, evaluation games, and retention inventory. The raw games,
 derived JSONL shards, and recovery-only `latest.pt` remain outside Git. Their
-544,426,771-byte inventory is recorded against
-`s3://twixt-ai/issue-128/matched-1k` with inventory SHA-256
+544,426,771-byte inventory was restored at
+`file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k`, and all 1,015
+objects were verified byte-for-byte against inventory SHA-256
 `9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a`.
-No storage attestation is recorded, so the report correctly marks the
-inventory as not pruning-ready.
+The report records that local-filesystem verification and marks the inventory
+pruning-ready; it makes no claim that the earlier S3 placeholder was uploaded.
 
 Reproduce the stage from the repository root with the complete command frozen
 in the [Issue 128 scaling contract](../../../docs/issue-128-strength-scaling-contract.md),
-using `experiments/issue-128/matched-1k` as the output directory and
-`s3://twixt-ai/issue-128/matched-1k` as the artifact URI.
+using a fresh output directory and a separately verified durable artifact URI.

@@ -145,6 +145,9 @@ def _run(tmp_path: Path) -> Path:
             "training": {
                 "runtime_seconds": 0.5,
                 "summary": {
+                    "best_epoch": 2,
+                    "best_loss": 0.6,
+                    "config": {"selection_metric": "value"},
                     "history": history,
                     "performance": {"examples_per_second": 1600.0},
                 },
@@ -319,6 +322,8 @@ def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
     assert "| 1 | matched non-neural MCTS | 32-4-4 | 80.0% | 40 | yes | 1289000 |" in rendered
     assert "| 1 | heuristic search | 6-34-0 | 15.0% | 40 | yes | 1289000 |" in rendered
     assert "## Scaling evidence" in rendered
+    assert "Selected checkpoint epoch/loss (metric)" in rendered
+    assert "2 / 0.600000 (value)" in rendered
     assert "## Training target distributions" in rendered
     assert "18 / 4 / 18" in rendered
     assert "## Artifact identities" in rendered

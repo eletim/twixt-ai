@@ -1,7 +1,7 @@
 # Mini Twixt training inspection
 
 Source: `experiments/issue-128/matched-1k/report.json`
-Source SHA-256: `8ce5e4b3d59b158f40aa4bca14a52ea92f50ba23cb194c3ab106c7d0a9a54fc4`
+Source SHA-256: `ade70e9f07f28e46123ab72b3ef0df04746a0e7e7f0e8f725aafc9ac5d7757f0`
 Run status: **completed**
 Probe set: `mini-fixed-positions-v1`
 
@@ -76,9 +76,9 @@ Probe set: `mini-fixed-positions-v1`
 
 ## Training loss components
 
-| Gen | Train total | Train policy | Train value | Validation total | Validation policy | Validation value | Best validation epoch/loss |
+| Gen | Train total | Train policy | Train value | Validation total | Validation policy | Validation value | Selected checkpoint epoch/loss (metric) |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 3.345→3.109 | 2.942→2.834 | 0.404→0.275 | 3.275→3.248 | 2.933→2.931 | 0.341→0.317 | 9 / 3.218 |
+| 1 | 3.345→3.109 | 2.942→2.834 | 0.404→0.275 | 3.275→3.248 | 2.933→2.931 | 0.341→0.317 | 9 / 0.299410 (value) |
 
 ## Scaling evidence
 
@@ -107,10 +107,10 @@ Probe set: `mini-fixed-positions-v1`
 
 | Gen | External URI | Inventory complete | Storage attested | Pruning ready | Category | Files | Bytes |
 | ---: | --- | --- | --- | --- | --- | ---: | ---: |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | dataset | 7 | 311208285 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | evaluation | 3 | 63094 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | selfplay | 1001 | 232485992 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | training | 4 | 669400 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | dataset | 7 | 311208285 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | evaluation | 3 | 63094 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | selfplay | 1001 | 232485992 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | training | 4 | 669400 |
 
 ### Retained object inventory
 

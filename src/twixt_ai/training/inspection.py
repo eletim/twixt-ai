@@ -164,16 +164,27 @@ def _loss_summary(training: object) -> dict[str, Any] | None:
     rows = [row for row in history if isinstance(row, Mapping)]
     if not rows:
         return None
-    best = min(
-        rows,
-        key=lambda row: float("inf")
-        if row.get("validation_loss") is None else row["validation_loss"],
+    config = summary.get("config")
+    selection_metric = (
+        config.get("selection_metric", "total")
+        if isinstance(config, Mapping) else "total"
+    )
+    best_epoch = summary.get("best_epoch")
+    best_loss = summary.get("best_loss")
+    selected = (
+        {
+            "epoch": best_epoch,
+            "loss": best_loss,
+            "metric": selection_metric,
+        }
+        if isinstance(best_epoch, int) and isinstance(best_loss, (int, float))
+        else None
     )
     return {
         "epochs": len(rows),
         "first": dict(rows[0]),
         "last": dict(rows[-1]),
-        "best_validation": dict(best) if best.get("validation_loss") is not None else None,
+        "selected_checkpoint": selected,
     }
 
 
@@ -596,7 +607,8 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
     lines.extend([
         "", "## Training loss components", "",
         "| Gen | Train total | Train policy | Train value | Validation total | "
-        "Validation policy | Validation value | Best validation epoch/loss |",
+        "Validation policy | Validation value | Selected checkpoint epoch/loss "
+        "(metric) |",
         "| ---: | --- | --- | --- | --- | --- | --- | --- |",
     ])
     for generation in report["generations"]:
@@ -607,10 +619,11 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             )
             continue
         first, last = losses["first"], losses["last"]
-        best = losses["best_validation"]
-        best_text = (
-            "—" if best is None
-            else f"{best.get('epoch', '—')} / {_number(best.get('validation_loss'))}"
+        selected = losses["selected_checkpoint"]
+        selected_text = (
+            "—" if selected is None
+            else f"{selected.get('epoch', '—')} / "
+            f"{_number(selected.get('loss'), 6)} ({selected.get('metric', '—')})"
         )
         lines.append(
             f"| {generation['generation']} | {_change(first, last, 'train_loss')} | "
@@ -618,7 +631,7 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             f"{_change(first, last, 'train_value_loss')} | "
             f"{_change(first, last, 'validation_loss')} | "
             f"{_change(first, last, 'validation_policy_loss')} | "
-            f"{_change(first, last, 'validation_value_loss')} | {best_text} |"
+            f"{_change(first, last, 'validation_value_loss')} | {selected_text} |"
         )
 
     lines.extend([

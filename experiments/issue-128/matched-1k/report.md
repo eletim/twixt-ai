@@ -1,7 +1,7 @@
 # Mini Twixt training inspection
 
 Source: `experiments/issue-128/matched-1k/report.json`
-Source SHA-256: `8ce5e4b3d59b158f40aa4bca14a52ea92f50ba23cb194c3ab106c7d0a9a54fc4`
+Source SHA-256: `3d6cca8e0ed7dc5ea21852633b52108352ca14019bcbe0febef7d0b4cd9830a1`
 Run status: **completed**
 Probe set: `mini-fixed-positions-v1`
 
@@ -9,7 +9,7 @@ Probe set: `mini-fixed-positions-v1`
 
 ```json
 {
-  "artifact_uri": "s3://twixt-ai/issue-128/matched-1k",
+  "artifact_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
   "batch_size": 128,
   "board": {
     "height": 10,
@@ -107,10 +107,10 @@ Probe set: `mini-fixed-positions-v1`
 
 | Gen | External URI | Inventory complete | Storage attested | Pruning ready | Category | Files | Bytes |
 | ---: | --- | --- | --- | --- | --- | ---: | ---: |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | dataset | 7 | 311208285 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | evaluation | 3 | 63094 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | selfplay | 1001 | 232485992 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | training | 4 | 669400 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | dataset | 7 | 311208285 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | evaluation | 3 | 63094 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | selfplay | 1001 | 232485992 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | yes | yes | yes | training | 4 | 669400 |
 
 ### Retained object inventory
 

@@ -1,6 +1,6 @@
 {
   "config": {
-    "artifact_uri": "s3://twixt-ai/issue-128/matched-1k",
+    "artifact_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
     "batch_size": 128,
     "board": {
       "height": 10,
@@ -1094,7 +1094,7 @@
       ],
       "generation": 1,
       "resolved_config": {
-        "artifact_uri": "s3://twixt-ai/issue-128/matched-1k",
+        "artifact_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
         "batch_size": 128,
         "dataset_window": 1,
         "device": {
@@ -6227,12 +6227,18 @@
             ]
           }
         },
-        "external_uri": "s3://twixt-ai/issue-128/matched-1k",
+        "external_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
         "files": 1015,
         "format": "twixt-ai-artifact-retention-manifest",
         "inventory_complete": true,
         "inventory_sha256": "9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a",
-        "storage_attestation": null,
+        "storage_attestation": {
+          "external_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
+          "inventory_sha256": "9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a",
+          "verified": true,
+          "verified_at": "2026-09-13T05:28:00+09:00",
+          "verifier": "local-filesystem-sha256-audit"
+        },
         "version": 1
       },
       "runtime_seconds": 526.9377336599864,

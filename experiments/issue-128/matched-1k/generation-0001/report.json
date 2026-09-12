@@ -1,15 +1,15 @@
 {
   "artifact_storage": {
-    "bytes": 544379916,
+    "bytes": 544426771,
     "dataset": {
       "bytes": 311208285,
       "files": 7
     },
     "evaluation": {
-      "bytes": 16239,
-      "files": 1
+      "bytes": 63094,
+      "files": 3
     },
-    "files": 1013,
+    "files": 1015,
     "selfplay": {
       "bytes": 232485992,
       "files": 1001
@@ -994,6 +994,40 @@
       "opponent": "parent champion",
       "path": "experiments/issue-128/matched-1k/generation-0001/evaluation.json",
       "sha256": "d7272a450dda05d04454dd8115eb73ed402b3945dd8c84caf4915d7f2fd86896"
+    },
+    {
+      "bytes": 23873,
+      "opponent": "matched non-neural MCTS",
+      "path": "experiments/issue-128/matched-1k/generation-0001/matched-non-neural-mcts.json",
+      "sha256": "90807dce1f482edcf462d7ecfded7b58e42c612c75d9e04485c50ec39a2139d0"
+    },
+    {
+      "bytes": 22982,
+      "opponent": "heuristic search",
+      "path": "experiments/issue-128/matched-1k/generation-0001/heuristic-search.json",
+      "sha256": "bbd9de4ecafe091172c0455147c502292b21c0d3a03cf58518408d41642cad2d"
+    }
+  ],
+  "fixed_opponent_evaluations": [
+    {
+      "candidate_draws": 4,
+      "candidate_losses": 4,
+      "candidate_win_rate": 0.8,
+      "candidate_wins": 32,
+      "games": 40,
+      "opponent": "matched non-neural MCTS",
+      "paired_role_swaps": true,
+      "seed": 1289000
+    },
+    {
+      "candidate_draws": 0,
+      "candidate_losses": 34,
+      "candidate_win_rate": 0.15,
+      "candidate_wins": 6,
+      "games": 40,
+      "opponent": "heuristic search",
+      "paired_role_swaps": true,
+      "seed": 1289000
     }
   ],
   "generation": 1,
@@ -1029,7 +1063,7 @@
     "workers": 8
   },
   "retention_manifest": {
-    "bytes": 544379916,
+    "bytes": 544426771,
     "categories": {
       "dataset": {
         "bytes": 311208285,
@@ -1073,13 +1107,23 @@
         ]
       },
       "evaluation": {
-        "bytes": 16239,
-        "files": 1,
+        "bytes": 63094,
+        "files": 3,
         "objects": [
           {
             "bytes": 16239,
             "path": "evaluation.json",
             "sha256": "d7272a450dda05d04454dd8115eb73ed402b3945dd8c84caf4915d7f2fd86896"
+          },
+          {
+            "bytes": 23873,
+            "path": "matched-non-neural-mcts.json",
+            "sha256": "90807dce1f482edcf462d7ecfded7b58e42c612c75d9e04485c50ec39a2139d0"
+          },
+          {
+            "bytes": 22982,
+            "path": "heuristic-search.json",
+            "sha256": "bbd9de4ecafe091172c0455147c502292b21c0d3a03cf58518408d41642cad2d"
           }
         ]
       },
@@ -6122,10 +6166,10 @@
       }
     },
     "external_uri": "s3://twixt-ai/issue-128/matched-1k",
-    "files": 1013,
+    "files": 1015,
     "format": "twixt-ai-artifact-retention-manifest",
     "inventory_complete": true,
-    "inventory_sha256": "51b183947f4995b068b40dc7a8de51f7c384d21001e3727806cc01394ebbaff8",
+    "inventory_sha256": "9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a",
     "storage_attestation": null,
     "version": 1
   },

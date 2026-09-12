@@ -1,7 +1,7 @@
 # Mini Twixt training inspection
 
 Source: `experiments/issue-128/matched-1k/report.json`
-Source SHA-256: `68e027724587f7f7be221d95af62b7da7f6811fc76aa473ec28842b2945eaa83`
+Source SHA-256: `8ce5e4b3d59b158f40aa4bca14a52ea92f50ba23cb194c3ab106c7d0a9a54fc4`
 Run status: **completed**
 Probe set: `mini-fixed-positions-v1`
 
@@ -67,6 +67,20 @@ Probe set: `mini-fixed-positions-v1`
 | ---: | --- | ---: | ---: | ---: | --- | --- | ---: | --- | --- | --- |
 | 1 | completed | 1000 | 8152.7 | 25535 | 3.345→3.109 | 3.275→3.248 | 75.0% | updated to candidate | promoted | self-play 64 sims; evaluation 20 sims; rollout 4 |
 
+## Fixed-opponent evaluation results
+
+Every comparison used 40 games as 20 identical-seed role-swapped pairs with
+seed 1289000. Learned and non-neural MCTS used 20 simulations, exploration
+sqrt(2), progressive widening 1.5/0.5, and rollout limit 4. Heuristic search
+used depth 1 and a 10,000-node budget. A previous-stage comparison does not
+apply to this first scaling stage.
+
+| Opponent | Candidate W-L-D | Candidate win rate | Artifact |
+| --- | ---: | ---: | --- |
+| Starting champion | 30-8-2 | 75.0% | `generation-0001/evaluation.json` |
+| Matched non-neural MCTS | 32-4-4 | 80.0% | `generation-0001/matched-non-neural-mcts.json` |
+| Unchanged heuristic search | 6-34-0 | 15.0% | `generation-0001/heuristic-search.json` |
+
 ## Training loss components
 
 | Gen | Train total | Train policy | Train value | Validation total | Validation policy | Validation value | Best validation epoch/loss |
@@ -77,7 +91,7 @@ Probe set: `mini-fixed-positions-v1`
 
 | Gen | Total / self-play / dataset / training / evaluation seconds | Training examples/s | Retained bytes (self-play / dataset / training / evaluation) | Self-play / dataset / candidate / evaluation SHA-256 |
 | ---: | --- | ---: | --- | --- |
-| 1 | 526.938 / 441.574 / 49.748 / 18.631 / 16.947 | 74869.5 | 544379916 (232485992 / 311208285 / 669400 / 16239) | `bd05a6321a64afb890f42d9c5dcdf2cf39a83d2429f93cde3391e1510528eca8` / `9d79b587e041f044084d8f14933b98baca31b9fbc0c799b358322e6160d5d6f7` / `5320f9ca4c146b1c925054ac4bd1e5e605d5f228c2dfb1d8c2a8a490d0981af2` / `d7272a450dda05d04454dd8115eb73ed402b3945dd8c84caf4915d7f2fd86896` |
+| 1 | 526.938 / 441.574 / 49.748 / 18.631 / 16.947 | 74869.5 | 544426771 (232485992 / 311208285 / 669400 / 63094) | `bd05a6321a64afb890f42d9c5dcdf2cf39a83d2429f93cde3391e1510528eca8` / `9d79b587e041f044084d8f14933b98baca31b9fbc0c799b358322e6160d5d6f7` / `5320f9ca4c146b1c925054ac4bd1e5e605d5f228c2dfb1d8c2a8a490d0981af2` / `d7272a450dda05d04454dd8115eb73ed402b3945dd8c84caf4915d7f2fd86896` |
 
 ## Artifact identities
 
@@ -93,13 +107,15 @@ Probe set: `mini-fixed-positions-v1`
 | 1 | dataset shard (train) | `dataset/train/shard-00004.jsonl` | `8ac740c6146a17966dc9643d44b032e68eb86ce04638f5fb5877fa53e88abb8d` |
 | 1 | dataset shard (validation) | `dataset/validation/shard-00000.jsonl` | `e4a5ee89afadfe4e74670008da8e5a996df358a1fac540316862ee0540169b09` |
 | 1 | evaluation: parent champion | `experiments/issue-128/matched-1k/generation-0001/evaluation.json` | `d7272a450dda05d04454dd8115eb73ed402b3945dd8c84caf4915d7f2fd86896` |
+| 1 | evaluation: matched non-neural MCTS | `experiments/issue-128/matched-1k/generation-0001/matched-non-neural-mcts.json` | `90807dce1f482edcf462d7ecfded7b58e42c612c75d9e04485c50ec39a2139d0` |
+| 1 | evaluation: heuristic search | `experiments/issue-128/matched-1k/generation-0001/heuristic-search.json` | `bbd9de4ecafe091172c0455147c502292b21c0d3a03cf58518408d41642cad2d` |
 
 ## Retention manifests
 
 | Gen | External URI | Inventory complete | Storage attested | Pruning ready | Category | Files | Bytes |
 | ---: | --- | --- | --- | --- | --- | ---: | ---: |
 | 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | dataset | 7 | 311208285 |
-| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | evaluation | 1 | 16239 |
+| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | evaluation | 3 | 63094 |
 | 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | selfplay | 1001 | 232485992 |
 | 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | no | no | training | 4 | 669400 |
 
@@ -115,6 +131,8 @@ Probe set: `mini-fixed-positions-v1`
 | 1 | dataset | `dataset/train/shard-00004.jsonl` | 33745011 | `8ac740c6146a17966dc9643d44b032e68eb86ce04638f5fb5877fa53e88abb8d` |
 | 1 | dataset | `dataset/validation/shard-00000.jsonl` | 33306966 | `e4a5ee89afadfe4e74670008da8e5a996df358a1fac540316862ee0540169b09` |
 | 1 | evaluation | `evaluation.json` | 16239 | `d7272a450dda05d04454dd8115eb73ed402b3945dd8c84caf4915d7f2fd86896` |
+| 1 | evaluation | `matched-non-neural-mcts.json` | 23873 | `90807dce1f482edcf462d7ecfded7b58e42c612c75d9e04485c50ec39a2139d0` |
+| 1 | evaluation | `heuristic-search.json` | 22982 | `bbd9de4ecafe091172c0455147c502292b21c0d3a03cf58518408d41642cad2d` |
 | 1 | selfplay | `selfplay/games/game-000000.json` | 126623 | `5d9979c1a724969c7163a1bcf477855edff7eeb8c0fef31e8f067851719585bc` |
 | 1 | selfplay | `selfplay/games/game-000001.json` | 468564 | `cfbedea192e93064cb6e5dcdd9557851a17ae2a38089a0975dbec880c7f40e6f` |
 | 1 | selfplay | `selfplay/games/game-000002.json` | 155074 | `f6def9c9f5afb343e771d5e19af56d1e5b928e985d026d5be32fb0fa6e417a19` |

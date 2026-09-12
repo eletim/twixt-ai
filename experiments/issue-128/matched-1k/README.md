@@ -23,12 +23,17 @@ Under the fixed seed-1289000 paired gate, the candidate scored 30-8-2 against
 the starting champion and cleared the predeclared 22-win threshold. This gate
 result does not change the fixed-teacher rule above.
 
+The remaining fixed-opponent evaluations used the same 40-game paired seed
+schedule. The candidate scored 32-4-4 against matched non-neural MCTS and
+6-34-0 against the unchanged depth-1, 10,000-node heuristic search. A
+previous-stage comparison is not applicable to the first 1k stage.
+
 [`report.md`](report.md) renders the complete configuration, hashes, lineage,
 timings, losses, evaluation games, and retention inventory. The raw games,
 derived JSONL shards, and recovery-only `latest.pt` remain outside Git. Their
-544,379,916-byte inventory is recorded against
+544,426,771-byte inventory is recorded against
 `s3://twixt-ai/issue-128/matched-1k` with inventory SHA-256
-`51b183947f4995b068b40dc7a8de51f7c384d21001e3727806cc01394ebbaff8`.
+`9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a`.
 No storage attestation is recorded, so the report correctly marks the
 inventory as not pruning-ready.
 

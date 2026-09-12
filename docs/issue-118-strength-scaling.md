@@ -114,6 +114,14 @@ learned entrant's perspective.
 | widening-exponent-0.75 (20, sqrt(2), 1.5/0.75) | 5-15-0 / 17-2-1 | 4-16-0 / 15-3-2 | 2-17-1 / 12-5-3 | rejected |
 | teacher-like-64 (64, 0.7, 3.0/0.5) | 9-11-0 / 16-4-0 | 10-10-0 / 16-4-0 | 5-15-0 / 11-5-4 | retained diagnostic |
 
+The standard-20 policy+value result is 2-18 here versus the previously
+reported 6-14 under the same nominal search settings. The earlier evaluation
+used seed 1188000, while this screen uses 1188100; that four-win difference is
+seed-driven sampling variance across two 20-game schedules, not evidence that
+the fixed champion regressed. Consequently, the trend claims below compare
+settings only within this screen's shared seed schedule and do not directly
+explain the exact earlier 6-14 score.
+
 Increasing budget alone materially narrowed the heuristic gap: combined
 guidance rose from 2-18 at 20 simulations to 8-12 at 128. The 64-simulation
 teacher-like combination did slightly better at half that budget, reaching

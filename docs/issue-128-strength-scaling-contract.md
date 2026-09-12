@@ -38,6 +38,9 @@ against the starting champion, the previous retained stage candidate when one
 exists, matched non-neural MCTS, and the unchanged depth-1, 10,000-node
 heuristic search. Learned and non-neural MCTS use 20 simulations and rollout
 limit 4. All stage/opponent comparisons reuse evaluation seed 1289000.
+The generation command must pass `--evaluation-seed 1289000`; this same seed
+drives the executable candidate-versus-starting-champion promotion gate, rather
+than the generation pipeline's default derivation from the stage root seed.
 
 A candidate is promoted only with at least 22 wins in 40 games against the
 starting champion; draws remain in the denominator. After the mandatory 1k
@@ -58,6 +61,7 @@ command renders those fields:
 PYTHONHASHSEED=0 twixt-ai-mini-generations \
   --initial-champion experiments/issue-125/generation-3/generation-0001/candidate/best.pt \
   --output-dir /path/to/stage-run --artifact-uri s3://bucket/issue-128/stage \
+  --evaluation-seed 1289000 \
   # ...the contract's stage-specific game count and root seed...
 twixt-ai-mini-report /path/to/stage-run --output /path/to/stage-report.md
 ```
@@ -75,7 +79,10 @@ every dataset-shard and fixed-opponent evaluation identity. Training marks only
 After upload, a separate storage verifier must attest the same external URI and
 inventory SHA-256 with its identity and verification time. Inspection derives
 pruning readiness only when the inventory digest and that attestation both
-validate. Without this independent attestation, local pruning is forbidden.
+validate. Validation requires all four non-empty categories, safe unique
+relative object paths, lowercase SHA-256 values, non-negative byte sizes, and
+exact category/global file and byte rollups. Without a structurally complete
+inventory and independent attestation, local pruning is forbidden.
 
 Any run that changes the teacher, board/rules, encoding, architecture, search,
 training, or evaluation semantics is a separately labelled diagnostic and

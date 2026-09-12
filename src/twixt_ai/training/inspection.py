@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from twixt_ai.game import (
@@ -195,11 +195,78 @@ def _dataset_shards(manifest: object) -> list[dict[str, Any]]:
     return records
 
 
+def _valid_retention_inventory(
+    categories: object, files: object, bytes_: object
+) -> bool:
+    required_categories = {"selfplay", "dataset", "training", "evaluation"}
+    if not isinstance(categories, Mapping) or set(categories) != required_categories:
+        return False
+    if (
+        isinstance(files, bool)
+        or not isinstance(files, int)
+        or isinstance(bytes_, bool)
+        or not isinstance(bytes_, int)
+    ):
+        return False
+
+    seen_paths: set[str] = set()
+    counted_files = 0
+    counted_bytes = 0
+    for category in required_categories:
+        details = categories[category]
+        if not isinstance(details, Mapping):
+            return False
+        category_files = details.get("files")
+        category_bytes = details.get("bytes")
+        objects = details.get("objects")
+        if (
+            isinstance(category_files, bool)
+            or not isinstance(category_files, int)
+            or category_files < 1
+            or isinstance(category_bytes, bool)
+            or not isinstance(category_bytes, int)
+            or category_bytes < 0
+            or not isinstance(objects, list)
+            or category_files != len(objects)
+        ):
+            return False
+        object_bytes = 0
+        for item in objects:
+            if not isinstance(item, Mapping):
+                return False
+            path = item.get("path")
+            sha256 = item.get("sha256")
+            size = item.get("bytes")
+            if not isinstance(path, str) or not path or "\\" in path:
+                return False
+            parsed = PurePosixPath(path)
+            if parsed.is_absolute() or str(parsed) != path or ".." in parsed.parts:
+                return False
+            if path in seen_paths:
+                return False
+            if (
+                not isinstance(sha256, str)
+                or len(sha256) != 64
+                or any(character not in "0123456789abcdef" for character in sha256)
+                or isinstance(size, bool)
+                or not isinstance(size, int)
+                or size < 0
+            ):
+                return False
+            seen_paths.add(path)
+            object_bytes += size
+        if object_bytes != category_bytes:
+            return False
+        counted_files += category_files
+        counted_bytes += category_bytes
+    return counted_files == files and counted_bytes == bytes_
+
+
 def _retention_status(retention: Mapping[str, Any]) -> dict[str, bool]:
     categories = retention.get("categories")
     files = retention.get("files")
     bytes_ = retention.get("bytes")
-    if not isinstance(categories, Mapping):
+    if not _valid_retention_inventory(categories, files, bytes_):
         inventory_verified = False
     else:
         payload = {"categories": categories, "files": files, "bytes": bytes_}

@@ -42,6 +42,12 @@ def test_issue_128_contract_fixes_matched_scaling_semantics() -> None:
     assert contract["training"]["scheduler"] == "none"
     assert contract["evaluation"]["paired_role_swaps"] is True
     assert contract["evaluation"]["games_per_opponent"] == 40
+    assert contract["evaluation"]["seed"] == 1_289_000
+    assert contract["evaluation"]["generation_cli_option"] == (
+        "--evaluation-seed 1289000"
+    )
+    assert contract["seeds"]["promotion_and_fixed_opponent_evaluation"] == 1_289_000
+    assert "generation_gate" not in contract["seeds"]
 
 
 def test_issue_128_requires_fresh_1k_and_explicit_stop_gates() -> None:
@@ -76,6 +82,7 @@ def test_issue_128_requires_fresh_1k_and_explicit_stop_gates() -> None:
     assert "canonical SHA-256" in manifest["inventory_complete"]
     assert "separate process" in manifest["storage_attestation"]["timing"]
     assert "both" in manifest["pruning_ready"]
+    assert "All four categories" in manifest["validation"]
     assert "every fixed-opponent evaluation" in contract["reporting"][
         "evaluation_artifacts"
     ]

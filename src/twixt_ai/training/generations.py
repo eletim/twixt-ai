@@ -72,6 +72,7 @@ class MiniGenerationConfig:
     shard_size: int = 10_000
     promotion_win_rate: float = 0.55
     seed: int = 590_100
+    evaluation_seed: int | None = None
     device: str = "auto"
     artifact_uri: str | None = None
 
@@ -104,6 +105,11 @@ class MiniGenerationConfig:
             )
         if isinstance(self.seed, bool) or not isinstance(self.seed, int):
             raise TypeError("seed must be an integer")
+        if self.evaluation_seed is not None and (
+            isinstance(self.evaluation_seed, bool)
+            or not isinstance(self.evaluation_seed, int)
+        ):
+            raise TypeError("evaluation_seed must be an integer or None")
         if not isinstance(self.device, str):
             raise TypeError("device must be a string")
         if self.device not in {"cpu", "cuda", "auto"}:
@@ -522,6 +528,11 @@ def run_mini_training_generations(
         generation_root = root / f"generation-{number:04d}"
         generation_root.mkdir()
         champion_before = champion
+        evaluation_seed = (
+            config.evaluation_seed
+            if config.evaluation_seed is not None
+            else config.seed + number * 10 + 2
+        )
         generation_started = perf_counter()
         generation: dict[str, Any] = {
             "generation": number,
@@ -550,6 +561,7 @@ def run_mini_training_generations(
                 "weight_decay": config.weight_decay,
                 "selection_metric": config.selection_metric,
                 "promotion_win_rate": config.promotion_win_rate,
+                "evaluation_seed": evaluation_seed,
                 "artifact_uri": config.artifact_uri,
                 "device": device.to_dict(),
                 "worker_mode": (
@@ -560,7 +572,7 @@ def run_mini_training_generations(
                 "selfplay": config.seed + number * 10,
                 "dataset_split": f"issue-59-{config.seed}-{number}",
                 "training": config.seed + number * 10 + 1,
-                "evaluation": config.seed + number * 10 + 2,
+                "evaluation": evaluation_seed,
             },
         }
         generations.append(generation)
@@ -684,7 +696,7 @@ def run_mini_training_generations(
                 champion_before,
                 candidate,
                 config,
-                config.seed + number * 10 + 2,
+                evaluation_seed,
                 device,
             )
             evaluation["runtime_seconds"] = perf_counter() - stage_started

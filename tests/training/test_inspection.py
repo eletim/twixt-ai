@@ -32,6 +32,25 @@ def _checkpoint(path: Path) -> dict[str, object]:
     }
 
 
+def _attest_retention(retention: dict[str, object]) -> None:
+    inventory_payload = {
+        "categories": retention["categories"],
+        "files": retention["files"],
+        "bytes": retention["bytes"],
+    }
+    inventory_sha256 = hashlib.sha256(json.dumps(
+        inventory_payload, sort_keys=True, separators=(",", ":")
+    ).encode()).hexdigest()
+    retention["inventory_sha256"] = inventory_sha256
+    retention["storage_attestation"] = {
+        "verified": True,
+        "external_uri": retention["external_uri"],
+        "inventory_sha256": inventory_sha256,
+        "verified_at": "2026-09-13T12:00:00Z",
+        "verifier": "fixture-storage-audit",
+    }
+
+
 def _run(tmp_path: Path) -> Path:
     initial = _checkpoint(tmp_path / "initial.pt")
     candidate = _checkpoint(tmp_path / "candidate.pt")
@@ -197,22 +216,7 @@ def _run(tmp_path: Path) -> Path:
         }],
     }
     retention = report["generations"][0]["retention_manifest"]
-    inventory_payload = {
-        "categories": retention["categories"],
-        "files": retention["files"],
-        "bytes": retention["bytes"],
-    }
-    inventory_sha256 = hashlib.sha256(json.dumps(
-        inventory_payload, sort_keys=True, separators=(",", ":")
-    ).encode()).hexdigest()
-    retention["inventory_sha256"] = inventory_sha256
-    retention["storage_attestation"] = {
-        "verified": True,
-        "external_uri": retention["external_uri"],
-        "inventory_sha256": inventory_sha256,
-        "verified_at": "2026-09-13T12:00:00Z",
-        "verifier": "fixture-storage-audit",
-    }
+    _attest_retention(retention)
     (run / "report.json").write_text(json.dumps(report), encoding="utf-8")
     return run
 
@@ -371,6 +375,57 @@ def test_storage_attestation_must_match_inventory_digest(tmp_path: Path) -> None
     status = report["generations"][0]["retention_manifest"]["status"]
     assert status["inventory_complete"] is True
     assert status["storage_attested"] is False
+    assert status["pruning_ready"] is False
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "empty-categories",
+        "missing-category",
+        "missing-object-field",
+        "invalid-path",
+        "invalid-sha256",
+        "category-file-rollup",
+        "category-byte-rollup",
+        "global-file-rollup",
+        "global-byte-rollup",
+    ),
+)
+def test_malformed_inventory_cannot_be_pruning_ready(
+    tmp_path: Path, mutation: str
+) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    retention = source["generations"][0]["retention_manifest"]
+    categories = retention["categories"]
+    first_object = categories["selfplay"]["objects"][0]
+    if mutation == "empty-categories":
+        retention["categories"] = {}
+    elif mutation == "missing-category":
+        categories.pop("evaluation")
+    elif mutation == "missing-object-field":
+        first_object.pop("sha256")
+    elif mutation == "invalid-path":
+        first_object["path"] = "../outside.json"
+    elif mutation == "invalid-sha256":
+        first_object["sha256"] = "not-a-sha256"
+    elif mutation == "category-file-rollup":
+        categories["selfplay"]["files"] += 1
+    elif mutation == "category-byte-rollup":
+        categories["selfplay"]["bytes"] += 1
+    elif mutation == "global-file-rollup":
+        retention["files"] += 1
+    else:
+        retention["bytes"] += 1
+    _attest_retention(retention)
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    status = report["generations"][0]["retention_manifest"]["status"]
+    assert status["inventory_complete"] is False
     assert status["pruning_ready"] is False
 
 

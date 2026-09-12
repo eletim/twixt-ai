@@ -119,6 +119,7 @@
     "paired_role_swaps": true,
     "shared_pair_seed_schedule": true,
     "seed": 1289000,
+    "generation_cli_option": "--evaluation-seed 1289000",
     "confidence_level": 0.95,
     "learned_and_non_neural_mcts": {
       "simulations": 20,
@@ -167,8 +168,7 @@
     "selfplay": "root_seed + 10",
     "dataset_split": "issue-59-{root_seed}-1",
     "training": "root_seed + 11",
-    "generation_gate": "root_seed + 12",
-    "cross_stage_evaluation": 1289000,
+    "promotion_and_fixed_opponent_evaluation": 1289000,
     "game_seed_derivation": "python-random.Random(batch_seed).getrandbits(64), once per game in zero-based game-index order",
     "decision_seed_derivation": "python-random.Random(game_seed).randrange(2**64), once per ply in move order"
   },
@@ -217,7 +217,8 @@
         "path",
         "sha256",
         "bytes"
-      ]
+      ],
+      "validation": "All four categories are required and non-empty; object paths are unique canonical relative paths; SHA-256 values are 64 lowercase hexadecimal characters; byte sizes are non-negative integers; and every category/global file and byte rollup must equal its objects before inventory_complete is accepted."
     },
     "git": [
       "contract and final Markdown/JSON reports",

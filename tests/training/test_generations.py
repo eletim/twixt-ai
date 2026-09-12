@@ -16,6 +16,7 @@ from twixt_ai.models import (
     save_policy_value_checkpoint,
 )
 from twixt_ai.training import generations
+from twixt_ai.training import generations_cli
 from twixt_ai.training.generations import (
     MiniGenerationConfig,
     run_mini_training_generations,
@@ -46,6 +47,7 @@ def test_runs_two_generations_with_explicit_lineage(
         validation_fraction=0,
         promotion_win_rate=0,
         seed=59,
+        evaluation_seed=1_289_000,
         artifact_uri="s3://twixt-ai/issue-128/test-stage",
     )
 
@@ -85,6 +87,9 @@ def test_runs_two_generations_with_explicit_lineage(
     ]
     assert sum(targets["value"]["fractions"].values()) == pytest.approx(1)
     first = report["generations"][0]
+    assert first["seeds"]["evaluation"] == 1_289_000
+    assert first["resolved_config"]["evaluation_seed"] == 1_289_000
+    assert first["evaluation"]["config"]["seed"] == 1_289_000
     assert first["selfplay"]["summary_sha256"] == hashlib.sha256(
         (output / "generation-0001" / "selfplay" / "summary.json").read_bytes()
     ).hexdigest()
@@ -134,6 +139,7 @@ def test_runs_two_generations_with_explicit_lineage(
         {"selfplay_progressive_widening_exponent": float("inf")},
         {"selection_metric": "policy"},
         {"artifact_uri": ""},
+        {"evaluation_seed": True},
     ],
 )
 def test_generation_config_rejects_invalid_values(kwargs: dict[str, object]) -> None:
@@ -302,6 +308,26 @@ def test_generation_cli_rejects_all_validation_split(
 
     assert raised.value.code == 2
     assert "validation_fraction must be in [0, 1)" in capsys.readouterr().err
+
+
+def test_generation_cli_passes_fixed_evaluation_seed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[MiniGenerationConfig] = []
+
+    def run_stub(*args: object, **kwargs: object) -> dict[str, object]:
+        observed.append(kwargs["config"])  # type: ignore[arg-type]
+        return {"status": "fixture"}
+
+    monkeypatch.setattr(generations_cli, "run_mini_training_generations", run_stub)
+
+    assert generations_cli.main([
+        "--initial-champion", "champion.pt",
+        "--output-dir", "output",
+        "--evaluation-seed", "1289000",
+    ]) == 0
+
+    assert observed[0].evaluation_seed == 1_289_000
 
 
 def test_generation_rejects_empty_training_split_after_dataset_build(

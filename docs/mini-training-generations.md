@@ -16,6 +16,11 @@ self-play, and requires a 55% candidate win rate. Seeds for every stage are
 derived from the recorded root seed. Set `PYTHONHASHSEED=0` so data ordering and
 the complete schedule are reproducible.
 
+Use `--evaluation-seed` when a protocol requires the same promotion schedule
+across otherwise independent runs. When omitted, the original per-generation
+derivation from `--seed` remains in effect. The resolved seed is recorded in
+both the generation's `seeds` and `resolved_config` objects.
+
 Self-play search strength can be changed independently of the fixed promotion
 evaluation with `--selfplay-exploration` and the two
 `--selfplay-progressive-widening-*` options. The generation report records the

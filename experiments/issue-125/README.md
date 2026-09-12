@@ -23,3 +23,55 @@ The deeper value-head audit is retained in
 whose manifest hash matches the generation-2 champion, and records phase,
 search-ambiguity, and value-confidence breakdowns without changing either
 artifact.
+
+## Full-scale search-configuration confirmation
+
+Before any candidate training, the unmodified generation-2 champion was run
+against the unchanged depth-1, 10,000-node heuristic with seed 1188200. Each
+setting used 40 games (20 identical-seed role-swapped pairs), policy+value
+guidance, rollout limit 4, and CUDA inference. The complete games, role splits,
+configuration, checkpoint hash, device metadata, and Wilson intervals are in
+[`search-confirmation.json`](search-confirmation.json).
+
+| Confirmed setting | Champion W-L-D | Win rate | 95% Wilson interval |
+| --- | ---: | ---: | ---: |
+| budget-128 (128, sqrt(2), 1.5/0.5) | 19-21-0 | 47.5% | 32.9%-62.5% |
+| teacher-like-64 (64, 0.7, 3.0/0.5) | 24-16-0 | 60.0% | 44.6%-73.7% |
+
+The 20-game screen's stronger configurations materially close the standard
+6-14 heuristic gap through search configuration alone. Teacher-like-64 won
+this fresh full-scale schedule, while budget-128 reached near parity. The
+overlapping intervals do not establish that either configuration is
+universally superior. The heuristic settings were identical in both matchups,
+and the champion remained SHA-256
+`742229c59caf251a07c7ecac6dc77ff75cbf09643a22cca16b92fe083df5a5ec`
+before and after confirmation.
+
+Reproduce the confirmation with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.matched_search_cli \
+  --checkpoint experiments/issue-118/generation-2/generation-0001/candidate/best.pt \
+  --output experiments/issue-125/search-confirmation.json \
+  --games-per-matchup 40 --seed 1188200 --rollout-limit 4 \
+  --setting budget-128 --setting teacher-like-64 \
+  --guidance-mode policy-value --baseline heuristic-search --device cuda
+```
+
+## Value-guided candidate training
+
+The value audit found validation MSE 0.4239, weak middle-confidence buckets,
+and phase-specific generalization gaps. The matched screen found that removing
+value guidance tied or improved the strongest 20-game results. Generation 2
+had selected epoch 4 by combined loss even though epoch 1 had its lowest
+validation value loss, then showed worsening validation value loss through
+epoch 20. These results motivated warm-starting from the immutable champion,
+lowering the learning rate, and selecting checkpoints by validation value loss.
+
+Both CUDA candidates and all of their metrics are retained under
+[`candidates/`](candidates/README.md). Neither improved convincingly: the
+1e-4 run's best value loss was 0.423955 at epoch 2 (effectively tied with the
+champion's 0.423941), and the follow-up 3e-4 run's best was 0.425781 at epoch
+1. Both then regressed. They are rejected as replacements, and no playing-
+strength claim is made from training metrics alone.

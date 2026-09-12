@@ -101,6 +101,8 @@ class MatchedSearchConfig:
     heuristic_search_depth: int = 1
     heuristic_search_node_budget: int = 10_000
     settings: tuple[SearchSetting, ...] = DEFAULT_SEARCH_SETTINGS
+    guidance_modes: tuple[str, ...] = GUIDANCE_MODES
+    baselines: tuple[str, ...] = ("heuristic-search", "matched-non-neural-mcts")
     device: str = "auto"
 
     def __post_init__(self) -> None:
@@ -130,9 +132,26 @@ class MatchedSearchConfig:
         names = [item.name for item in settings]
         if len(names) != len(set(names)):
             raise ValueError("search setting names must be unique")
+        guidance_modes = tuple(self.guidance_modes)
+        if (
+            not guidance_modes
+            or len(guidance_modes) != len(set(guidance_modes))
+            or any(mode not in GUIDANCE_MODES for mode in guidance_modes)
+        ):
+            raise ValueError(f"guidance_modes must be unique members of {GUIDANCE_MODES}")
+        valid_baselines = ("heuristic-search", "matched-non-neural-mcts")
+        baselines = tuple(self.baselines)
+        if (
+            not baselines
+            or len(baselines) != len(set(baselines))
+            or any(baseline not in valid_baselines for baseline in baselines)
+        ):
+            raise ValueError(f"baselines must be unique members of {valid_baselines}")
         if self.device not in {"cpu", "cuda", "auto"}:
             raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
         object.__setattr__(self, "settings", settings)
+        object.__setattr__(self, "guidance_modes", guidance_modes)
+        object.__setattr__(self, "baselines", baselines)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -146,6 +165,8 @@ class MatchedSearchConfig:
                 "node_budget": self.heuristic_search_node_budget,
             },
             "settings": [item.to_dict() for item in self.settings],
+            "guidance_modes": list(self.guidance_modes),
+            "baselines": list(self.baselines),
             "device": self.device,
         }
 
@@ -212,10 +233,10 @@ def run_matched_search_analysis(
 
     for setting in config.settings:
         search_settings = _mcts_settings(setting, config.rollout_limit)
-        for mode in GUIDANCE_MODES:
+        for mode in config.guidance_modes:
             candidate = f"learned-{mode}-{setting.name}"
             guidance = AblatedPolicyValue(neural, mode)
-            for baseline in ("heuristic-search", "matched-non-neural-mcts"):
+            for baseline in config.baselines:
                 baseline_settings = (
                     heuristic_settings
                     if baseline == "heuristic-search"
@@ -296,8 +317,8 @@ def run_matched_search_analysis(
             "available_cpus": _available_cpus(),
         },
         "methodology": {
-            "guidance_modes": list(GUIDANCE_MODES),
-            "baselines": ["heuristic-search", "matched-non-neural-mcts"],
+            "guidance_modes": list(config.guidance_modes),
+            "baselines": list(config.baselines),
             "paired_role_swaps": True,
             "shared_pair_seed_schedule": True,
             "non_neural_mcts_settings_match_candidate": True,

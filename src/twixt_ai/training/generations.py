@@ -181,6 +181,14 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _inventory_sha256(
+    categories: dict[str, object], files: int, bytes_: int
+) -> str:
+    payload = {"categories": categories, "files": files, "bytes": bytes_}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _target_distributions(
     dataset_root: Path, manifest: dict[str, object]
 ) -> dict[str, object]:
@@ -716,14 +724,20 @@ def run_mini_training_generations(
                     }],
                 },
             }
+            retained_files = sum(item["files"] for item in inventory.values())
+            retained_bytes = sum(item["bytes"] for item in inventory.values())
             generation["retention_manifest"] = {
                 "format": "twixt-ai-artifact-retention-manifest",
                 "version": 1,
                 "external_uri": config.artifact_uri,
-                "pruning_ready": config.artifact_uri is not None,
+                "inventory_complete": True,
+                "inventory_sha256": _inventory_sha256(
+                    inventory, retained_files, retained_bytes
+                ),
+                "storage_attestation": None,
                 "categories": inventory,
-                "files": sum(item["files"] for item in inventory.values()),
-                "bytes": sum(item["bytes"] for item in inventory.values()),
+                "files": retained_files,
+                "bytes": retained_bytes,
             }
             generation["artifact_storage"] = {
                 **{

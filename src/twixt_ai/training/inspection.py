@@ -195,6 +195,44 @@ def _dataset_shards(manifest: object) -> list[dict[str, Any]]:
     return records
 
 
+def _retention_status(retention: Mapping[str, Any]) -> dict[str, bool]:
+    categories = retention.get("categories")
+    files = retention.get("files")
+    bytes_ = retention.get("bytes")
+    if not isinstance(categories, Mapping):
+        inventory_verified = False
+    else:
+        payload = {"categories": categories, "files": files, "bytes": bytes_}
+        encoded = json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ).encode()
+        inventory_verified = hashlib.sha256(encoded).hexdigest() == retention.get(
+            "inventory_sha256"
+        )
+    inventory_complete = (
+        retention.get("inventory_complete") is True and inventory_verified
+    )
+    external_uri = retention.get("external_uri")
+    attestation = retention.get("storage_attestation")
+    storage_attested = (
+        isinstance(external_uri, str)
+        and bool(external_uri.strip())
+        and isinstance(attestation, Mapping)
+        and attestation.get("verified") is True
+        and attestation.get("external_uri") == external_uri
+        and attestation.get("inventory_sha256") == retention.get("inventory_sha256")
+        and isinstance(attestation.get("verified_at"), str)
+        and bool(attestation.get("verified_at"))
+        and isinstance(attestation.get("verifier"), str)
+        and bool(attestation.get("verifier"))
+    )
+    return {
+        "inventory_complete": inventory_complete,
+        "storage_attested": storage_attested,
+        "pruning_ready": inventory_complete and storage_attested,
+    }
+
+
 def _generation_summary(generation: object) -> dict[str, Any]:
     if not isinstance(generation, Mapping):
         raise TypeError("generation entries must be objects")
@@ -244,6 +282,9 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             target_distributions = {"policy": dict(policy), "value": None}
     storage = generation.get("artifact_storage")
     retention = generation.get("retention_manifest")
+    retention_summary = dict(retention) if isinstance(retention, Mapping) else None
+    if retention_summary is not None:
+        retention_summary["status"] = _retention_status(retention_summary)
     return {
         "generation": generation.get("generation"),
         "status": generation.get("status"),
@@ -303,8 +344,7 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             if evaluation_artifacts else None,
         },
         "artifact_storage": dict(storage) if isinstance(storage, Mapping) else None,
-        "retention_manifest": dict(retention)
-        if isinstance(retention, Mapping) else None,
+        "retention_manifest": retention_summary,
         "evaluation": (
             {"comparison": "candidate vs parent champion", **dict(promotion)}
             if isinstance(promotion, Mapping) else None
@@ -542,22 +582,27 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
 
     lines.extend([
         "", "## Retention manifests", "",
-        "| Gen | External URI | Pruning ready | Category | Files | Bytes |",
-        "| ---: | --- | --- | --- | ---: | ---: |",
+        "| Gen | External URI | Inventory complete | Storage attested | "
+        "Pruning ready | Category | Files | Bytes |",
+        "| ---: | --- | --- | --- | --- | --- | ---: | ---: |",
     ])
     for generation in report["generations"]:
         retention = generation["retention_manifest"]
         if not retention:
             lines.append(
-                f"| {generation['generation']} | — | no | unavailable | — | — |"
+                f"| {generation['generation']} | — | no | no | no | "
+                "unavailable | — | — |"
             )
             continue
         categories = retention.get("categories") or {}
+        status = retention["status"]
         for category, details in categories.items():
             lines.append(
                 f"| {generation['generation']} | "
                 f"`{retention.get('external_uri') or '—'}` | "
-                f"{'yes' if retention.get('pruning_ready') else 'no'} | {category} | "
+                f"{'yes' if status['inventory_complete'] else 'no'} | "
+                f"{'yes' if status['storage_attested'] else 'no'} | "
+                f"{'yes' if status['pruning_ready'] else 'no'} | {category} | "
                 f"{_number(details.get('files'))} | {_number(details.get('bytes'))} |"
             )
 

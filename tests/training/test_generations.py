@@ -95,7 +95,10 @@ def test_runs_two_generations_with_explicit_lineage(
     assert first["artifact_storage"]["files"] > 4
     retention = first["retention_manifest"]
     assert retention["external_uri"] == "s3://twixt-ai/issue-128/test-stage"
-    assert retention["pruning_ready"] is True
+    assert retention["inventory_complete"] is True
+    assert retention["storage_attestation"] is None
+    assert "pruning_ready" not in retention
+    assert len(retention["inventory_sha256"]) == 64
     assert retention["files"] == sum(
         category["files"] for category in retention["categories"].values()
     )

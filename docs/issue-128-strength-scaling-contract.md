@@ -70,9 +70,12 @@ artifact storage rather than Git at these scales. `--artifact-uri` records the
 durable base URI in a versioned retention manifest. That manifest inventories
 each retained object's relative path, SHA-256, and bytes, plus categorized and
 total file/byte counts. The inspection report renders both these objects and
-every dataset-shard and fixed-opponent evaluation identity. Local pruning is
-allowed only when the manifest says `pruning_ready: true`; without a non-empty
-external URI it remains false.
+every dataset-shard and fixed-opponent evaluation identity. Training marks only
+`inventory_complete`; supplying the URI does not claim or verify a transfer.
+After upload, a separate storage verifier must attest the same external URI and
+inventory SHA-256 with its identity and verification time. Inspection derives
+pruning readiness only when the inventory digest and that attestation both
+validate. Without this independent attestation, local pruning is forbidden.
 
 Any run that changes the teacher, board/rules, encoding, architecture, search,
 training, or evaluation semantics is a separately labelled diagnostic and

@@ -73,6 +73,9 @@ def test_issue_128_requires_fresh_1k_and_explicit_stop_gates() -> None:
         "selfplay", "dataset", "training", "evaluation"
     ]
     assert manifest["object_fields"] == ["path", "sha256", "bytes"]
+    assert "canonical SHA-256" in manifest["inventory_complete"]
+    assert "separate process" in manifest["storage_attestation"]["timing"]
+    assert "both" in manifest["pruning_ready"]
     assert "every fixed-opponent evaluation" in contract["reporting"][
         "evaluation_artifacts"
     ]

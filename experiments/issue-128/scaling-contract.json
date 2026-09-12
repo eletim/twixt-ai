@@ -189,7 +189,19 @@
       "format": "twixt-ai-artifact-retention-manifest",
       "version": 1,
       "external_uri": "Required non-empty durable base URI before pruning any local artifact.",
-      "pruning_ready": "True only when external_uri is present and the categorized inventory was captured.",
+      "inventory_complete": "True only after the categorized inventory and its canonical SHA-256 were captured.",
+      "inventory_sha256": "SHA-256 of canonical JSON containing categories, files, and bytes.",
+      "storage_attestation": {
+        "timing": "Added only after a separate process verifies every inventoried object at external_uri.",
+        "required_fields": [
+          "verified=true",
+          "external_uri matching the manifest",
+          "inventory_sha256 matching the manifest",
+          "verified_at",
+          "verifier"
+        ]
+      },
+      "pruning_ready": "Derived by reporting; true only when inventory_complete and a matching verified-storage attestation both validate.",
       "categories": [
         "selfplay",
         "dataset",
@@ -220,7 +232,7 @@
       "dataset JSONL shards",
       "latest.pt and other non-best checkpoints needed for recovery"
     ],
-    "policy": "Do not duplicate multi-gigabyte reconstructable raw games and shards in Git. A retention manifest with a durable artifact URI, categorized counts/bytes, and a path/SHA-256/byte identity for every retained object must report pruning_ready=true before pruning local scratch copies. Never omit a rejected or saturated stage's report or best checkpoint."
+    "policy": "Do not duplicate multi-gigabyte reconstructable raw games and shards in Git. Training records inventory_complete and an inventory SHA-256 but never asserts external persistence. After transfer, a separate storage verifier must attest the matching URI and inventory digest. Reporting derives pruning readiness only from both valid records; local scratch copies must not be pruned otherwise. Never omit a rejected or saturated stage's report or best checkpoint."
   },
   "invariants": {
     "primary_comparison": "Only game count and the explicitly assigned stage/root seeds vary. Every stage independently uses the same teacher and training initialization; candidates never become later-stage teachers.",

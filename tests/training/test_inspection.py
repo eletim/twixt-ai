@@ -149,7 +149,9 @@ def _run(tmp_path: Path) -> Path:
                 "format": "twixt-ai-artifact-retention-manifest",
                 "version": 1,
                 "external_uri": "s3://twixt-ai/issue-128/matched-1k",
-                "pruning_ready": True,
+                "inventory_complete": True,
+                "inventory_sha256": "pending",
+                "storage_attestation": None,
                 "files": 7,
                 "bytes": 2560 + candidate["bytes"],
                 "categories": {
@@ -193,6 +195,23 @@ def _run(tmp_path: Path) -> Path:
                 },
             },
         }],
+    }
+    retention = report["generations"][0]["retention_manifest"]
+    inventory_payload = {
+        "categories": retention["categories"],
+        "files": retention["files"],
+        "bytes": retention["bytes"],
+    }
+    inventory_sha256 = hashlib.sha256(json.dumps(
+        inventory_payload, sort_keys=True, separators=(",", ":")
+    ).encode()).hexdigest()
+    retention["inventory_sha256"] = inventory_sha256
+    retention["storage_attestation"] = {
+        "verified": True,
+        "external_uri": retention["external_uri"],
+        "inventory_sha256": inventory_sha256,
+        "verified_at": "2026-09-13T12:00:00Z",
+        "verifier": "fixture-storage-audit",
     }
     (run / "report.json").write_text(json.dumps(report), encoding="utf-8")
     return run
@@ -238,6 +257,11 @@ def test_builds_summary_and_fixed_checkpoint_probes(tmp_path: Path) -> None:
     assert generation["retention_manifest"]["external_uri"] == (
         "s3://twixt-ai/issue-128/matched-1k"
     )
+    assert generation["retention_manifest"]["status"] == {
+        "inventory_complete": True,
+        "storage_attested": True,
+        "pruning_ready": True,
+    }
     assert generation["losses"]["first"]["train_loss"] == 5.0
     assert generation["losses"]["last"]["validation_loss"] == 4.3
     assert generation["evaluation"]["win_rate"] == 0.75
@@ -271,7 +295,8 @@ def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
         assert "`" + character * 64 + "`" in rendered
     assert "s3://twixt-ai/issue-128/matched-1k" in rendered
     assert (
-        "| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | selfplay | 1 | 1024 |"
+        "| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | yes | yes | "
+        "selfplay | 1 | 1024 |"
         in rendered
     )
     assert "selfplay/games/game-000000.json" in rendered
@@ -312,6 +337,41 @@ def test_preserves_legacy_single_evaluation_artifact(tmp_path: Path) -> None:
     assert report["generations"][0]["hashes"]["evaluation_artifacts"] == [
         generation["evaluation_artifact"]
     ]
+
+
+def test_external_uri_without_storage_attestation_is_not_pruning_ready(
+    tmp_path: Path,
+) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["generations"][0]["retention_manifest"]["storage_attestation"] = None
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    assert report["generations"][0]["retention_manifest"]["status"] == {
+        "inventory_complete": True,
+        "storage_attested": False,
+        "pruning_ready": False,
+    }
+
+
+def test_storage_attestation_must_match_inventory_digest(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["generations"][0]["retention_manifest"]["storage_attestation"][
+        "inventory_sha256"
+    ] = "0" * 64
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    status = report["generations"][0]["retention_manifest"]["status"]
+    assert status["inventory_complete"] is True
+    assert status["storage_attested"] is False
+    assert status["pruning_ready"] is False
 
 
 def test_resolves_by_hash_after_stale_working_directory_candidate(

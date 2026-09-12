@@ -58,7 +58,11 @@ directory.
 For large runs, pass `--artifact-uri` with the durable base location. The
 generation report then includes a retention manifest with categorized
 file/byte totals and a relative path, SHA-256, and byte size for every retained
-object. Its `pruning_ready` flag remains false when no external URI was given.
+object. Generation records `inventory_complete` and a canonical inventory
+SHA-256, but never claims that an external transfer succeeded. After transfer,
+a separate storage verifier must add an attestation matching the external URI
+and inventory digest; inspection reports pruning readiness only when both the
+inventory and that attestation validate.
 
 ## Artifacts and recovery
 

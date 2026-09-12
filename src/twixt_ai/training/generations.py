@@ -176,10 +176,10 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _policy_target_quality(
+def _target_distributions(
     dataset_root: Path, manifest: dict[str, object]
 ) -> dict[str, object]:
-    """Summarize the search distributions actually consumed by training."""
+    """Summarize the policy and value targets actually consumed by training."""
 
     supports: dict[int, int] = {}
     examples = 0
@@ -187,6 +187,7 @@ def _policy_target_quality(
     entropy_total = 0.0
     normalized_entropy_total = 0.0
     maximum_probability_total = 0.0
+    outcomes: dict[int, int] = {}
     splits = manifest.get("splits")
     if not isinstance(splits, dict):
         raise ValueError("dataset manifest has no splits object")
@@ -208,6 +209,14 @@ def _policy_target_quality(
                     policy = example.get("policy")
                     if not isinstance(policy, list) or not policy:
                         raise ValueError("dataset example is missing its policy target")
+                    outcome = example.get("outcome")
+                    if (
+                        isinstance(outcome, bool)
+                        or not isinstance(outcome, (int, float))
+                        or outcome not in (-1, 0, 1)
+                    ):
+                        raise ValueError("dataset example has an invalid value target")
+                    outcomes[int(outcome)] = outcomes.get(int(outcome), 0) + 1
                     probabilities = [float(item["probability"]) for item in policy]
                     if any(
                         value <= 0 or not math.isfinite(value)
@@ -229,16 +238,35 @@ def _policy_target_quality(
     if not examples:
         raise ValueError("dataset contains no policy targets")
     return {
-        "examples": examples,
-        "support": {
-            "mean": support_total / examples,
-            "minimum": min(supports),
-            "maximum": max(supports),
-            "histogram": {str(key): supports[key] for key in sorted(supports)},
+        "policy": {
+            "examples": examples,
+            "support": {
+                "mean": support_total / examples,
+                "minimum": min(supports),
+                "maximum": max(supports),
+                "histogram": {str(key): supports[key] for key in sorted(supports)},
+            },
+            "entropy_mean_nats": entropy_total / examples,
+            "normalized_entropy_mean": normalized_entropy_total / examples,
+            "maximum_probability_mean": maximum_probability_total / examples,
         },
-        "entropy_mean_nats": entropy_total / examples,
-        "normalized_entropy_mean": normalized_entropy_total / examples,
-        "maximum_probability_mean": maximum_probability_total / examples,
+        "value": {
+            "examples": examples,
+            "counts": {str(key): outcomes.get(key, 0) for key in (-1, 0, 1)},
+            "fractions": {
+                str(key): outcomes.get(key, 0) / examples for key in (-1, 0, 1)
+            },
+        },
+    }
+
+
+def _artifact_storage(path: Path) -> dict[str, int]:
+    """Return practical on-disk retention totals for one artifact subtree."""
+
+    files = [item for item in path.rglob("*") if item.is_file()]
+    return {
+        "files": len(files),
+        "bytes": sum(item.stat().st_size for item in files),
     }
 
 
@@ -536,6 +564,10 @@ def run_mini_training_generations(
             generation["selfplay"] = {
                 "runtime_seconds": runtime_seconds,
                 "games_per_hour": completed_games / runtime_seconds * 3600.0,
+                "summary_sha256": (
+                    _sha256(selfplay_root / "summary.json")
+                    if (selfplay_root / "summary.json").is_file() else None
+                ),
                 "device": device.to_dict(),
                 "inference": inference,
                 "summary": batch.to_dict(),
@@ -577,6 +609,9 @@ def run_mini_training_generations(
             )
             if not dataset.train_examples:
                 raise ValueError("training split must contain at least one example")
+            target_distributions = _target_distributions(
+                generation_root / "dataset", dataset.to_dict()
+            )
             generation["dataset"] = {
                 "runtime_seconds": perf_counter() - stage_started,
                 "source_generations": list(
@@ -586,9 +621,10 @@ def run_mini_training_generations(
                 "manifest_sha256": _sha256(
                     generation_root / "dataset" / "manifest.json"
                 ),
-                "policy_target_quality": _policy_target_quality(
-                    generation_root / "dataset", dataset.to_dict()
-                ),
+                # Preserve the original field for existing consumers while
+                # exposing both target families under one scaling-report key.
+                "policy_target_quality": target_distributions["policy"],
+                "target_distributions": target_distributions,
             }
             _write_json(generation_root / "report.json", generation)
 
@@ -630,6 +666,11 @@ def run_mini_training_generations(
             )
             evaluation["runtime_seconds"] = perf_counter() - stage_started
             _write_json(generation_root / "evaluation.json", evaluation)
+            generation["evaluation_artifact"] = {
+                "path": str(generation_root / "evaluation.json"),
+                "sha256": _sha256(generation_root / "evaluation.json"),
+                "bytes": (generation_root / "evaluation.json").stat().st_size,
+            }
             promoted = evaluation["promotion"]["promoted"]
             if promoted:
                 champion = candidate
@@ -638,6 +679,20 @@ def run_mini_training_generations(
             generation["champion_after"] = _checkpoint(champion)
             generation["status"] = "completed"
             generation["runtime_seconds"] = perf_counter() - generation_started
+            storage = {
+                "selfplay": _artifact_storage(generation_root / "selfplay"),
+                "dataset": _artifact_storage(generation_root / "dataset"),
+                "training": _artifact_storage(generation_root / "candidate"),
+                "evaluation": {
+                    "files": 1,
+                    "bytes": generation["evaluation_artifact"]["bytes"],
+                },
+            }
+            generation["artifact_storage"] = {
+                **storage,
+                "files": sum(item["files"] for item in storage.values()),
+                "bytes": sum(item["bytes"] for item in storage.values()),
+            }
             lineage.append({
                 "generation": number,
                 "parent_sha256": _sha256(champion_before),

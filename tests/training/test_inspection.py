@@ -83,22 +83,47 @@ def _run(tmp_path: Path) -> Path:
             },
             "selfplay": {
                 "runtime_seconds": 2.0,
+                "summary_sha256": "1" * 64,
                 "summary": {"aggregate": {
                     "completed": 2, "failed": 0, "total_moves": 40
                 }},
             },
             "dataset": {
+                "runtime_seconds": 0.25,
                 "source_generations": [1],
                 "manifest": {"source_games": 2, "examples": 40},
+                "manifest_sha256": "2" * 64,
+                "target_distributions": {
+                    "policy": {
+                        "examples": 40,
+                        "support": {"mean": 4.5, "minimum": 1, "maximum": 9},
+                        "entropy_mean_nats": 1.25,
+                        "maximum_probability_mean": 0.45,
+                    },
+                    "value": {
+                        "examples": 40,
+                        "counts": {"-1": 18, "0": 4, "1": 18},
+                        "fractions": {"-1": 0.45, "0": 0.1, "1": 0.45},
+                    },
+                },
             },
-            "training": {"summary": {"history": history}, "candidate": candidate},
+            "training": {
+                "runtime_seconds": 0.5,
+                "summary": {
+                    "history": history,
+                    "performance": {"examples_per_second": 1600.0},
+                },
+                "candidate": candidate,
+            },
             "evaluation": {"promotion": {
                 "candidate_wins": 3,
                 "games": 4,
                 "win_rate": 0.75,
                 "required_win_rate": 0.55,
                 "promoted": True,
-            }},
+            }, "runtime_seconds": 0.25},
+            "evaluation_artifact": {"sha256": "3" * 64, "bytes": 256},
+            "artifact_storage": {"files": 8, "bytes": 4096},
         }],
     }
     (run / "report.json").write_text(json.dumps(report), encoding="utf-8")
@@ -120,6 +145,21 @@ def test_builds_summary_and_fixed_checkpoint_probes(tmp_path: Path) -> None:
     generation = report["generations"][0]
     assert generation["selfplay"]["games_per_hour"] == pytest.approx(3600)
     assert generation["dataset"]["examples"] == 40
+    assert generation["dataset"]["manifest_sha256"] == "2" * 64
+    assert generation["dataset"]["target_distributions"]["value"]["counts"] == {
+        "-1": 18, "0": 4, "1": 18
+    }
+    assert generation["timing_seconds"] == {
+        "total": 3.0,
+        "selfplay": 2.0,
+        "dataset": 0.25,
+        "training": 0.5,
+        "evaluation": 0.25,
+    }
+    assert generation["throughput"]["training_examples_per_second"] == 1600
+    candidate_sha = report["checkpoints"][1]["sha256"]
+    assert generation["hashes"]["candidate_checkpoint_sha256"] == candidate_sha
+    assert generation["artifact_storage"] == {"files": 8, "bytes": 4096}
     assert generation["losses"]["first"]["train_loss"] == 5.0
     assert generation["losses"]["last"]["validation_loss"] == 4.3
     assert generation["evaluation"]["win_rate"] == 0.75
@@ -137,6 +177,9 @@ def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
     assert structured["source"]["sha256"] in rendered
     assert structured["checkpoints"][0]["sha256"] in rendered
     assert "75.0%" in rendered
+    assert "## Scaling evidence" in rendered
+    assert "## Training target distributions" in rendered
+    assert "18 / 4 / 18" in rendered
     assert "contested-midgame" in rendered
 
     output = tmp_path / "reports" / "inspection.md"

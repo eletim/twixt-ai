@@ -19,11 +19,14 @@ the complete schedule are reproducible.
 Self-play search strength can be changed independently of the fixed promotion
 evaluation with `--selfplay-exploration` and the two
 `--selfplay-progressive-widening-*` options. The generation report records the
-resolved search settings, dataset manifest SHA-256, policy-target support,
-entropy, and mean maximum probability. These diagnostics make it possible to
-reject a search configuration that plays strongly but emits nearly uniform
-training targets. `--selection-metric` controls whether candidate checkpoint
-selection uses combined policy/value loss or value loss.
+resolved search settings, self-play summary and dataset manifest SHA-256,
+policy-target support, entropy and mean maximum probability, and value-target
+counts/fractions. It also records per-stage wall time, self-play and training
+throughput, evaluation artifact identity, and retained file/byte totals. These
+diagnostics make it possible to reject a search configuration that plays
+strongly but emits nearly uniform or badly imbalanced training targets.
+`--selection-metric` controls whether candidate checkpoint selection uses
+combined policy/value loss or value loss.
 
 ## Run
 
@@ -76,8 +79,9 @@ twixt-ai-mini-report mini-generations --output mini-generations/report.md
 ```
 
 Omit `--output` to print the report. The command identifies the exact source
-report, complete configuration, checkpoint hashes and lineage; summarizes
-self-play throughput, dataset sizes, loss curves, search budgets,
+report, complete configuration, checkpoint and artifact hashes and lineage;
+summarizes stage timing, self-play/training throughput, dataset and retained
+storage sizes, policy/value target distributions, loss curves, search budgets,
 candidate-vs-parent promotion evaluations, and generation-over-generation
 champion changes; and evaluates
 every available checkpoint on the versioned `mini-fixed-positions-v1` probe

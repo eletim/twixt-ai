@@ -76,10 +76,22 @@ def test_runs_two_generations_with_explicit_lineage(
     assert first_dataset["manifest_sha256"] == hashlib.sha256(
         manifest_path.read_bytes()
     ).hexdigest()
-    assert first_dataset["policy_target_quality"]["examples"] == first_dataset[
-        "manifest"
-    ]["examples"]
-    assert first_dataset["policy_target_quality"]["maximum_probability_mean"] > 0
+    targets = first_dataset["target_distributions"]
+    assert targets["policy"]["examples"] == first_dataset["manifest"]["examples"]
+    assert targets["policy"]["maximum_probability_mean"] > 0
+    assert sum(targets["value"]["counts"].values()) == first_dataset["manifest"][
+        "examples"
+    ]
+    assert sum(targets["value"]["fractions"].values()) == pytest.approx(1)
+    first = report["generations"][0]
+    assert first["selfplay"]["summary_sha256"] == hashlib.sha256(
+        (output / "generation-0001" / "selfplay" / "summary.json").read_bytes()
+    ).hexdigest()
+    assert first["evaluation_artifact"]["sha256"] == hashlib.sha256(
+        (output / "generation-0001" / "evaluation.json").read_bytes()
+    ).hexdigest()
+    assert first["artifact_storage"]["bytes"] > first["training"]["candidate"]["bytes"]
+    assert first["artifact_storage"]["files"] > 4
     assert (output / "generation-0001" / "candidate" / "best.pt").is_file()
     assert (output / "generation-0002" / "evaluation.json").is_file()
     assert json.loads((output / "report.json").read_text()) == report

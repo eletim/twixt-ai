@@ -90,6 +90,46 @@ def test_config_rejects_invalid_or_ambiguous_schedules() -> None:
         SearchSetting("invalid", 0, 1.0, 1.0, 0.5)
 
 
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"guidance_modes": ()},
+        {"guidance_modes": ("policy-value", "policy-value")},
+        {"guidance_modes": ("unknown",)},
+        {"baselines": ()},
+        {"baselines": ("heuristic-search", "heuristic-search")},
+        {"baselines": ("random",)},
+    ],
+)
+def test_config_rejects_invalid_schedule_filters(overrides) -> None:
+    with pytest.raises(ValueError):
+        MatchedSearchConfig(**overrides)
+
+
+def test_schedule_filters_limit_matchups(tmp_path: Path) -> None:
+    board = BoardDimensions(4, 4)
+    checkpoint = _checkpoint(tmp_path / "model.pt", board)
+    report = run_matched_search_analysis(
+        checkpoint,
+        config=MatchedSearchConfig(
+            board=board,
+            games_per_matchup=2,
+            rollout_limit=1,
+            heuristic_search_node_budget=20,
+            settings=(SearchSetting("small", 1, 0.7, 1.5, 0.5),),
+            guidance_modes=("policy-value",),
+            baselines=("heuristic-search",),
+            device="cpu",
+        ),
+    )
+
+    assert len(report["matchups"]) == 1
+    assert report["config"]["guidance_modes"] == ["policy-value"]
+    assert report["config"]["baselines"] == ["heuristic-search"]
+    assert report["methodology"]["guidance_modes"] == ["policy-value"]
+    assert report["methodology"]["baselines"] == ["heuristic-search"]
+
+
 def test_cli_writes_once_without_overwriting(tmp_path: Path) -> None:
     from twixt_ai.evaluation import matched_search_cli
 

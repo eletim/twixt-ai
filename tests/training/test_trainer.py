@@ -463,3 +463,17 @@ def test_cli_emits_summary(tmp_path: Path, capsys: object) -> None:
     assert emitted["completed_epochs"] == 1
     assert emitted["config"]["seed"] == 7
     assert emitted["config"]["selection_metric"] == "value"
+
+
+def test_cli_can_warm_start_from_checkpoint(tmp_path: Path) -> None:
+    dataset = _dataset(tmp_path / "dataset")
+    initial = tmp_path / "initial.pt"
+    model_config = PolicyValueConfig(channels=2, residual_blocks=1, value_hidden=4)
+    save_policy_value_checkpoint(initial, PolicyValueNetwork(model_config))
+
+    assert main([
+        "--dataset", str(dataset), "--output-dir", str(tmp_path / "run"),
+        "--epochs", "1", "--batch-size", "2", "--channels", "2",
+        "--residual-blocks", "1", "--value-hidden", "4", "--seed", "7",
+        "--initial-checkpoint", str(initial),
+    ]) == 0

@@ -1,7 +1,7 @@
 # Mini Twixt training inspection
 
 Source: `experiments/issue-128/matched-1k/report.json`
-Source SHA-256: `3d6cca8e0ed7dc5ea21852633b52108352ca14019bcbe0febef7d0b4cd9830a1`
+Source SHA-256: `ade70e9f07f28e46123ab72b3ef0df04746a0e7e7f0e8f725aafc9ac5d7757f0`
 Run status: **completed**
 Probe set: `mini-fixed-positions-v1`
 
@@ -9,7 +9,7 @@ Probe set: `mini-fixed-positions-v1`
 
 ```json
 {
-  "artifact_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
+  "artifact_uri": "s3://twixt-ai/issue-128/matched-1k",
   "batch_size": 128,
   "board": {
     "height": 10,

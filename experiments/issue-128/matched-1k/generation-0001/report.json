@@ -1032,7 +1032,7 @@
   ],
   "generation": 1,
   "resolved_config": {
-    "artifact_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
+    "artifact_uri": "s3://twixt-ai/issue-128/matched-1k",
     "batch_size": 128,
     "dataset_window": 1,
     "device": {

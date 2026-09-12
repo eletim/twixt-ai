@@ -230,6 +230,29 @@ def test_issue_128_5k_stage_preserves_protocol_and_negative_results() -> None:
     assert generation["scaling_decision"]["next_optional_stage"] == "not run"
 
 
+def test_issue_128_final_report_preserves_saturation_and_provenance() -> None:
+    report = Path("docs/issue-128-strength-scaling.md").read_text(encoding="utf-8")
+
+    required_evidence = (
+        "aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9",
+        "9d79b587e041f044084d8f14933b98baca31b9fbc0c799b358322e6160d5d6f7",
+        "d0ab6252d29945b1e25735615460cc42f9528191ce46e5e4e2c25f29d2360af8",
+        "5320f9ca4c146b1c925054ac4bd1e5e605d5f228c2dfb1d8c2a8a490d0981af2",
+        "60087bdb8c11fdd04c665775b6dc0e5595b206a8cac26859f4330ad8bc14db19",
+        "9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a",
+        "5447d23e68d0df76348c4077d502a8e5fd227f55f236349544e9d1abdbbc03e1",
+    )
+    assert all(value in report for value in required_evidence)
+    assert "19-21-0" in report
+    assert "32.9%-62.5%" in report
+    assert "fails 22-win scaling gate; saturated" in report
+    assert "The 10k stage was conditional" in report
+    assert "25k was also ineligible" in report
+    assert "50k was neither\neligible nor run" in report
+    assert "does not\nreverse the saturation decision" in report
+    assert "quality of the fixed teacher/search targets" in report
+
+
 @pytest.mark.parametrize("stage", ("matched-1k", "5k"))
 def test_issue_128_retained_stage_has_matching_storage_attestation(
     stage: str,

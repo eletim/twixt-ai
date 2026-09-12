@@ -1,7 +1,7 @@
 # Mini Twixt training inspection
 
 Source: `experiments/issue-128/5k/report.json`
-Source SHA-256: `a6cb0eea3f9a4199fcbff53e4fafdd1b2fbcc84bf138715586ea86b9f2acfc65`
+Source SHA-256: `49255adb6e9e7fc6552fd0aec4c12fa5a0b2ef5805e762525daa1314f00f91f5`
 Run status: **completed**
 Probe set: `mini-fixed-positions-v1`
 
@@ -130,10 +130,10 @@ Probe set: `mini-fixed-positions-v1`
 
 | Gen | External URI | Inventory complete | Storage attested | Pruning ready | Category | Files | Bytes |
 | ---: | --- | --- | --- | --- | --- | ---: | ---: |
-| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k` | yes | yes | yes | dataset | 28 | 1590018621 |
-| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k` | yes | yes | yes | evaluation | 4 | 80207 |
-| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k` | yes | yes | yes | selfplay | 5001 | 1179141425 |
-| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k` | yes | yes | yes | training | 4 | 669752 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k/generation-0001` | yes | yes | yes | dataset | 28 | 1590018621 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k/generation-0001` | yes | yes | yes | evaluation | 4 | 80207 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k/generation-0001` | yes | yes | yes | selfplay | 5001 | 1179141425 |
+| 1 | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k/generation-0001` | yes | yes | yes | training | 4 | 669752 |
 
 ### Retained object inventory
 

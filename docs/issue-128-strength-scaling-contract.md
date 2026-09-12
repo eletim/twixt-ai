@@ -1,5 +1,8 @@
 # Issue 128 Mini strength-scaling contract
 
+The completed matched-1k/5k synthesis and stop decision are in the
+[`Issue 128 strength-scaling result`](issue-128-strength-scaling.md).
+
 The machine-readable source of truth is
 [`experiments/issue-128/scaling-contract.json`](../experiments/issue-128/scaling-contract.json).
 The primary curve freezes the current generation-3 champion at SHA-256

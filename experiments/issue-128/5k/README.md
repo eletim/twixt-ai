@@ -29,7 +29,7 @@ as negative saturation evidence and the optional 10k stage is not run.
 [`report.md`](report.md) renders the complete configuration, hashes, lineage,
 timings, losses, evaluation games, and retention inventory. Raw games, derived
 JSONL shards, and the recovery-only `latest.pt` remain outside Git at
-`file:///home/eletim/twixt-ai-artifacts/issue-128/5k`. An independent
+`file:///home/eletim/twixt-ai-artifacts/issue-128/5k/generation-0001`. An independent
 byte-for-byte audit verified all 5,037 objects and 2,769,910,005 bytes against
 inventory SHA-256
 `5447d23e68d0df76348c4077d502a8e5fd227f55f236349544e9d1abdbbc03e1`.

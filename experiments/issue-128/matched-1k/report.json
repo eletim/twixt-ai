@@ -6227,16 +6227,16 @@
             ]
           }
         },
-        "external_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
+        "external_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k/generation-0001",
         "files": 1015,
         "format": "twixt-ai-artifact-retention-manifest",
         "inventory_complete": true,
         "inventory_sha256": "9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a",
         "storage_attestation": {
-          "external_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k",
+          "external_uri": "file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k/generation-0001",
           "inventory_sha256": "9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a",
           "verified": true,
-          "verified_at": "2026-09-13T05:28:00+09:00",
+          "verified_at": "2026-09-13T06:36:01+09:00",
           "verifier": "local-filesystem-sha256-audit"
         },
         "version": 1

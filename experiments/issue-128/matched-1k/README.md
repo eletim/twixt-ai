@@ -32,7 +32,8 @@ previous-stage comparison is not applicable to the first 1k stage.
 timings, losses, evaluation games, and retention inventory. The raw games,
 derived JSONL shards, and recovery-only `latest.pt` remain outside Git. Their
 544,426,771-byte inventory was restored at
-`file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k`, and all 1,015
+`file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k/generation-0001`,
+and all 1,015
 objects were verified byte-for-byte against inventory SHA-256
 `9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a`.
 The report records that local-filesystem verification and marks the inventory

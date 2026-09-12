@@ -1,0 +1,100 @@
+{
+  "decision_rule": {
+    "adoption_supporting_matchups": {
+      "games_per_matchup": 40,
+      "opponents": [
+        "issue-57",
+        "matched-non-neural-mcts"
+      ],
+      "required_win_rate": 0.55
+    },
+    "confirmation": "combine the pre-existing 40 games with 160 additional independent-seed games; a setting holds up only when its combined 95% Wilson win-rate interval is wholly above 0.5",
+    "follow_up": "run supporting matchups only for a setting that holds up",
+    "outcomes": "adopt only when confirmation and both supporting matchups pass; otherwise reject adoption and retain an inconclusive confirmation label when the interval includes 0.5"
+  },
+  "format": "twixt-ai-search-configuration-decision",
+  "heuristic_search": {
+    "depth": 1,
+    "node_budget": 10000,
+    "unchanged_across_source_reports": true
+  },
+  "results": [
+    {
+      "additional": {
+        "draws": 0,
+        "games": 160,
+        "losses": 90,
+        "seed": 1251400,
+        "wins": 70
+      },
+      "combined": {
+        "draws": 0,
+        "games": 200,
+        "losses": 111,
+        "win_rate": {
+          "confidence_level": 0.95,
+          "lower": 0.3778060100295335,
+          "upper": 0.5142669758719658,
+          "value": 0.445
+        },
+        "wins": 89
+      },
+      "confirmation": "inconclusive",
+      "decision": "reject adoption",
+      "initial": {
+        "draws": 0,
+        "games": 40,
+        "losses": 21,
+        "seed": 1188200,
+        "wins": 19
+      },
+      "reason": "the combined confidence interval includes 0.5, so the setting did not trigger supporting baseline evaluation",
+      "setting": "budget-128",
+      "supporting_matchups": "not triggered"
+    },
+    {
+      "additional": {
+        "draws": 0,
+        "games": 160,
+        "losses": 87,
+        "seed": 1251400,
+        "wins": 73
+      },
+      "combined": {
+        "draws": 0,
+        "games": 200,
+        "losses": 103,
+        "win_rate": {
+          "confidence_level": 0.95,
+          "lower": 0.4166738517187752,
+          "upper": 0.5538915080725428,
+          "value": 0.485
+        },
+        "wins": 97
+      },
+      "confirmation": "inconclusive",
+      "decision": "reject adoption",
+      "initial": {
+        "draws": 0,
+        "games": 40,
+        "losses": 16,
+        "seed": 1188200,
+        "wins": 24
+      },
+      "reason": "the combined confidence interval includes 0.5, so the setting did not trigger supporting baseline evaluation",
+      "setting": "teacher-like-64",
+      "supporting_matchups": "not triggered"
+    }
+  ],
+  "sources": [
+    {
+      "path": "experiments/issue-125/search-confirmation.json",
+      "sha256": "6da70f04ffff534c61ad5f6f21bdefc9f79eddccba7a6172a6914efa52fc101e"
+    },
+    {
+      "path": "experiments/issue-125/search-confirmation-additional.json",
+      "sha256": "de8e345701ad6bfcf1658f9b799dbd2b7a6c5290e099d10962af3094f29e7581"
+    }
+  ],
+  "version": 1
+}

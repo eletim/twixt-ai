@@ -89,8 +89,8 @@ reverse the saturation decision or establish a general 5k improvement.
 
 | Stage | Verified URI | Objects | Bytes | Inventory SHA-256 |
 | --- | --- | ---: | ---: | --- |
-| matched-1k | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k` | 1,015 | 544,426,771 | `9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a` |
-| 5k | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k` | 5,037 | 2,769,910,005 | `5447d23e68d0df76348c4077d502a8e5fd227f55f236349544e9d1abdbbc03e1` |
+| matched-1k | `file:///home/eletim/twixt-ai-artifacts/issue-128/matched-1k/generation-0001` | 1,015 | 544,426,771 | `9895fbb545029311942fe2b124b3543ee2e4904dbe55522d238c165d1b459a2a` |
+| 5k | `file:///home/eletim/twixt-ai-artifacts/issue-128/5k/generation-0001` | 5,037 | 2,769,910,005 | `5447d23e68d0df76348c4077d502a8e5fd227f55f236349544e9d1abdbbc03e1` |
 
 Both manifests contain all four required categories (self-play, dataset,
 training, and evaluation), have exact category/global rollups, and carry an

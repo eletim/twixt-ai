@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import pytest
 
@@ -280,3 +281,39 @@ def test_issue_128_retained_stage_has_matching_storage_attestation(
     assert attestation["inventory_sha256"] == inventory_sha256
     assert attestation["verified_at"]
     assert attestation["verifier"]
+
+
+@pytest.mark.parametrize("stage", ("matched-1k", "5k"))
+def test_issue_128_file_retention_contains_every_inventoried_object(
+    stage: str,
+) -> None:
+    report = json.loads(
+        Path(f"experiments/issue-128/{stage}/report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    retention = report["generations"][0]["retention_manifest"]
+    parsed_uri = urlparse(retention["external_uri"])
+
+    assert parsed_uri.scheme == "file"
+    assert not parsed_uri.netloc
+    root = Path(unquote(parsed_uri.path))
+    assert root.name == "generation-0001"
+    if not root.is_dir():
+        pytest.skip(f"external retention storage is not mounted: {root}")
+
+    checked_files = 0
+    checked_bytes = 0
+    for category in retention["categories"].values():
+        for item in category["objects"]:
+            retained_path = root / item["path"]
+            assert retained_path.is_file(), retained_path
+            assert retained_path.stat().st_size == item["bytes"]
+            assert hashlib.sha256(retained_path.read_bytes()).hexdigest() == (
+                item["sha256"]
+            )
+            checked_files += 1
+            checked_bytes += item["bytes"]
+
+    assert checked_files == retention["files"]
+    assert checked_bytes == retention["bytes"]

@@ -406,23 +406,6 @@ def diagnose_value_model(
                 for index, accumulator in enumerate(calibration)
             ]
             report["breakdowns"] = {
-                "game_phase": {
-                    "metric": "source.ply",
-                    "bucket_size": diagnostics_config.ply_bucket_size,
-                    "buckets": {
-                        name: {
-                            "ply_range": [
-                                int(name.split("-")[0]),
-                                int(name.split("-")[1]),
-                            ],
-                            **accumulator.to_dict(),
-                        }
-                        for name, accumulator in sorted(
-                            phases.items(),
-                            key=lambda item: int(item[0].split("-")[0]),
-                        )
-                    },
-                },
                 "position_difficulty": {
                     "metric": "normalized_search_policy_entropy",
                     "definition": (

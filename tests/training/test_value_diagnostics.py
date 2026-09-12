@@ -141,7 +141,15 @@ def test_diagnostics_measure_loaded_targets_checkpoint_and_mse(tmp_path: Path) -
     ]["counts"]
     assert report["splits"]["validation"]["metrics"]["mse"] is None
     assert report["generalization"]["mse_gap"] is None
+    phase_metrics = report["splits"]["train"]["metrics_by_ply"]
+    assert sum(bucket["examples"] for bucket in phase_metrics.values()) == (
+        expected_examples
+    )
+    assert sum(
+        bucket["target_balance"]["examples"] for bucket in phase_metrics.values()
+    ) == expected_examples
     breakdowns = report["splits"]["train"]["breakdowns"]
+    assert "game_phase" not in breakdowns
     assert sum(
         bucket["examples"]
         for bucket in breakdowns["value_head_confidence"]["buckets"]

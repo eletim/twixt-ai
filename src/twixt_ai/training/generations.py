@@ -73,6 +73,7 @@ class MiniGenerationConfig:
     promotion_win_rate: float = 0.55
     seed: int = 590_100
     device: str = "auto"
+    artifact_uri: str | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -107,6 +108,10 @@ class MiniGenerationConfig:
             raise TypeError("device must be a string")
         if self.device not in {"cpu", "cuda", "auto"}:
             raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
+        if self.artifact_uri is not None and (
+            not isinstance(self.artifact_uri, str) or not self.artifact_uri.strip()
+        ):
+            raise ValueError("artifact_uri must be a non-empty string or None")
         for name in ("learning_rate", "weight_decay"):
             value = getattr(self, name)
             if (
@@ -260,13 +265,22 @@ def _target_distributions(
     }
 
 
-def _artifact_storage(path: Path) -> dict[str, int]:
-    """Return practical on-disk retention totals for one artifact subtree."""
+def _artifact_inventory(path: Path, root: Path) -> dict[str, object]:
+    """Return a verifiable inventory for one retained artifact subtree."""
 
-    files = [item for item in path.rglob("*") if item.is_file()]
+    files = sorted(item for item in path.rglob("*") if item.is_file())
+    objects = [
+        {
+            "path": str(item.relative_to(root)),
+            "sha256": _sha256(item),
+            "bytes": item.stat().st_size,
+        }
+        for item in files
+    ]
     return {
         "files": len(files),
-        "bytes": sum(item.stat().st_size for item in files),
+        "bytes": sum(item["bytes"] for item in objects),
+        "objects": objects,
     }
 
 
@@ -528,6 +542,7 @@ def run_mini_training_generations(
                 "weight_decay": config.weight_decay,
                 "selection_metric": config.selection_metric,
                 "promotion_win_rate": config.promotion_win_rate,
+                "artifact_uri": config.artifact_uri,
                 "device": device.to_dict(),
                 "worker_mode": (
                     "thread" if device.resolved_device == "cuda" else "process"
@@ -666,11 +681,13 @@ def run_mini_training_generations(
             )
             evaluation["runtime_seconds"] = perf_counter() - stage_started
             _write_json(generation_root / "evaluation.json", evaluation)
-            generation["evaluation_artifact"] = {
+            evaluation_artifact = {
                 "path": str(generation_root / "evaluation.json"),
                 "sha256": _sha256(generation_root / "evaluation.json"),
                 "bytes": (generation_root / "evaluation.json").stat().st_size,
+                "opponent": "parent champion",
             }
+            generation["evaluation_artifacts"] = [evaluation_artifact]
             promoted = evaluation["promotion"]["promoted"]
             if promoted:
                 champion = candidate
@@ -679,19 +696,42 @@ def run_mini_training_generations(
             generation["champion_after"] = _checkpoint(champion)
             generation["status"] = "completed"
             generation["runtime_seconds"] = perf_counter() - generation_started
-            storage = {
-                "selfplay": _artifact_storage(generation_root / "selfplay"),
-                "dataset": _artifact_storage(generation_root / "dataset"),
-                "training": _artifact_storage(generation_root / "candidate"),
+            inventory = {
+                "selfplay": _artifact_inventory(
+                    generation_root / "selfplay", generation_root
+                ),
+                "dataset": _artifact_inventory(
+                    generation_root / "dataset", generation_root
+                ),
+                "training": _artifact_inventory(
+                    generation_root / "candidate", generation_root
+                ),
                 "evaluation": {
                     "files": 1,
-                    "bytes": generation["evaluation_artifact"]["bytes"],
+                    "bytes": evaluation_artifact["bytes"],
+                    "objects": [{
+                        "path": "evaluation.json",
+                        "sha256": evaluation_artifact["sha256"],
+                        "bytes": evaluation_artifact["bytes"],
+                    }],
                 },
             }
+            generation["retention_manifest"] = {
+                "format": "twixt-ai-artifact-retention-manifest",
+                "version": 1,
+                "external_uri": config.artifact_uri,
+                "pruning_ready": config.artifact_uri is not None,
+                "categories": inventory,
+                "files": sum(item["files"] for item in inventory.values()),
+                "bytes": sum(item["bytes"] for item in inventory.values()),
+            }
             generation["artifact_storage"] = {
-                **storage,
-                "files": sum(item["files"] for item in storage.values()),
-                "bytes": sum(item["bytes"] for item in storage.values()),
+                **{
+                    name: {"files": value["files"], "bytes": value["bytes"]}
+                    for name, value in inventory.items()
+                },
+                "files": generation["retention_manifest"]["files"],
+                "bytes": generation["retention_manifest"]["bytes"],
             }
             lineage.append({
                 "generation": number,

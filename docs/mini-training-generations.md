@@ -55,6 +55,11 @@ renames a champion checkpoint. A promoted candidate becomes the input path for
 the next generation; a rejected candidate remains under its generation
 directory.
 
+For large runs, pass `--artifact-uri` with the durable base location. The
+generation report then includes a retention manifest with categorized
+file/byte totals and a relative path, SHA-256, and byte size for every retained
+object. Its `pruning_ready` flag remains false when no external URI was given.
+
 ## Artifacts and recovery
 
 `config.json` records the immutable schedule, while the root `report.json`

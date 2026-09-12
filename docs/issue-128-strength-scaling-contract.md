@@ -55,6 +55,10 @@ distributions, and storage totals needed by the scaling table. The inspection
 command renders those fields:
 
 ```bash
+PYTHONHASHSEED=0 twixt-ai-mini-generations \
+  --initial-champion experiments/issue-125/generation-3/generation-0001/candidate/best.pt \
+  --output-dir /path/to/stage-run --artifact-uri s3://bucket/issue-128/stage \
+  # ...the contract's stage-specific game count and root seed...
 twixt-ai-mini-report /path/to/stage-run --output /path/to/stage-report.md
 ```
 
@@ -62,9 +66,13 @@ Commit the contract, aggregate reports, configs, manifests and shard hashes,
 training summaries/metrics, each attempted stage's best checkpoint, and all
 evaluation results—including rejection and saturation evidence. Raw games,
 derived JSONL shards, and recovery-only checkpoints belong in durable external
-artifact storage rather than Git at these scales. Before local pruning, record
-the external URI, hashes, file counts, and bytes so the retained evidence can
-be verified and the datasets can be recovered.
+artifact storage rather than Git at these scales. `--artifact-uri` records the
+durable base URI in a versioned retention manifest. That manifest inventories
+each retained object's relative path, SHA-256, and bytes, plus categorized and
+total file/byte counts. The inspection report renders both these objects and
+every dataset-shard and fixed-opponent evaluation identity. Local pruning is
+allowed only when the manifest says `pruning_ready: true`; without a non-empty
+external URI it remains false.
 
 Any run that changes the teacher, board/rules, encoding, architecture, search,
 training, or evaluation semantics is a separately labelled diagnostic and

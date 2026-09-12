@@ -67,3 +67,12 @@ def test_issue_128_requires_fresh_1k_and_explicit_stop_gates() -> None:
     assert contract["gates"]["saturation"]["loss_and_calibration_override_strength"] is False
     assert contract["gates"]["stretch_50k"]["maximum_projected_storage_bytes"] == 25 * 1024**3
     assert "dataset JSONL shards" in contract["retention"]["external_durable_storage"]
+    manifest = contract["retention"]["manifest"]
+    assert manifest["format"] == "twixt-ai-artifact-retention-manifest"
+    assert manifest["categories"] == [
+        "selfplay", "dataset", "training", "evaluation"
+    ]
+    assert manifest["object_fields"] == ["path", "sha256", "bytes"]
+    assert "every fixed-opponent evaluation" in contract["reporting"][
+        "evaluation_artifacts"
+    ]

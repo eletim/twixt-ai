@@ -173,6 +173,7 @@
     "decision_seed_derivation": "python-random.Random(game_seed).randrange(2**64), once per ply in move order"
   },
   "reporting": {
+    "evaluation_artifacts": "One path/SHA-256/byte record for every fixed-opponent evaluation; the collection is not limited to the generation promotion evaluation.",
     "required": [
       "teacher, dataset-manifest, every dataset-shard, candidate-checkpoint, and evaluation-artifact SHA-256",
       "self-play, dataset-build, training, evaluation, and total wall seconds",
@@ -184,6 +185,28 @@
     ]
   },
   "retention": {
+    "manifest": {
+      "format": "twixt-ai-artifact-retention-manifest",
+      "version": 1,
+      "external_uri": "Required non-empty durable base URI before pruning any local artifact.",
+      "pruning_ready": "True only when external_uri is present and the categorized inventory was captured.",
+      "categories": [
+        "selfplay",
+        "dataset",
+        "training",
+        "evaluation"
+      ],
+      "category_fields": [
+        "files",
+        "bytes",
+        "objects"
+      ],
+      "object_fields": [
+        "path",
+        "sha256",
+        "bytes"
+      ]
+    },
     "git": [
       "contract and final Markdown/JSON reports",
       "config, root and generation reports",
@@ -197,7 +220,7 @@
       "dataset JSONL shards",
       "latest.pt and other non-best checkpoints needed for recovery"
     ],
-    "policy": "Do not duplicate multi-gigabyte reconstructable raw games and shards in Git. Record their durable artifact URI, aggregate bytes, file count, and cryptographic hashes before pruning local scratch copies. Never omit a rejected or saturated stage's report or best checkpoint."
+    "policy": "Do not duplicate multi-gigabyte reconstructable raw games and shards in Git. A retention manifest with a durable artifact URI, categorized counts/bytes, and a path/SHA-256/byte identity for every retained object must report pruning_ready=true before pruning local scratch copies. Never omit a rejected or saturated stage's report or best checkpoint."
   },
   "invariants": {
     "primary_comparison": "Only game count and the explicitly assigned stage/root seeds vary. Every stage independently uses the same teacher and training initialization; candidates never become later-stage teachers.",

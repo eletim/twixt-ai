@@ -43,6 +43,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--promotion-win-rate", type=float, default=0.55)
     parser.add_argument("--seed", type=int, default=590_100)
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
+    parser.add_argument(
+        "--artifact-uri",
+        help="durable base URI recorded with the verifiable retention inventory",
+    )
     return parser
 
 

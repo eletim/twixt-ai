@@ -177,6 +177,24 @@ def _loss_summary(training: object) -> dict[str, Any] | None:
     }
 
 
+def _dataset_shards(manifest: object) -> list[dict[str, Any]]:
+    if not isinstance(manifest, Mapping):
+        return []
+    records: list[dict[str, Any]] = []
+    splits = manifest.get("splits")
+    if not isinstance(splits, Mapping):
+        return records
+    for split in ("train", "validation"):
+        value = splits.get(split)
+        shards = value.get("shards") if isinstance(value, Mapping) else None
+        if not isinstance(shards, list):
+            continue
+        for shard in shards:
+            if isinstance(shard, Mapping):
+                records.append({"split": split, **dict(shard)})
+    return records
+
+
 def _generation_summary(generation: object) -> dict[str, Any]:
     if not isinstance(generation, Mapping):
         raise TypeError("generation entries must be objects")
@@ -200,9 +218,20 @@ def _generation_summary(generation: object) -> dict[str, Any]:
         if isinstance(training_summary, Mapping) else None
     )
     candidate = training.get("candidate") if isinstance(training, Mapping) else None
+    teacher = generation.get("champion_before")
     evaluation = generation.get("evaluation")
     promotion = evaluation.get("promotion") if isinstance(evaluation, Mapping) else None
-    evaluation_artifact = generation.get("evaluation_artifact")
+    raw_evaluations = generation.get("evaluation_artifacts")
+    if isinstance(raw_evaluations, list):
+        evaluation_artifacts = [
+            dict(item) for item in raw_evaluations if isinstance(item, Mapping)
+        ]
+    else:
+        legacy_evaluation = generation.get("evaluation_artifact")
+        evaluation_artifacts = (
+            [dict(legacy_evaluation)]
+            if isinstance(legacy_evaluation, Mapping) else []
+        )
     target_distributions = (
         dataset.get("target_distributions") if isinstance(dataset, Mapping) else None
     )
@@ -214,6 +243,7 @@ def _generation_summary(generation: object) -> dict[str, Any]:
         if isinstance(policy, Mapping):
             target_distributions = {"policy": dict(policy), "value": None}
     storage = generation.get("artifact_storage")
+    retention = generation.get("retention_manifest")
     return {
         "generation": generation.get("generation"),
         "status": generation.get("status"),
@@ -241,6 +271,7 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             if isinstance(dataset, Mapping) else None,
             "target_distributions": dict(target_distributions)
             if isinstance(target_distributions, Mapping) else None,
+            "shards": _dataset_shards(manifest),
         },
         "losses": _loss_summary(training),
         "timing_seconds": {
@@ -259,16 +290,21 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             if isinstance(performance, Mapping) else None,
         },
         "hashes": {
+            "teacher": dict(teacher) if isinstance(teacher, Mapping) else None,
             "selfplay_summary_sha256": selfplay.get("summary_sha256")
             if isinstance(selfplay, Mapping) else None,
             "dataset_manifest_sha256": dataset.get("manifest_sha256")
             if isinstance(dataset, Mapping) else None,
             "candidate_checkpoint_sha256": candidate.get("sha256")
             if isinstance(candidate, Mapping) else None,
-            "evaluation_sha256": evaluation_artifact.get("sha256")
-            if isinstance(evaluation_artifact, Mapping) else None,
+            "dataset_shards": _dataset_shards(manifest),
+            "evaluation_artifacts": evaluation_artifacts,
+            "evaluation_sha256": evaluation_artifacts[0].get("sha256")
+            if evaluation_artifacts else None,
         },
         "artifact_storage": dict(storage) if isinstance(storage, Mapping) else None,
+        "retention_manifest": dict(retention)
+        if isinstance(retention, Mapping) else None,
         "evaluation": (
             {"comparison": "candidate vs parent champion", **dict(promotion)}
             if isinstance(promotion, Mapping) else None
@@ -470,6 +506,75 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             f"`{hashes['candidate_checkpoint_sha256'] or '—'}` / "
             f"`{hashes['evaluation_sha256'] or '—'}` |"
         )
+
+    lines.extend([
+        "", "## Artifact identities", "",
+        "| Gen | Role | Path | SHA-256 |",
+        "| ---: | --- | --- | --- |",
+    ])
+    for generation in report["generations"]:
+        hashes = generation["hashes"]
+        teacher = hashes["teacher"] or {}
+        lines.append(
+            f"| {generation['generation']} | teacher | `{teacher.get('path', '—')}` | "
+            f"`{teacher.get('sha256', '—')}` |"
+        )
+        lines.append(
+            f"| {generation['generation']} | self-play summary | `selfplay/summary.json` | "
+            f"`{hashes['selfplay_summary_sha256'] or '—'}` |"
+        )
+        lines.append(
+            f"| {generation['generation']} | dataset manifest | `dataset/manifest.json` | "
+            f"`{hashes['dataset_manifest_sha256'] or '—'}` |"
+        )
+        for shard in hashes["dataset_shards"]:
+            lines.append(
+                f"| {generation['generation']} | dataset shard ({shard['split']}) | "
+                f"`dataset/{shard.get('path', '—')}` | "
+                f"`{shard.get('sha256', '—')}` |"
+            )
+        for artifact in hashes["evaluation_artifacts"]:
+            lines.append(
+                f"| {generation['generation']} | evaluation: "
+                f"{artifact.get('opponent', 'unspecified opponent')} | "
+                f"`{artifact.get('path', '—')}` | `{artifact.get('sha256', '—')}` |"
+            )
+
+    lines.extend([
+        "", "## Retention manifests", "",
+        "| Gen | External URI | Pruning ready | Category | Files | Bytes |",
+        "| ---: | --- | --- | --- | ---: | ---: |",
+    ])
+    for generation in report["generations"]:
+        retention = generation["retention_manifest"]
+        if not retention:
+            lines.append(
+                f"| {generation['generation']} | — | no | unavailable | — | — |"
+            )
+            continue
+        categories = retention.get("categories") or {}
+        for category, details in categories.items():
+            lines.append(
+                f"| {generation['generation']} | "
+                f"`{retention.get('external_uri') or '—'}` | "
+                f"{'yes' if retention.get('pruning_ready') else 'no'} | {category} | "
+                f"{_number(details.get('files'))} | {_number(details.get('bytes'))} |"
+            )
+
+    lines.extend([
+        "", "### Retained object inventory", "",
+        "| Gen | Category | Path | Bytes | SHA-256 |",
+        "| ---: | --- | --- | ---: | --- |",
+    ])
+    for generation in report["generations"]:
+        retention = generation["retention_manifest"] or {}
+        for category, details in (retention.get("categories") or {}).items():
+            for item in details.get("objects") or []:
+                lines.append(
+                    f"| {generation['generation']} | {category} | "
+                    f"`{item.get('path', '—')}` | {_number(item.get('bytes'))} | "
+                    f"`{item.get('sha256', '—')}` |"
+                )
 
     lines.extend([
         "", "## Training target distributions", "",

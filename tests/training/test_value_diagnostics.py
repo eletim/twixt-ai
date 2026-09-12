@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -42,6 +43,32 @@ def _decisive_dataset(root: Path) -> tuple[Path, object]:
         config=DatasetConfig(validation_fraction=0, split_seed="perspective"),
     )
     return dataset, summary
+
+
+def _add_uniform_policy_targets(dataset: Path) -> None:
+    manifest_path = dataset / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for split in ("train", "validation"):
+        for shard in manifest["splits"][split]["shards"]:
+            path = dataset / shard["path"]
+            examples = [
+                json.loads(line)
+                for line in path.read_text(encoding="utf-8").splitlines()
+            ]
+            for example in examples:
+                example["policy"] = [
+                    {"coordinate": {"x": 1, "y": 0}, "probability": 0.5},
+                    {"coordinate": {"x": 2, "y": 0}, "probability": 0.5},
+                ]
+            content = "".join(
+                json.dumps(example, sort_keys=True, separators=(",", ":")) + "\n"
+                for example in examples
+            ).encode()
+            path.write_bytes(content)
+            shard["sha256"] = hashlib.sha256(content).hexdigest()
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def test_value_perspective_survives_artifact_dataset_and_augmentation(
@@ -106,8 +133,71 @@ def test_diagnostics_measure_loaded_targets_checkpoint_and_mse(tmp_path: Path) -
     assert metrics["mean_prediction"] == 0
     assert metrics["mse"] == 1
     assert metrics["mae"] == 1
+    assert metrics["calibration_error"] == (
+        metrics["mean_prediction"] - metrics["mean_target"]
+    )
+    assert metrics["target_balance"]["counts"] == report["splits"]["train"][
+        "targets"
+    ]["counts"]
     assert report["splits"]["validation"]["metrics"]["mse"] is None
     assert report["generalization"]["mse_gap"] is None
+    breakdowns = report["splits"]["train"]["breakdowns"]
+    assert sum(
+        bucket["examples"]
+        for bucket in breakdowns["value_head_confidence"]["buckets"]
+    ) == expected_examples
+    assert breakdowns["position_difficulty"]["unavailable_examples"] == (
+        expected_examples
+    )
+    assert report["dataset"]["verification"] == {
+        "manifest_sha256_computed": True,
+        "shard_sha256s_verified": 1,
+        "example_counts_verified": expected_examples,
+    }
+
+
+def test_diagnostics_bucket_search_ambiguity_and_value_confidence(
+    tmp_path: Path,
+) -> None:
+    dataset, summary = _decisive_dataset(tmp_path)
+    _add_uniform_policy_targets(dataset)
+    config = PolicyValueConfig(
+        channels=2,
+        residual_blocks=1,
+        value_hidden=2,
+        board_width=6,
+        board_height=6,
+    )
+    model = PolicyValueNetwork(config)
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.zero_()
+    checkpoint = tmp_path / "zero.pt"
+    save_policy_value_checkpoint(checkpoint, model)
+
+    report = diagnose_value_model(
+        dataset,
+        checkpoint,
+        config=ValueDiagnosticsConfig(
+            difficulty_bins=2, confidence_bins=2, device="cpu"
+        ),
+    )
+
+    breakdowns = report["splits"]["train"]["breakdowns"]
+    difficulty = breakdowns["position_difficulty"]
+    assert difficulty["unavailable_examples"] == 0
+    assert [bucket["examples"] for bucket in difficulty["buckets"]] == [
+        0,
+        summary.train_examples,
+    ]
+    confidence = breakdowns["value_head_confidence"]
+    assert [bucket["examples"] for bucket in confidence["buckets"]] == [
+        summary.train_examples,
+        0,
+    ]
+    assert confidence["buckets"][0]["target_balance"]["counts"] == report[
+        "splits"
+    ]["train"]["targets"]["counts"]
 
 
 def test_target_only_diagnostics_use_default_config(tmp_path: Path) -> None:
@@ -166,6 +256,6 @@ def test_cli_writes_report_once(tmp_path: Path) -> None:
     arguments = ["--dataset", str(dataset), "--output", str(output), "--device", "cpu"]
 
     assert main(arguments) == 0
-    assert json.loads(output.read_text(encoding="utf-8"))["version"] == 1
+    assert json.loads(output.read_text(encoding="utf-8"))["version"] == 2
     with pytest.raises(SystemExit):
         main(arguments)

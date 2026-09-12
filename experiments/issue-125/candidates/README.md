@@ -18,8 +18,8 @@ same per-epoch metrics independently.
 
 | Candidate | Seed | Schedule | Best validation value loss | Best checkpoint SHA-256 | Latest checkpoint SHA-256 | Decision |
 | --- | ---: | --- | ---: | --- | --- | --- |
-| [`value-selected-lr-1e-4`](value-selected-lr-1e-4/summary.json) | 125100 | 20 epochs, LR 0.0001 | 0.4239549535 (epoch 2) | `7a1830a71be9edce4a488bf3047151e8303aa980cec8ca2803198cd71cd6c733` | `7b806ac01512feb3f37bfe2d267078623e125e7d07211ae2c8eb7ee7c3a843fb` | inconclusive/rejected |
-| [`value-selected-lr-3e-4`](value-selected-lr-3e-4/summary.json) | 125200 | 12 epochs, LR 0.0003 | 0.4257806858 (epoch 1) | `3e6c1dbba9761faa3c14b46b60b1a6037d758b3789431bda023d8eae327166a2` | `3ae7219dcfa3e31496aa0622d2bbf20bb4e08b920f4de1128e7f435b1eb9bacd` | negative/rejected |
+| [`value-selected-lr-1e-4`](value-selected-lr-1e-4/summary.json) | 125100 | 20 epochs, LR 0.0001 | 0.4239549535 (epoch 2) | `7a1830a71be9edce4a488bf3047151e8303aa980cec8ca2803198cd71cd6c733` | `7b806ac01512feb3f37bfe2d267078623e125e7d07211ae2c8eb7ee7c3a843fb` | rejected, 19/40 champion wins |
+| [`value-selected-lr-3e-4`](value-selected-lr-3e-4/summary.json) | 125200 | 12 epochs, LR 0.0003 | 0.4257806858 (epoch 1) | `3e6c1dbba9761faa3c14b46b60b1a6037d758b3789431bda023d8eae327166a2` | `3ae7219dcfa3e31496aa0622d2bbf20bb4e08b920f4de1128e7f435b1eb9bacd` | rejected, 21/40 champion wins |
 
 The first run was effectively tied with the champion's 0.423941 validation
 value loss and became worse after epoch 2, so the second schedule was tried.
@@ -27,6 +27,11 @@ The second was worse from epoch 1 and continued to regress. This supports the
 earlier diagnosis that checkpoint selection and a gentler schedule alone do
 not repair the value bottleneck on the same targets; changing target quality,
 sampling, or value-head capacity is a higher-leverage next step.
+
+The decisions above come from the fixed playing-strength protocol recorded in
+[`../candidate-evaluation.json`](../candidate-evaluation.json), not from these
+training metrics. Promotion required at least 22 wins in 40 paired games
+against the generation-2 champion, exactly matching generation 2's 55% rule.
 
 The commands differed only in output, epochs, learning rate, and seed:
 

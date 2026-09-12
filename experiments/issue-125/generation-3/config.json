@@ -1,0 +1,30 @@
+{
+  "batch_size": 128,
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "dataset_window": 1,
+  "device": "cuda",
+  "epochs": 20,
+  "evaluation_games": 40,
+  "evaluation_simulations": 20,
+  "games_per_generation": 1000,
+  "generations": 1,
+  "inference_batch_size": 8,
+  "inference_max_wait_seconds": 0.002,
+  "learning_rate": 0.001,
+  "promotion_rule": "candidate wins / all paired evaluation games >= promotion_win_rate; draws remain in the denominator",
+  "promotion_win_rate": 0.55,
+  "rollout_limit": 4,
+  "seed": 1253000,
+  "selection_metric": "value",
+  "selfplay_exploration": 0.7,
+  "selfplay_progressive_widening_constant": 3.0,
+  "selfplay_progressive_widening_exponent": 0.5,
+  "selfplay_simulations": 64,
+  "shard_size": 5000,
+  "validation_fraction": 0.1,
+  "weight_decay": 0.0001,
+  "workers": 8
+}

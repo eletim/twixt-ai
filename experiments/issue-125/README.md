@@ -144,3 +144,48 @@ PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
   --setting budget-128 --setting teacher-like-64 \
   --guidance-mode policy-value --baseline heuristic-search --device cuda
 ```
+
+## Generation-3 candidate
+
+After the same-dataset value retrains and search-configuration changes failed
+to establish an improvement, the generations pipeline produced 1,000 new
+self-play games from the unchanged generation-2 champion. The teacher used the
+screened generation 1-2 settings: 64 simulations, exploration 0.7, rollout
+limit 4, and progressive widening 3.0/0.5. The complete games, dataset,
+training outputs, paired gate, configuration, seeds, lineage, runtimes, and
+CUDA metadata are retained under [`generation-3/`](generation-3/).
+
+The dataset contains 20,770 positions and has manifest SHA-256
+`9f00059cb9c6c2a3fc17ab3c847aa527158c3b9a9c2dbc42e521ab6318330619`.
+Training warm-started only from generation 2 SHA-256
+`742229c59caf251a07c7ecac6dc77ff75cbf09643a22cca16b92fe083df5a5ec`.
+Following the value-head diagnostics, `best.pt` was selected by validation
+value loss; no class reweighting or target reformulation was applied because
+the diagnostics did not support either. Epoch 10 was selected at validation
+value loss 0.107454. The retained candidate SHA-256 is
+`aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9`.
+
+The pipeline's unchanged 40-game promotion gate used 20 simulations and seed
+1253012. The candidate scored 26-11-3 against generation 2 and passed the 55%
+gate at 65% wins. This is a candidate-versus-parent result, not yet a claim
+against the fixed heuristic baseline.
+
+Reproduce the retained generation with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.training.generations_cli \
+  --initial-champion experiments/issue-118/generation-2/generation-0001/candidate/best.pt \
+  --output-dir experiments/issue-125/generation-3 \
+  --generations 1 --games-per-generation 1000 --dataset-window 1 \
+  --selfplay-simulations 64 --selfplay-exploration 0.7 \
+  --selfplay-progressive-widening-constant 3.0 \
+  --selfplay-progressive-widening-exponent 0.5 \
+  --evaluation-games 40 --evaluation-simulations 20 --rollout-limit 4 \
+  --workers 8 --inference-batch-size 8 \
+  --inference-max-wait-seconds 0.002 \
+  --epochs 20 --batch-size 128 --learning-rate 0.001 \
+  --weight-decay 0.0001 --selection-metric value \
+  --validation-fraction 0.1 --shard-size 5000 \
+  --promotion-win-rate 0.55 --seed 1253000 --device cuda
+```

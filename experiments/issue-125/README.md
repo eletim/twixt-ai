@@ -73,5 +73,74 @@ Both CUDA candidates and all of their metrics are retained under
 [`candidates/`](candidates/README.md). Neither improved convincingly: the
 1e-4 run's best value loss was 0.423955 at epoch 2 (effectively tied with the
 champion's 0.423941), and the follow-up 3e-4 run's best was 0.425781 at epoch
-1. Both then regressed. They are rejected as replacements, and no playing-
-strength claim is made from training metrics alone.
+1. Both then regressed. No playing-strength or promotion claim is made from
+those metrics alone.
+
+## Fixed-protocol candidate evaluation
+
+The predeclared promotion rule is generation 2's unchanged rule: promote a
+candidate only if it wins at least 55% (22 of 40) of the games against the
+generation-2 champion. Every matchup uses 20 MCTS simulations, rollout limit
+4, policy+value guidance, 20 identical-seed role-swapped pairs, and seed
+1251300. The Issue 57 and learned opponents use the same MCTS budget; the
+non-neural MCTS is budget-matched; and the heuristic remains depth 1 with a
+10,000-node budget. Supporting matchups do not override the champion gate.
+
+The complete configuration, hashes, games, role splits, intervals, and explicit
+decisions are in [`candidate-evaluation.json`](candidate-evaluation.json).
+
+| Candidate | Generation-2 champion | Issue 57 | Matched non-neural MCTS | Unchanged heuristic | Decision |
+| --- | ---: | ---: | ---: | ---: | --- |
+| value-selected-lr-1e-4 | 19-18-3 | 40-0-0 | 34-5-1 | 4-36-0 | reject (47.5% champion wins) |
+| value-selected-lr-3e-4 | 21-15-4 | 40-0-0 | 34-3-3 | 6-34-0 | reject (52.5% champion wins) |
+
+Reproduce the complete matrix with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.value_candidates_cli \
+  --champion experiments/issue-118/generation-2/generation-0001/candidate/best.pt \
+  --issue-57 experiments/issue-57/baseline/best.pt \
+  --candidate value-selected-lr-1e-4=experiments/issue-125/candidates/value-selected-lr-1e-4/best.pt \
+  --candidate value-selected-lr-3e-4=experiments/issue-125/candidates/value-selected-lr-3e-4/best.pt \
+  --output experiments/issue-125/candidate-evaluation.json \
+  --games-per-matchup 40 --seed 1251300 --simulations 20 \
+  --rollout-limit 4 --promotion-win-rate 0.55 --device cuda
+```
+
+## Search-configuration decision
+
+Before the additional games, the confirmation rule was fixed as follows: add
+160 independent-seed games per setting, combine them with the original 40, and
+call a margin real only when the combined 95% Wilson interval is wholly above
+50%. Only a setting that passed that gate would receive 40-game paired
+follow-ups against Issue 57 and matched non-neural MCTS; adoption would then
+require at least 55% wins in each follow-up as well.
+
+The independent seed-1251400 games reversed the original point estimates. Full
+games are in
+[`search-confirmation-additional.json`](search-confirmation-additional.json),
+and the aggregation and explicit decisions are in
+[`search-configuration-decision.json`](search-configuration-decision.json).
+
+| Setting | Initial W-L-D | Additional W-L-D | Combined W-L-D | Combined win rate (95% Wilson) | Adoption decision |
+| --- | ---: | ---: | ---: | ---: | --- |
+| budget-128 | 19-21-0 | 70-90-0 | 89-111-0 | 44.5% (37.8%-51.4%) | reject; inconclusive margin |
+| teacher-like-64 | 24-16-0 | 73-87-0 | 97-103-0 | 48.5% (41.7%-55.4%) | reject; inconclusive margin |
+
+Neither interval excludes 50%, so neither setting held up and the conditional
+Issue 57/MCTS follow-ups were not triggered. The champion checkpoint and the
+heuristic depth/node budget are identical in the original and additional
+reports.
+
+Reproduce the additional schedule with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.matched_search_cli \
+  --checkpoint experiments/issue-118/generation-2/generation-0001/candidate/best.pt \
+  --output experiments/issue-125/search-confirmation-additional.json \
+  --games-per-matchup 160 --seed 1251400 --rollout-limit 4 \
+  --setting budget-128 --setting teacher-like-64 \
+  --guidance-mode policy-value --baseline heuristic-search --device cuda
+```

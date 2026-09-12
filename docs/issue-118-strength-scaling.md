@@ -89,6 +89,48 @@ non-neural MCTS, and 6-14-0 against heuristic search. Policy-only scored
 generation 1 to 6-14, while the value-only result shows that value guidance
 remains the principal bottleneck.
 
+## Matched search-mode bottleneck screen
+
+The generation-2 champion was screened again with seed 1188100 to separate
+value-head quality from search budget and exploration/widening configuration.
+Every setting used 20 games (ten identical-seed role-swapped pairs) for each
+guidance mode and opponent. The heuristic opponent was unchanged throughout:
+depth 1 and a 10,000-node budget. In the other matchup, non-neural MCTS used
+the candidate's exact simulation, exploration, rollout, and progressive-
+widening settings. The complete 840-game schedule, including every rejected
+setting, is in
+`experiments/issue-118/diagnostics/generation-2-matched-search.json`.
+
+Each cell below is heuristic W-L-D / matched non-neural MCTS W-L-D from the
+learned entrant's perspective.
+
+| Setting (simulations, exploration, widening constant/exponent) | Policy+value | Policy-only | Value-only | Screen decision |
+| --- | ---: | ---: | ---: | ---: |
+| standard-20 (20, sqrt(2), 1.5/0.5) | 2-18-0 / 16-1-3 | 1-19-0 / 18-1-1 | 1-19-0 / 11-5-4 | reference |
+| budget-64 (64, sqrt(2), 1.5/0.5) | 6-14-0 / 15-4-1 | 5-15-0 / 18-1-1 | 0-19-1 / 6-11-3 | rejected |
+| budget-128 (128, sqrt(2), 1.5/0.5) | 8-12-0 / 18-2-0 | 7-13-0 / 14-4-2 | 1-19-0 / 13-6-1 | rejected |
+| exploration-0.7 (20, 0.7, 1.5/0.5) | 5-15-0 / 17-1-2 | 4-16-0 / 16-4-0 | 2-18-0 / 13-4-3 | rejected |
+| widening-3.0 (20, sqrt(2), 3.0/0.5) | 6-14-0 / 16-4-0 | 5-15-0 / 16-4-0 | 2-18-0 / 14-5-1 | rejected |
+| widening-exponent-0.75 (20, sqrt(2), 1.5/0.75) | 5-15-0 / 17-2-1 | 4-16-0 / 15-3-2 | 2-17-1 / 12-5-3 | rejected |
+| teacher-like-64 (64, 0.7, 3.0/0.5) | 9-11-0 / 16-4-0 | 10-10-0 / 16-4-0 | 5-15-0 / 11-5-4 | retained diagnostic |
+
+Increasing budget alone materially narrowed the heuristic gap: combined
+guidance rose from 2-18 at 20 simulations to 8-12 at 128. The 64-simulation
+teacher-like combination did slightly better at half that budget, reaching
+9-11 with policy+value and 10-10 with policy-only. Its individual exploration
+and widening changes were weaker, so this is evidence of a configuration
+interaction rather than a single magic constant. The non-neural results show
+that learned guidance remains useful at every screened setting.
+
+Value-only never did better than 5-15 against the heuristic, and removing the
+value head tied or improved the best combined result. The screen therefore
+does not attribute the original 6-14 gap to one cause: more search and the
+matched teacher-like configuration recover much of it, while value quality
+remains the limiting learned component. The other settings are retained as
+rejected negative or dominated results; none justifies changing the fixed
+heuristic protocol. With only 20 games per matchup, the near-parity result is
+diagnostic rather than a claim that the champion has surpassed the heuristic.
+
 ## Reproduction
 
 Run generation 1 from a source checkout with CUDA:
@@ -117,3 +159,15 @@ head-to-head results.
 Generation 2 used the same command with the generation-1 candidate as
 `--initial-champion`, output directory `experiments/issue-118/generation-2`,
 root seed 1187000, and shard size 5000.
+
+Reproduce the matched search-mode screen from a CUDA source checkout with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m twixt_ai.evaluation.matched_search_cli \
+  --checkpoint experiments/issue-118/generation-2/generation-0001/candidate/best.pt \
+  --output generation-2-matched-search.json --device cuda
+```
+
+The command refuses to overwrite an existing report, and the report records
+the full default setting schedule, checkpoint hash, device metadata, fixed
+heuristic configuration, matched MCTS configuration, seeds, and role swaps.

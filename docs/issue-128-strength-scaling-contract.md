@@ -58,13 +58,33 @@ distributions, and storage totals needed by the scaling table. The inspection
 command renders those fields:
 
 ```bash
-PYTHONHASHSEED=0 twixt-ai-mini-generations \
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m twixt_ai.training.generations_cli \
   --initial-champion experiments/issue-125/generation-3/generation-0001/candidate/best.pt \
-  --output-dir /path/to/stage-run --artifact-uri s3://bucket/issue-128/stage \
-  --evaluation-seed 1289000 \
-  # ...the contract's stage-specific game count and root seed...
-twixt-ai-mini-report /path/to/stage-run --output /path/to/stage-report.md
+  --output-dir /path/to/issue-128/matched-1k \
+  --artifact-uri s3://bucket/issue-128/matched-1k \
+  --generations 1 --games-per-generation 1000 --dataset-window 1 \
+  --selfplay-simulations 64 --selfplay-exploration 0.7 \
+  --selfplay-progressive-widening-constant 3.0 \
+  --selfplay-progressive-widening-exponent 0.5 \
+  --evaluation-games 40 --evaluation-simulations 20 --rollout-limit 4 \
+  --workers 8 --inference-batch-size 8 \
+  --inference-max-wait-seconds 0.002 \
+  --epochs 20 --batch-size 128 --learning-rate 0.001 \
+  --weight-decay 0.0001 --selection-metric value \
+  --validation-fraction 0.1 --shard-size 5000 \
+  --promotion-win-rate 0.55 --seed 1281000 \
+  --evaluation-seed 1289000 --device cuda
+
+twixt-ai-mini-report /path/to/issue-128/matched-1k \
+  --output /path/to/issue-128/matched-1k-report.md
 ```
+
+This is the complete matched-1k invocation; it does not rely on workflow
+defaults. For a later stage, change only `--games-per-generation`, `--seed`,
+`--output-dir`, and `--artifact-uri` to that stage's values in the contract.
+Every stage remains a separate `--generations 1 --dataset-window 1` run from
+the same initial checkpoint, so no candidate can become another stage's
+teacher or enter another stage's dataset.
 
 Commit the contract, aggregate reports, configs, manifests and shard hashes,
 training summaries/metrics, each attempted stage's best checkpoint, and all

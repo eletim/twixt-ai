@@ -70,6 +70,40 @@
       "stretch": true
     }
   ],
+  "generation_cli": {
+    "entrypoint": "python3 -m twixt_ai.training.generations_cli",
+    "initial_champion": "experiments/issue-125/generation-3/generation-0001/candidate/best.pt",
+    "stage_arguments": [
+      "games_per_generation",
+      "seed",
+      "output_dir",
+      "artifact_uri"
+    ],
+    "fixed_arguments": {
+      "generations": 1,
+      "dataset_window": 1,
+      "selfplay_simulations": 64,
+      "selfplay_exploration": 0.7,
+      "selfplay_progressive_widening_constant": 3.0,
+      "selfplay_progressive_widening_exponent": 0.5,
+      "evaluation_games": 40,
+      "evaluation_simulations": 20,
+      "rollout_limit": 4,
+      "workers": 8,
+      "inference_batch_size": 8,
+      "inference_max_wait_seconds": 0.002,
+      "epochs": 20,
+      "batch_size": 128,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "selection_metric": "value",
+      "validation_fraction": 0.1,
+      "shard_size": 5000,
+      "promotion_win_rate": 0.55,
+      "evaluation_seed": 1289000,
+      "device": "cuda"
+    }
+  },
   "selfplay": {
     "teacher_sha256": "aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9",
     "teacher_changes_between_stages": false,

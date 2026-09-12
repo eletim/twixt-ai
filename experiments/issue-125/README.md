@@ -189,3 +189,53 @@ PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
   --validation-fraction 0.1 --shard-size 5000 \
   --promotion-win-rate 0.55 --seed 1253000 --device cuda
 ```
+
+## Generation-3 evaluation and closing synthesis
+
+Generation 3 was evaluated without screening or cherry-picking on the same
+fixed schedule used for the value candidates: 40 games per opponent as 20
+identical-seed role-swapped pairs, seed 1251300, 20 MCTS simulations, rollout
+limit 4, and policy+value guidance. The learned and non-neural MCTS opponents
+used the same search budget. The heuristic opponent remained unchanged at
+depth 1 and 10,000 nodes. Full games, role splits, checkpoint hashes, device
+metadata, intervals, and the promotion decision are retained in
+[`generation-3-evaluation.json`](generation-3-evaluation.json).
+
+| Opponent | Generation-3 W-L-D | Win rate |
+| --- | ---: | ---: |
+| Generation-2 champion | 34-6-0 | 85.0% |
+| Immutable Issue 57 baseline | 38-0-2 | 95.0% |
+| Matched non-neural MCTS | 33-2-5 | 82.5% |
+| Unchanged heuristic search | 7-33-0 | 17.5% |
+
+The 34 wins against generation 2 exceed the predeclared 22-of-40 (55%) gate,
+so generation 3 is promoted. The new champion is
+`generation-3/generation-0001/candidate/best.pt`, SHA-256
+`aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9`.
+The machine-readable decision and final champion pointer are in
+[`final-report.json`](final-report.json).
+
+Reproduce the evaluation with:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH=src python3 -m \
+  twixt_ai.evaluation.value_candidates_cli \
+  --champion experiments/issue-118/generation-2/generation-0001/candidate/best.pt \
+  --issue-57 experiments/issue-57/baseline/best.pt \
+  --candidate generation-3=experiments/issue-125/generation-3/generation-0001/candidate/best.pt \
+  --output experiments/issue-125/generation-3-evaluation.json \
+  --games-per-matchup 40 --seed 1251300 --simulations 20 \
+  --rollout-limit 4 --promotion-win-rate 0.55 --device cuda
+```
+
+Across Issue 125's attempted interventions, heuristic strength did not
+materially improve beyond the original generation-2 result of 6-14-0 (30%).
+The value-selected retrains scored 4-36-0 and 6-34-0; the two search changes
+failed their predeclared 200-game confidence gate; and the promoted generation
+3 scored 7-33-0 (17.5%) with the original search configuration. Training loss,
+the favorable internal parent gate, and the strong non-heuristic matchups do
+not override that fixed-baseline evidence. This meets Issue 125's stopping
+criterion: the tested same-architecture value retraining, search tuning, and
+additional-generation path has plateaued. A further attempt should begin with
+a qualitatively larger architecture or learning/search formulation change,
+not another iteration of the interventions evaluated here.

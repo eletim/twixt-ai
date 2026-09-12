@@ -17,3 +17,9 @@ The immutable Issue 57 reference remains
 [`../issue-57/baseline/best.pt`](../issue-57/baseline/best.pt), SHA-256
 `ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8`.
 Both checkpoints are read-only reference points for every later Issue 125 comparison.
+
+The deeper value-head audit is retained in
+[`diagnostics/`](diagnostics/README.md). It uses the largest self-play dataset
+whose manifest hash matches the generation-2 champion, and records phase,
+search-ambiguity, and value-confidence breakdowns without changing either
+artifact.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,7 +20,7 @@ from twixt_ai.models.policy_value import PolicyValueNetwork
 from .data import DATASET_FORMAT, DATASET_VERSION, EXAMPLE_FORMAT, EXAMPLE_VERSION
 
 VALUE_DIAGNOSTICS_FORMAT = "twixt-ai-value-diagnostics"
-VALUE_DIAGNOSTICS_VERSION = 1
+VALUE_DIAGNOSTICS_VERSION = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,11 +29,19 @@ class ValueDiagnosticsConfig:
 
     ply_bucket_size: int = 16
     calibration_bins: int = 10
+    difficulty_bins: int = 3
+    confidence_bins: int = 5
     batch_size: int = 512
     device: str = "auto"
 
     def __post_init__(self) -> None:
-        for name in ("ply_bucket_size", "calibration_bins", "batch_size"):
+        for name in (
+            "ply_bucket_size",
+            "calibration_bins",
+            "difficulty_bins",
+            "confidence_bins",
+            "batch_size",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
@@ -52,9 +61,13 @@ class _Accumulator:
     prediction_sum: float = 0.0
     squared_error_sum: float = 0.0
     absolute_error_sum: float = 0.0
+    target_counts: dict[int, int] | None = None
 
     def add(self, target: float, prediction: float) -> None:
+        if self.target_counts is None:
+            self.target_counts = {-1: 0, 0: 0, 1: 0}
         self.count += 1
+        self.target_counts[int(target)] += 1
         self.target_sum += target
         self.prediction_sum += prediction
         self.squared_error_sum += (prediction - target) ** 2
@@ -66,15 +79,22 @@ class _Accumulator:
                 "examples": 0,
                 "mean_target": None,
                 "mean_prediction": None,
+                "calibration_error": None,
                 "mse": None,
                 "mae": None,
+                "target_balance": _distribution({-1: 0, 0: 0, 1: 0}),
             }
+        mean_target = self.target_sum / self.count
+        mean_prediction = self.prediction_sum / self.count
+        assert self.target_counts is not None
         return {
             "examples": self.count,
-            "mean_target": self.target_sum / self.count,
-            "mean_prediction": self.prediction_sum / self.count,
+            "mean_target": mean_target,
+            "mean_prediction": mean_prediction,
+            "calibration_error": mean_prediction - mean_target,
             "mse": self.squared_error_sum / self.count,
             "mae": self.absolute_error_sum / self.count,
+            "target_balance": _distribution(self.target_counts),
         }
 
 
@@ -99,7 +119,36 @@ def _manifest(root: Path) -> tuple[dict[str, Any], bytes, BoardDimensions]:
     return value, content, BoardDimensions(board["width"], board["height"])
 
 
-def _example(value: object, board: BoardDimensions) -> tuple[GameState, int, int]:
+def _policy_difficulty(value: Mapping[object, object]) -> float | None:
+    """Return normalized search-policy entropy as a position-difficulty proxy."""
+
+    policy = value.get("policy")
+    if policy is None:
+        return None
+    if not isinstance(policy, list) or not policy:
+        raise ValueError("policy must be a non-empty array when present")
+    probabilities: list[float] = []
+    for index, item in enumerate(policy):
+        probability = item.get("probability") if isinstance(item, Mapping) else None
+        if (
+            isinstance(probability, bool)
+            or not isinstance(probability, (int, float))
+            or not math.isfinite(probability)
+            or probability <= 0
+        ):
+            raise ValueError(f"policy[{index}].probability must be positive and finite")
+        probabilities.append(float(probability))
+    if not math.isclose(sum(probabilities), 1.0, abs_tol=1e-9):
+        raise ValueError("policy probabilities must sum to one")
+    if len(probabilities) == 1:
+        return 0.0
+    entropy = -sum(probability * math.log(probability) for probability in probabilities)
+    return entropy / math.log(len(probabilities))
+
+
+def _example(
+    value: object, board: BoardDimensions
+) -> tuple[GameState, int, int, float | None]:
     if not isinstance(value, Mapping):
         raise TypeError("example must contain an object")
     if value.get("format") != EXAMPLE_FORMAT or value.get("version") != EXAMPLE_VERSION:
@@ -114,7 +163,7 @@ def _example(value: object, board: BoardDimensions) -> tuple[GameState, int, int
     ply = source.get("ply") if isinstance(source, Mapping) else None
     if isinstance(ply, bool) or not isinstance(ply, int) or ply < 0:
         raise ValueError("source.ply must be a non-negative integer")
-    return state, target, ply
+    return state, target, ply, _policy_difficulty(value)
 
 
 def _distribution(counts: Mapping[int, int]) -> dict[str, object]:
@@ -139,14 +188,34 @@ def _bucket_name(ply: int, size: int) -> str:
     return f"{start}-{start + size - 1}"
 
 
+def _unit_bucket(value: float, bins: int) -> int:
+    return min(bins - 1, max(0, int(value * bins)))
+
+
+def _ranged_buckets(
+    accumulators: list[_Accumulator], metric: str
+) -> list[dict[str, object]]:
+    bins = len(accumulators)
+    return [
+        {
+            f"{metric}_range": [index / bins, (index + 1) / bins],
+            "upper_bound_inclusive": index == bins - 1,
+            **accumulator.to_dict(),
+        }
+        for index, accumulator in enumerate(accumulators)
+    ]
+
+
 def _consume_batch(
-    pending: list[tuple[GameState, int, int]],
+    pending: list[tuple[GameState, int, int, int | None]],
     model: PolicyValueNetwork,
     device: str,
     config: ValueDiagnosticsConfig,
     overall: _Accumulator,
     phases: dict[str, _Accumulator],
     calibration: list[_Accumulator],
+    difficulties: list[_Accumulator],
+    confidence: list[_Accumulator],
 ) -> None:
     if not pending:
         return
@@ -155,12 +224,12 @@ def _consume_batch(
             encode_position_for_version(
                 state, model.config.encoding_version, device=device
             )
-            for state, _, _ in pending
+            for state, _, _, _ in pending
         ]
     )
     with torch.inference_mode():
         _, predictions = model(inputs)
-    for (_, target, ply), prediction_tensor in zip(pending, predictions):
+    for (_, target, ply, difficulty), prediction_tensor in zip(pending, predictions):
         prediction = float(prediction_tensor.item())
         phase = _bucket_name(ply, config.ply_bucket_size)
         overall.add(target, prediction)
@@ -170,6 +239,11 @@ def _consume_batch(
             max(0, int((prediction + 1) / 2 * config.calibration_bins)),
         )
         calibration[index].add(target, prediction)
+        if difficulty is not None:
+            difficulties[difficulty].add(target, prediction)
+        confidence[_unit_bucket(abs(prediction), config.confidence_bins)].add(
+            target, prediction
+        )
     pending.clear()
 
 
@@ -228,7 +302,13 @@ def diagnose_value_model(
         calibration = [
             _Accumulator() for _ in range(diagnostics_config.calibration_bins)
         ]
-        pending: list[tuple[GameState, int, int]] = []
+        difficulties = [
+            _Accumulator() for _ in range(diagnostics_config.difficulty_bins)
+        ]
+        confidence = [
+            _Accumulator() for _ in range(diagnostics_config.confidence_bins)
+        ]
+        pending: list[tuple[GameState, int, int, int | None]] = []
 
         actual_examples = 0
         for shard in split_value["shards"]:
@@ -252,7 +332,7 @@ def diagnose_value_model(
                 )
             for line in lines:
                 try:
-                    state, target, ply = _example(json.loads(line), board)
+                    state, target, ply, difficulty = _example(json.loads(line), board)
                 except (json.JSONDecodeError, TypeError, ValueError) as exc:
                     raise ValueError(
                         f"invalid training example in {shard['path']}: {exc}"
@@ -262,7 +342,12 @@ def diagnose_value_model(
                 phase_targets.setdefault(phase, {-1: 0, 0: 0, 1: 0})[target] += 1
                 actual_examples += 1
                 if model is not None:
-                    pending.append((state, target, ply))
+                    difficulty_bucket = (
+                        _unit_bucket(difficulty, diagnostics_config.difficulty_bins)
+                        if difficulty is not None
+                        else None
+                    )
+                    pending.append((state, target, ply, difficulty_bucket))
                     if len(pending) == diagnostics_config.batch_size:
                         assert model is not None
                         _consume_batch(
@@ -273,6 +358,8 @@ def diagnose_value_model(
                             overall,
                             phases,
                             calibration,
+                            difficulties,
+                            confidence,
                         )
         if model is not None:
             _consume_batch(
@@ -283,6 +370,8 @@ def diagnose_value_model(
                 overall,
                 phases,
                 calibration,
+                difficulties,
+                confidence,
             )
         if actual_examples != split_value.get("examples"):
             raise ValueError(
@@ -316,6 +405,30 @@ def diagnose_value_model(
                 }
                 for index, accumulator in enumerate(calibration)
             ]
+            report["breakdowns"] = {
+                "position_difficulty": {
+                    "metric": "normalized_search_policy_entropy",
+                    "definition": (
+                        "Entropy of the sparse MCTS visit-probability target divided "
+                        "by log of its support; 0 is concentrated and 1 is uniform. "
+                        "This measures teacher search ambiguity, not intrinsic game "
+                        "complexity."
+                    ),
+                    "buckets": _ranged_buckets(
+                        difficulties, "normalized_entropy"
+                    ),
+                    "unavailable_examples": overall.count
+                    - sum(item.count for item in difficulties),
+                },
+                "value_head_confidence": {
+                    "metric": "absolute_value_prediction",
+                    "definition": (
+                        "Absolute bounded value prediction; 0 is neutral and 1 is "
+                        "maximal outcome confidence."
+                    ),
+                    "buckets": _ranged_buckets(confidence, "absolute_prediction"),
+                },
+            }
         split_reports[split] = report
 
     result: dict[str, Any] = {
@@ -327,6 +440,17 @@ def diagnose_value_model(
             "manifest_sha256": manifest_sha256,
             "board": board.to_dict(),
             "source_games": manifest.get("source_games"),
+            "verification": {
+                "manifest_sha256_computed": True,
+                "shard_sha256s_verified": sum(
+                    len(manifest["splits"][split]["shards"])
+                    for split in ("train", "validation")
+                ),
+                "example_counts_verified": sum(
+                    split_reports[split]["targets"]["examples"]
+                    for split in ("train", "validation")
+                ),
+            },
         },
         "splits": split_reports,
     }
@@ -336,6 +460,11 @@ def diagnose_value_model(
             "sha256": _sha256(checkpoint.read_bytes()),
             "model_config": loaded.model.config.to_dict(),
             "metadata": dict(loaded.metadata),
+            "dataset_sha256_matches": (
+                loaded.metadata.get("dataset_sha256") == manifest_sha256
+                if "dataset_sha256" in loaded.metadata
+                else None
+            ),
         }
         result["device"] = device.to_dict()
         train_mse = split_reports["train"]["metrics"]["mse"]

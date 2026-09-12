@@ -337,6 +337,15 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             [dict(legacy_evaluation)]
             if isinstance(legacy_evaluation, Mapping) else []
         )
+    raw_fixed_opponents = generation.get("fixed_opponent_evaluations")
+    fixed_opponent_evaluations = (
+        [
+            dict(item)
+            for item in raw_fixed_opponents
+            if isinstance(item, Mapping)
+        ]
+        if isinstance(raw_fixed_opponents, list) else []
+    )
     target_distributions = (
         dataset.get("target_distributions") if isinstance(dataset, Mapping) else None
     )
@@ -416,6 +425,7 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             {"comparison": "candidate vs parent champion", **dict(promotion)}
             if isinstance(promotion, Mapping) else None
         ),
+        "fixed_opponent_evaluations": fixed_opponent_evaluations,
         "champion_change": (
             "updated to candidate"
             if isinstance(promotion, Mapping) and promotion.get("promoted") is True
@@ -497,9 +507,9 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
     lines = [
         "# Mini Twixt training inspection",
         "",
-        f"Source: `{source['path']}`  ",
-        f"Source SHA-256: `{source['sha256']}`  ",
-        f"Run status: **{source.get('status', 'unknown')}**  ",
+        f"Source: `{source['path']}`",
+        f"Source SHA-256: `{source['sha256']}`",
+        f"Run status: **{source.get('status', 'unknown')}**",
         f"Probe set: `{report['probe_set']}`",
         "",
         "## Exact run configuration",
@@ -557,6 +567,31 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             f"{generation['champion_change'] or '—'} | "
             f"{generation['decision'] or '—'} | {budget_text} |"
         )
+
+    fixed_opponents = [
+        (generation["generation"], evaluation)
+        for generation in report["generations"]
+        for evaluation in generation["fixed_opponent_evaluations"]
+    ]
+    if fixed_opponents:
+        lines.extend([
+            "", "## Fixed-opponent evaluation results", "",
+            "| Gen | Opponent | Candidate W-L-D | Candidate win rate | "
+            "Games | Paired role swaps | Seed |",
+            "| ---: | --- | ---: | ---: | ---: | --- | ---: |",
+        ])
+        for generation, evaluation in fixed_opponents:
+            win_rate = evaluation.get("candidate_win_rate")
+            lines.append(
+                f"| {generation} | {evaluation.get('opponent', '—')} | "
+                f"{_number(evaluation.get('candidate_wins'))}-"
+                f"{_number(evaluation.get('candidate_losses'))}-"
+                f"{_number(evaluation.get('candidate_draws'))} | "
+                f"{_number(None if win_rate is None else 100 * win_rate, 1)}% | "
+                f"{_number(evaluation.get('games'))} | "
+                f"{'yes' if evaluation.get('paired_role_swaps') is True else 'no'} | "
+                f"{_number(evaluation.get('seed'))} |"
+            )
 
     lines.extend([
         "", "## Training loss components", "",

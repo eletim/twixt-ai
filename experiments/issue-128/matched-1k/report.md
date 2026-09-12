@@ -69,17 +69,10 @@ Probe set: `mini-fixed-positions-v1`
 
 ## Fixed-opponent evaluation results
 
-Every comparison used 40 games as 20 identical-seed role-swapped pairs with
-seed 1289000. Learned and non-neural MCTS used 20 simulations, exploration
-sqrt(2), progressive widening 1.5/0.5, and rollout limit 4. Heuristic search
-used depth 1 and a 10,000-node budget. A previous-stage comparison does not
-apply to this first scaling stage.
-
-| Opponent | Candidate W-L-D | Candidate win rate | Artifact |
-| --- | ---: | ---: | --- |
-| Starting champion | 30-8-2 | 75.0% | `generation-0001/evaluation.json` |
-| Matched non-neural MCTS | 32-4-4 | 80.0% | `generation-0001/matched-non-neural-mcts.json` |
-| Unchanged heuristic search | 6-34-0 | 15.0% | `generation-0001/heuristic-search.json` |
+| Gen | Opponent | Candidate W-L-D | Candidate win rate | Games | Paired role swaps | Seed |
+| ---: | --- | ---: | ---: | ---: | --- | ---: |
+| 1 | matched non-neural MCTS | 32-4-4 | 80.0% | 40 | yes | 1289000 |
+| 1 | heuristic search | 6-34-0 | 15.0% | 40 | yes | 1289000 |
 
 ## Training loss components
 

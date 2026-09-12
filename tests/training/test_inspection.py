@@ -163,6 +163,28 @@ def _run(tmp_path: Path) -> Path:
                 {"opponent": "matched non-neural MCTS", "path": "mcts.json", "sha256": "8" * 64, "bytes": 256},
                 {"opponent": "heuristic search", "path": "heuristic.json", "sha256": "9" * 64, "bytes": 256},
             ],
+            "fixed_opponent_evaluations": [
+                {
+                    "candidate_draws": 4,
+                    "candidate_losses": 4,
+                    "candidate_win_rate": 0.8,
+                    "candidate_wins": 32,
+                    "games": 40,
+                    "opponent": "matched non-neural MCTS",
+                    "paired_role_swaps": True,
+                    "seed": 1_289_000,
+                },
+                {
+                    "candidate_draws": 0,
+                    "candidate_losses": 34,
+                    "candidate_win_rate": 0.15,
+                    "candidate_wins": 6,
+                    "games": 40,
+                    "opponent": "heuristic search",
+                    "paired_role_swaps": True,
+                    "seed": 1_289_000,
+                },
+            ],
             "artifact_storage": {"files": 8, "bytes": 4096},
             "retention_manifest": {
                 "format": "twixt-ai-artifact-retention-manifest",
@@ -270,6 +292,16 @@ def test_builds_summary_and_fixed_checkpoint_probes(tmp_path: Path) -> None:
     assert generation["losses"]["last"]["validation_loss"] == 4.3
     assert generation["evaluation"]["win_rate"] == 0.75
     assert generation["evaluation"]["comparison"] == "candidate vs parent champion"
+    assert generation["fixed_opponent_evaluations"][0] == {
+        "candidate_draws": 4,
+        "candidate_losses": 4,
+        "candidate_win_rate": 0.8,
+        "candidate_wins": 32,
+        "games": 40,
+        "opponent": "matched non-neural MCTS",
+        "paired_role_swaps": True,
+        "seed": 1_289_000,
+    }
     assert generation["champion_change"] == "updated to candidate"
     assert "strength_change" not in generation
 
@@ -283,6 +315,9 @@ def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
     assert structured["source"]["sha256"] in rendered
     assert structured["checkpoints"][0]["sha256"] in rendered
     assert "75.0%" in rendered
+    assert "## Fixed-opponent evaluation results" in rendered
+    assert "| 1 | matched non-neural MCTS | 32-4-4 | 80.0% | 40 | yes | 1289000 |" in rendered
+    assert "| 1 | heuristic search | 6-34-0 | 15.0% | 40 | yes | 1289000 |" in rendered
     assert "## Scaling evidence" in rendered
     assert "## Training target distributions" in rendered
     assert "18 / 4 / 18" in rendered
@@ -311,6 +346,9 @@ def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
     assert inspection_cli.main([str(run), "--output", str(output)]) == 0
     assert output.read_text(encoding="utf-8").startswith(
         "# Mini Twixt training inspection"
+    )
+    assert "## Fixed-opponent evaluation results" in output.read_text(
+        encoding="utf-8"
     )
 
 

@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 import torch
+from torch import nn
 
 from twixt_ai.game import (
     BoardDimensions,
@@ -15,6 +16,7 @@ from twixt_ai.game import (
 )
 from twixt_ai.models import (
     ACTION_COUNT,
+    ARCHITECTURE_VERSION,
     ENCODING_VERSION,
     MINI_ENCODING_VERSION,
     MINI_NORMALIZED_POLICY_VALUE_CONFIG,
@@ -88,19 +90,51 @@ def test_mini_baseline_is_compact_and_preserves_the_model_contract() -> None:
     assert MINI_POLICY_VALUE_CONFIG == PolicyValueConfig(
         channels=8,
         residual_blocks=1,
-        value_hidden=16,
+        value_hidden=256,
         board_width=10,
         board_height=10,
         input_channels=NUM_CHANNELS,
         encoding_version=ENCODING_VERSION,
     )
-    assert sum(parameter.numel() for parameter in model.parameters()) == 24_547
+    assert sum(parameter.numel() for parameter in model.parameters()) == 570_437
     assert inputs.shape == (1, 22, 10, 10)
     assert logits.shape == (1, 100)
     assert values.shape == (1,)
     assert -1 <= values.item() <= 1
     assert torch.isneginf(masked[0, ~mask]).all()
     assert torch.equal(masked[0, mask], logits[0, mask])
+
+
+def test_mini_heads_use_flattened_trunk_output_directly() -> None:
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+
+    assert [type(layer) for layer in model.policy_head] == [
+        nn.Flatten,
+        nn.Linear,
+        nn.ReLU,
+        nn.Linear,
+        nn.ReLU,
+        nn.Linear,
+    ]
+    assert [
+        (layer.in_features, layer.out_features)
+        for layer in model.policy_head
+        if isinstance(layer, nn.Linear)
+    ] == [(800, 256), (256, 256), (256, 100)]
+    assert [type(layer) for layer in model.value_head] == [
+        nn.Flatten,
+        nn.Linear,
+        nn.ReLU,
+        nn.Linear,
+        nn.ReLU,
+        nn.Linear,
+        nn.Tanh,
+    ]
+    assert [
+        (layer.in_features, layer.out_features)
+        for layer in model.value_head
+        if isinstance(layer, nn.Linear)
+    ] == [(800, 256), (256, 256), (256, 1)]
 
 
 def test_normalized_mini_model_accepts_the_ten_plane_encoding() -> None:
@@ -233,6 +267,24 @@ def test_loader_rejects_disagreeing_checkpoint_encoding_metadata(tmp_path) -> No
     torch.save(payload, checkpoint_path)
 
     with pytest.raises(ValueError, match="encoding_version"):
+        load_policy_value_checkpoint(checkpoint_path)
+
+
+def test_loader_rejects_previous_head_architecture_before_loading_weights(
+    tmp_path,
+) -> None:
+    checkpoint_path = tmp_path / "old-heads.pt"
+    save_policy_value_checkpoint(
+        checkpoint_path, PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    )
+    payload = torch.load(checkpoint_path, weights_only=True)
+    payload["architecture_version"] = ARCHITECTURE_VERSION - 1
+    torch.save(payload, checkpoint_path)
+
+    with pytest.raises(
+        ValueError,
+        match=r"incompatible checkpoint architecture_version: expected 2, got 1",
+    ):
         load_policy_value_checkpoint(checkpoint_path)
 
 

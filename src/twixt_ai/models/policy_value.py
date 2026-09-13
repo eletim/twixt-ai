@@ -19,7 +19,7 @@ from .mini_encoding import MINI_ENCODING_VERSION, MINI_NUM_CHANNELS
 
 ACTION_COUNT = BOARD_SIZE * BOARD_SIZE
 ARCHITECTURE_NAME = "twixt-resnet-policy-value"
-ARCHITECTURE_VERSION = 1
+ARCHITECTURE_VERSION = 2
 CHECKPOINT_FORMAT = "twixt-ai-policy-value"
 CHECKPOINT_VERSION = 1
 
@@ -96,7 +96,7 @@ class PolicyValueConfig:
 MINI_POLICY_VALUE_CONFIG = PolicyValueConfig(
     channels=8,
     residual_blocks=1,
-    value_hidden=16,
+    value_hidden=256,
     board_width=10,
     board_height=10,
 )
@@ -106,7 +106,7 @@ MINI_POLICY_VALUE_CONFIG = PolicyValueConfig(
 MINI_NORMALIZED_POLICY_VALUE_CONFIG = PolicyValueConfig(
     channels=8,
     residual_blocks=1,
-    value_hidden=16,
+    value_hidden=256,
     board_width=10,
     board_height=10,
     input_channels=MINI_NUM_CHANNELS,
@@ -163,20 +163,18 @@ class PolicyValueNetwork(nn.Module):
             *(_ResidualBlock(channels) for _ in range(self.config.residual_blocks)),
         )
         self.policy_head = nn.Sequential(
-            nn.Conv2d(channels, 2, kernel_size=1, bias=False),
-            nn.BatchNorm2d(2),
-            nn.ReLU(inplace=True),
             nn.Flatten(),
-            nn.Linear(2 * self.action_count, self.action_count),
-        )
-        self.value_features = nn.Sequential(
-            nn.Conv2d(channels, 1, kernel_size=1, bias=False),
-            nn.BatchNorm2d(1),
+            nn.Linear(channels * self.action_count, self.config.value_hidden),
             nn.ReLU(inplace=True),
-            nn.Flatten(),
+            nn.Linear(self.config.value_hidden, self.config.value_hidden),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.config.value_hidden, self.action_count),
         )
         self.value_head = nn.Sequential(
-            nn.Linear(self.action_count, self.config.value_hidden),
+            nn.Flatten(),
+            nn.Linear(channels * self.action_count, self.config.value_hidden),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.config.value_hidden, self.config.value_hidden),
             nn.ReLU(inplace=True),
             nn.Linear(self.config.value_hidden, 1),
             nn.Tanh(),
@@ -189,7 +187,7 @@ class PolicyValueNetwork(nn.Module):
             raise ValueError(f"inputs must have shape [N, {', '.join(map(str, self.input_shape))}]")
         shared = self.trunk(inputs)
         logits = self.policy_head(shared)
-        values = self.value_head(self.value_features(shared)).squeeze(-1)
+        values = self.value_head(shared).squeeze(-1)
         return logits, values
 
 

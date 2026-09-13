@@ -35,7 +35,14 @@ combined policy/value loss or value loss.
 
 ## Run
 
-Start from the measured Issue 57 Mini checkpoint:
+The examples below record how the architecture-v1 lineage was run. The current
+architecture-v2 loader intentionally rejects the referenced Issue 57 checkpoint
+and all later champions through Issue 128 because the widened heads have
+different weights. To continue the workflow with current code, first bootstrap
+a fresh architecture-v2 champion and supply that checkpoint instead; do not use
+a pre-v2 checkpoint as `--initial-champion`.
+
+The historical lineage started from the measured Issue 57 Mini checkpoint:
 
 ```bash
 PYTHONHASHSEED=0 twixt-ai-mini-generations \

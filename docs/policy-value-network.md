@@ -1,4 +1,4 @@
-# Policy/value network v1
+# Policy/value network v2
 
 `PolicyValueNetwork` is the first learned Twixt baseline. Its checkpoint-stable
 configuration selects encoding v1 with 22 input channels or encoding v2 with
@@ -29,16 +29,26 @@ validates that compatibility metadata before constructing the model and
 loading weights. A change to tensor semantics or model structure therefore
 requires a version change rather than silently loading incompatible weights.
 
+Architecture version 2 is structurally incompatible with every version-1
+checkpoint, including the committed Mini champion lineage through Issue 128.
+Those checkpoints remain historical evidence, but current loaders reject them
+and they cannot be passed to `--initial-checkpoint` or `--initial-champion`.
+Further training under the widened heads must begin from a newly bootstrapped
+version-2 champion rather than warm-starting that lineage.
+
 ## Mini Twixt baseline
 
 `MINI_POLICY_VALUE_CONFIG` is the explicit default 10x10 baseline. Issue 77
 retained its 22-plane encoding v1 after the v0.0.3 measurements did not show
 that encoding v2 preserved learned playing strength. It uses
-8 trunk channels, 1 residual block, and 16 value-head hidden units for exactly
-24,547 trainable parameters (98,188 bytes of float32 weights). The ordinary
+8 trunk channels and 1 residual block. Both heads flatten the 8x10x10 trunk
+output directly, then use two 256-unit fully connected hidden layers. The
+policy head emits 100 logits and the value head emits one tanh-bounded scalar.
+The model has exactly 570,437 trainable parameters. The ordinary
 `PolicyValueConfig` fields and the training CLI's `--channels`,
-`--residual-blocks`, and `--value-hidden` options remain available for larger
-comparison models.
+`--residual-blocks`, and `--value-hidden` options remain available for
+comparison models; `value_hidden` controls the shared hidden width of both
+heads.
 
 Its input/output contract is `[N, 22, 10, 10]` float tensors to `[N, 100]`
 unmasked row-major policy logits and `[N]` side-to-move values in `[-1, 1]`.
@@ -50,7 +60,7 @@ resume additionally rejects a requested config mismatch.
 
 `MINI_NORMALIZED_POLICY_VALUE_CONFIG` is the corresponding opt-in encoding-v2
 preset with `[N, 10, 10, 10]` inputs. It has the same trunk and heads, but
-23,683 parameters because its first convolution consumes 10 rather than 22
+569,573 parameters because its first convolution consumes 10 rather than 22
 planes. It remains supported for regression and comparison, but is not the
 default. See the [Mini encoding decision](mini-encoding-decision.md) for the
 measured correctness, cost, training, and playing-strength evidence.

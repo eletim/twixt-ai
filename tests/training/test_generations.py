@@ -177,7 +177,7 @@ def test_cuda_selfplay_loads_one_shared_model_and_records_batches(
         epochs=1,
     )
 
-    batch, inference = generations._run_selfplay(
+    batch, inference = generations.run_generation_selfplay(
         champion, tmp_path / "selfplay", config, 86, device
     )
 
@@ -286,7 +286,7 @@ def test_cuda_selfplay_snapshots_statistics_after_batcher_shutdown(
         epochs=1,
     )
 
-    _, inference = generations._run_selfplay(
+    _, inference = generations.run_generation_selfplay(
         champion, tmp_path / "selfplay", config, 86, device
     )
 
@@ -346,7 +346,7 @@ def test_generation_rejects_empty_training_split_after_dataset_build(
         ),
     )
     monkeypatch.setattr(
-        generations, "_game_paths", lambda roots: (tmp_path / "game.json",)
+        generations, "completed_game_paths", lambda roots: (tmp_path / "game.json",)
     )
     monkeypatch.setattr(
         generations,

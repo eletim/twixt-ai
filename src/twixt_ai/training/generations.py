@@ -174,7 +174,8 @@ class MiniGenerationConfig:
         return value
 
 
-def _write_json(path: Path, value: object) -> None:
+def write_json(path: Path, value: object) -> None:
+    """Atomically write a JSON artifact used by a Mini training workflow."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(
@@ -195,7 +196,7 @@ def _inventory_sha256(
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _target_distributions(
+def summarize_target_distributions(
     dataset_root: Path, manifest: dict[str, object]
 ) -> dict[str, object]:
     """Summarize the policy and value targets actually consumed by training."""
@@ -298,7 +299,8 @@ def _artifact_inventory(path: Path, root: Path) -> dict[str, object]:
     }
 
 
-def _checkpoint(path: Path) -> dict[str, object]:
+def checkpoint_record(path: Path) -> dict[str, object]:
+    """Describe a policy/value checkpoint and its model configuration."""
     loaded = load_policy_value_checkpoint(path)
     return {
         "path": str(path),
@@ -328,7 +330,8 @@ def _agent(
     )
 
 
-def _game_paths(selfplay_roots: list[Path]) -> tuple[Path, ...]:
+def completed_game_paths(selfplay_roots: list[Path]) -> tuple[Path, ...]:
+    """Return completed game artifacts referenced by self-play summaries."""
     paths: list[Path] = []
     for root in selfplay_roots:
         summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
@@ -338,7 +341,7 @@ def _game_paths(selfplay_roots: list[Path]) -> tuple[Path, ...]:
     return tuple(paths)
 
 
-def _run_selfplay(
+def run_generation_selfplay(
     champion: Path,
     output_dir: Path,
     config: MiniGenerationConfig,
@@ -494,14 +497,14 @@ def run_mini_training_generations(
         raise ValueError("PYTHONHASHSEED must be 0")
     device = select_device(config.device)
     champion = Path(initial_champion)
-    initial = _checkpoint(champion)
+    initial = checkpoint_record(champion)
     if initial["model_config"] != MINI_POLICY_VALUE_CONFIG.to_dict():
         raise ValueError("initial champion must use the Mini model configuration")
     root = Path(output_dir)
     if root.exists() and any(root.iterdir()):
         raise ValueError("output directory must be empty or not exist")
     root.mkdir(parents=True, exist_ok=True)
-    _write_json(root / "config.json", config.to_dict())
+    write_json(root / "config.json", config.to_dict())
 
     started = perf_counter()
     selfplay_roots: list[Path] = []
@@ -522,7 +525,7 @@ def run_mini_training_generations(
         "generations": generations,
         "lineage": lineage,
     }
-    _write_json(root / "report.json", report)
+    write_json(root / "report.json", report)
 
     for number in range(1, config.generations + 1):
         generation_root = root / f"generation-{number:04d}"
@@ -537,7 +540,7 @@ def run_mini_training_generations(
         generation: dict[str, Any] = {
             "generation": number,
             "status": "running",
-            "champion_before": _checkpoint(champion_before),
+            "champion_before": checkpoint_record(champion_before),
             "resolved_config": {
                 "games": config.games_per_generation,
                 "dataset_window": config.dataset_window,
@@ -576,13 +579,13 @@ def run_mini_training_generations(
             },
         }
         generations.append(generation)
-        _write_json(generation_root / "report.json", generation)
-        _write_json(root / "report.json", report)
+        write_json(generation_root / "report.json", generation)
+        write_json(root / "report.json", report)
         stage = "selfplay"
         try:
             selfplay_root = generation_root / "selfplay"
             stage_started = perf_counter()
-            batch, inference = _run_selfplay(
+            batch, inference = run_generation_selfplay(
                 champion_before,
                 selfplay_root,
                 config,
@@ -607,12 +610,12 @@ def run_mini_training_generations(
                 "inference": inference,
                 "summary": batch.to_dict(),
             }
-            _write_json(generation_root / "report.json", generation)
+            write_json(generation_root / "report.json", generation)
 
             stage = "dataset"
             stage_started = perf_counter()
             window = selfplay_roots[-config.dataset_window :]
-            sources = _game_paths(window)
+            sources = completed_game_paths(window)
             dataset = build_dataset(
                 sources,
                 generation_root / "dataset",
@@ -644,7 +647,7 @@ def run_mini_training_generations(
             )
             if not dataset.train_examples:
                 raise ValueError("training split must contain at least one example")
-            target_distributions = _target_distributions(
+            target_distributions = summarize_target_distributions(
                 generation_root / "dataset", dataset.to_dict()
             )
             generation["dataset"] = {
@@ -661,7 +664,7 @@ def run_mini_training_generations(
                 "policy_target_quality": target_distributions["policy"],
                 "target_distributions": target_distributions,
             }
-            _write_json(generation_root / "report.json", generation)
+            write_json(generation_root / "report.json", generation)
 
             stage = "training"
             stage_started = perf_counter()
@@ -686,9 +689,9 @@ def run_mini_training_generations(
                 "runtime_seconds": perf_counter() - stage_started,
                 "initialized_from_sha256": _sha256(champion_before),
                 "summary": training.to_dict(),
-                "candidate": _checkpoint(candidate),
+                "candidate": checkpoint_record(candidate),
             }
-            _write_json(generation_root / "report.json", generation)
+            write_json(generation_root / "report.json", generation)
 
             stage = "evaluation"
             stage_started = perf_counter()
@@ -700,7 +703,7 @@ def run_mini_training_generations(
                 device,
             )
             evaluation["runtime_seconds"] = perf_counter() - stage_started
-            _write_json(generation_root / "evaluation.json", evaluation)
+            write_json(generation_root / "evaluation.json", evaluation)
             evaluation_artifact = {
                 "path": str(generation_root / "evaluation.json"),
                 "sha256": _sha256(generation_root / "evaluation.json"),
@@ -713,7 +716,7 @@ def run_mini_training_generations(
                 champion = candidate
             generation["evaluation"] = evaluation
             generation["decision"] = "promoted" if promoted else "rejected"
-            generation["champion_after"] = _checkpoint(champion)
+            generation["champion_after"] = checkpoint_record(champion)
             generation["status"] = "completed"
             generation["runtime_seconds"] = perf_counter() - generation_started
             inventory = {
@@ -773,16 +776,16 @@ def run_mini_training_generations(
             generation["runtime_seconds"] = perf_counter() - generation_started
             report["status"] = "failed"
             report["runtime_seconds"] = perf_counter() - started
-            _write_json(generation_root / "report.json", generation)
-            _write_json(root / "report.json", report)
+            write_json(generation_root / "report.json", generation)
+            write_json(root / "report.json", report)
             raise
-        _write_json(generation_root / "report.json", generation)
-        _write_json(root / "report.json", report)
+        write_json(generation_root / "report.json", generation)
+        write_json(root / "report.json", report)
 
     report["status"] = "completed"
-    report["final_champion"] = _checkpoint(champion)
+    report["final_champion"] = checkpoint_record(champion)
     report["runtime_seconds"] = perf_counter() - started
-    _write_json(root / "report.json", report)
+    write_json(root / "report.json", report)
     return report
 
 
@@ -790,5 +793,10 @@ __all__ = [
     "GENERATIONS_FORMAT",
     "GENERATIONS_VERSION",
     "MiniGenerationConfig",
+    "checkpoint_record",
+    "completed_game_paths",
+    "run_generation_selfplay",
     "run_mini_training_generations",
+    "summarize_target_distributions",
+    "write_json",
 ]

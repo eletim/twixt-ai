@@ -64,6 +64,9 @@ negative settings are documented in
 [`docs/issue-118-strength-scaling.md`](docs/issue-118-strength-scaling.md).
 The follow-on fixed-teacher data-volume protocol is defined in
 [`docs/issue-128-strength-scaling-contract.md`](docs/issue-128-strength-scaling-contract.md).
+The widened-head architecture-v2 bootstrap outcome and retained negative
+strength/value evidence are summarized in
+[`experiments/issue-143/README.md`](experiments/issue-143/README.md).
 Summarize one of those runs, including checkpoint lineage, promotion-driven
 champion changes, and fixed-position policy/value probes, with
 `twixt-ai-mini-report RUN`.

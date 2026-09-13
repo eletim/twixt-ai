@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from pathlib import Path
 
 import pytest
 import torch
@@ -11,7 +13,10 @@ from twixt_ai.models import (
     MINI_POLICY_VALUE_CONFIG,
     load_policy_value_checkpoint,
 )
-from twixt_ai.training.bootstrap import bootstrap_mini_champion
+from twixt_ai.training.bootstrap import (
+    DEFAULT_BOOTSTRAP_SEED,
+    bootstrap_mini_champion,
+)
 from twixt_ai.training.bootstrap_cli import main
 
 
@@ -57,6 +62,24 @@ def test_bootstrap_is_reproducible_and_preserves_caller_rng(tmp_path) -> None:
     assert torch.equal(torch.random.get_rng_state(), state_before)
     second = bootstrap_mini_champion(tmp_path / "second", seed=143_002)
     assert first["checkpoint"]["sha256"] == second["checkpoint"]["sha256"]
+
+
+def test_committed_bootstrap_reproduces_from_recorded_seed(tmp_path: Path) -> None:
+    root = (
+        Path(__file__).resolve().parents[2]
+        / "experiments"
+        / "issue-143"
+        / "architecture-v2-bootstrap"
+    )
+    committed = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+
+    reproduced = bootstrap_mini_champion(tmp_path / "reproduced")
+
+    assert committed["initialization"]["seed"] == DEFAULT_BOOTSTRAP_SEED
+    assert committed["checkpoint"]["sha256"] == hashlib.sha256(
+        (root / "champion.pt").read_bytes()
+    ).hexdigest()
+    assert reproduced["checkpoint"]["sha256"] == committed["checkpoint"]["sha256"]
 
 
 def test_bootstrap_refuses_to_overwrite_an_existing_experiment(tmp_path) -> None:

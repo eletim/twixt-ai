@@ -19,11 +19,11 @@ from twixt_ai.models import MINI_POLICY_VALUE_CONFIG
 from .data import DatasetConfig, build_dataset
 from .generations import (
     MiniGenerationConfig,
-    _checkpoint,
-    _game_paths,
-    _run_selfplay,
-    _target_distributions,
-    _write_json,
+    checkpoint_record,
+    completed_game_paths,
+    run_generation_selfplay,
+    summarize_target_distributions,
+    write_json,
 )
 
 
@@ -122,7 +122,7 @@ def run_mini_selfplay_dataset(
     generation_config = config.generation_config()
     device = select_device(config.device)
     champion = Path(champion_path)
-    champion_record = _checkpoint(champion)
+    champion_record = checkpoint_record(champion)
     if champion_record["model_config"] != MINI_POLICY_VALUE_CONFIG.to_dict():
         raise ValueError("champion must use the Mini model configuration")
 
@@ -158,14 +158,14 @@ def run_mini_selfplay_dataset(
         "selfplay": config.seed,
         "dataset_split": config.resolved_split_seed,
     }
-    _write_json(
+    write_json(
         root / "config.json",
         {"resolved_config": resolved_config, "seeds": seeds},
     )
 
     started = perf_counter()
     selfplay_started = perf_counter()
-    batch, inference = _run_selfplay(
+    batch, inference = run_generation_selfplay(
         champion, root / "selfplay", generation_config, config.seed, device
     )
     selfplay_seconds = perf_counter() - selfplay_started
@@ -174,7 +174,7 @@ def run_mini_selfplay_dataset(
 
     dataset_started = perf_counter()
     dataset = build_dataset(
-        _game_paths([root / "selfplay"]),
+        completed_game_paths([root / "selfplay"]),
         root / "dataset",
         config=DatasetConfig(
             shard_size=config.shard_size,
@@ -189,7 +189,9 @@ def run_mini_selfplay_dataset(
     )
     manifest = dataset.to_dict()
     dataset_seconds = perf_counter() - dataset_started
-    target_distributions = _target_distributions(root / "dataset", manifest)
+    target_distributions = summarize_target_distributions(
+        root / "dataset", manifest
+    )
     report = {
         "format": SELFPLAY_DATASET_FORMAT,
         "version": SELFPLAY_DATASET_VERSION,
@@ -221,7 +223,7 @@ def run_mini_selfplay_dataset(
         },
         "runtime_seconds": perf_counter() - started,
     }
-    _write_json(root / "report.json", report)
+    write_json(root / "report.json", report)
     return report
 
 

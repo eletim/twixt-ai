@@ -43,8 +43,12 @@ For context, the architecture-v1 generation-2 audit reported validation MSE
 0.4239 on 3,626 positions. That value is not treated as a controlled
 head-width comparison because it came from a different checkpoint and probe
 dataset. Likewise, the v1 candidates used 1,000- and 5,000-game datasets while
-this first fresh v2 lineage used 100 games. The matched baseline games are the
-decisive evidence that the realized widened-head pipeline did not improve
+this first fresh v2 lineage used 100 games. Their self-play search contracts
+also differed: the v1 datasets used 64 simulations, exploration `0.7`, and
+progressive widening `3.0/0.5`, while v2 used 100 simulations, exploration
+`sqrt(2)`, and widening `1.5/0.5`. Evaluation search was matched, but the
+training-data search mismatch remains a confound. The matched baseline games
+are decisive evidence that the realized widened-head pipeline did not improve
 strength; the available data do not isolate head width as the sole cause.
 
 ## Decision and next bottleneck
@@ -64,11 +68,12 @@ strength gates before attributing any change to head capacity.
 
 - V2 value diagnostics: [`v2-value-quality/value-head.json`](v2-value-quality/value-head.json)
 - V2 paired strength games: [`v2-strength/evaluation.json`](v2-strength/evaluation.json)
+- V2 self-play protocol and dataset: [`v2-selfplay-dataset/report.json`](v2-selfplay-dataset/report.json)
 - Architecture-v1 matched evidence: [`../issue-128/matched-1k/report.json`](../issue-128/matched-1k/report.json)
   and [`../issue-128/5k/report.json`](../issue-128/5k/report.json)
 - Architecture-v1 value context:
   [`../issue-125/diagnostics/generation-2-value-head.json`](../issue-125/diagnostics/generation-2-value-head.json)
 
-The complete project test suite (498 tests), Python byte-compilation check,
+The complete project test suite (502 tests), Python byte-compilation check,
 JSON parsing, and a regression cross-check of the cited artifact values pass
 on the final report commit.

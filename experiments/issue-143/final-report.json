@@ -3,6 +3,7 @@
   "version": 1,
   "architecture_question": "Did the widened architecture-v2 policy/value heads materially improve value quality and playing strength over the architecture-v1 Mini lineage?",
   "source_artifacts": {
+    "architecture_v2_selfplay_dataset": "experiments/issue-143/v2-selfplay-dataset/report.json",
     "architecture_v2_value_quality": "experiments/issue-143/v2-value-quality/value-head.json",
     "architecture_v2_strength": "experiments/issue-143/v2-strength/evaluation.json",
     "architecture_v1_matched_1k": "experiments/issue-128/matched-1k/report.json",
@@ -15,6 +16,7 @@
     "seed": 1289000,
     "setting": "standard-20",
     "simulations": 20,
+    "exploration": 1.4142135623730951,
     "rollout_limit": 4,
     "progressive_widening_constant": 1.5,
     "progressive_widening_exponent": 0.5,
@@ -65,9 +67,31 @@
       "predictions": 82
     }
   },
+  "architecture_v1_value_context": {
+    "validation_positions": 3626,
+    "validation_mse": 0.4239413336304218
+  },
+  "selfplay_search_protocols": {
+    "architecture_v1_matched": {
+      "simulations": 64,
+      "exploration": 0.7,
+      "rollout_limit": 4,
+      "progressive_widening_constant": 3.0,
+      "progressive_widening_exponent": 0.5
+    },
+    "architecture_v2": {
+      "simulations": 100,
+      "exploration": 1.4142135623730951,
+      "rollout_limit": 4,
+      "progressive_widening_constant": 1.5,
+      "progressive_widening_exponent": 0.5
+    },
+    "matched": false
+  },
   "comparison_limits": [
     "The architecture-v1 value audit used a different checkpoint and probe dataset, so its 0.4239 validation MSE is context rather than a controlled head-width comparison.",
-    "Architecture-v1 matched candidates used 1,000- and 5,000-game datasets; the first fresh architecture-v2 lineage used 100 games, so the run does not isolate head width as the sole causal variable."
+    "Architecture-v1 matched candidates used 1,000- and 5,000-game datasets; the first fresh architecture-v2 lineage used 100 games, so the run does not isolate head width as the sole causal variable.",
+    "The training datasets were generated with different self-play search contracts: architecture-v1 used 64 simulations, exploration 0.7, and progressive widening 3.0/0.5, while architecture-v2 used 100 simulations, exploration sqrt(2), and progressive widening 1.5/0.5. Evaluation search was matched, but this training-data mismatch confounds any attribution to head width."
   ],
   "decision": {
     "material_value_quality_improvement": false,
@@ -83,7 +107,7 @@
     "next_experiment": "Improve or enlarge bootstrap teacher/search data under a frozen comparison contract, and require held-out value diagnostics plus paired strength gates before attributing gains to head capacity."
   },
   "verification": {
-    "full_test_suite": "498 passed",
+    "full_test_suite": "502 passed",
     "compileall": "passed",
     "json_validation": "passed",
     "cited_artifact_regression_cross_check": "passed",

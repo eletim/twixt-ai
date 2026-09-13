@@ -13,7 +13,10 @@ rollout limit, progressive-widening constant `1.5` and exponent `0.5`, with
 policy/value guidance on the 10x10 encoding-v1 Mini board. CUDA execution used
 two game threads and shared inference batches of up to 16 positions with a
 0.002-second maximum wait; these execution settings did not alter search
-semantics.
+semantics. These are the Mini generation defaults, but they are not the Issue
+128 matched-baseline self-play contract (`64` simulations, exploration `0.7`,
+and widening `3.0/0.5`); that difference is retained as a comparison limit in
+the final report rather than rewriting this completed experiment's lineage.
 
 All 100 games completed without failure and produced 4,702 positions: 4,371
 training examples and 331 validation examples. The SHA-256 of

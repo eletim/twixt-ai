@@ -39,6 +39,12 @@ from .mini_experiment import (
     MiniTrainingExperimentConfig,
     run_mini_training_experiment,
 )
+from .selfplay_dataset import (
+    SELFPLAY_DATASET_FORMAT,
+    SELFPLAY_DATASET_VERSION,
+    MiniSelfplayDatasetConfig,
+    run_mini_selfplay_dataset,
+)
 from .trainer import (
     TRAINING_FORMAT,
     TRAINING_VERSION,
@@ -68,6 +74,8 @@ __all__ = [
     "MATCHED_ENCODING_TRAINING_FORMAT",
     "MATCHED_ENCODING_TRAINING_VERSION",
     "PROBE_SET",
+    "SELFPLAY_DATASET_FORMAT",
+    "SELFPLAY_DATASET_VERSION",
     "TRAINING_FORMAT",
     "TRAINING_VERSION",
     "VALUE_DIAGNOSTICS_FORMAT",
@@ -78,6 +86,7 @@ __all__ = [
     "EpochMetrics",
     "MatchedEncodingTrainingConfig",
     "MiniGenerationConfig",
+    "MiniSelfplayDatasetConfig",
     "MiniTrainingExperimentConfig",
     "Shard",
     "TrainingConfig",
@@ -91,5 +100,6 @@ __all__ = [
     "run_matched_encoding_training",
     "run_mini_training_experiment",
     "run_mini_training_generations",
+    "run_mini_selfplay_dataset",
     "train_model",
 ]

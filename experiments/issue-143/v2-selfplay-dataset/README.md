@@ -27,3 +27,17 @@ dataset split configuration, checkpoint identity, and full MCTS configuration.
 self-play summary, inference statistics, and policy/value target diagnostics.
 The source games and dataset shards are checked in so the manifest and counts
 can be independently verified.
+
+Reproduce the artifact from a source checkout with PyTorch 2.8.0+cu128 and an
+available CUDA device, targeting an absent or empty output directory:
+
+```bash
+PYTHONHASHSEED=0 PYTHONPATH="$PWD/src" \
+  python3 -m twixt_ai.training.selfplay_dataset_cli \
+  --champion experiments/issue-143/architecture-v2-bootstrap/champion.pt \
+  --output-dir /tmp/issue-143-v2-selfplay-dataset \
+  --seed 143100 \
+  --split-seed issue-143-v2-143100 \
+  --workflow-label issue-143-v2-selfplay-dataset \
+  --device cuda
+```

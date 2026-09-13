@@ -29,6 +29,13 @@ validates that compatibility metadata before constructing the model and
 loading weights. A change to tensor semantics or model structure therefore
 requires a version change rather than silently loading incompatible weights.
 
+Architecture version 2 is structurally incompatible with every version-1
+checkpoint, including the committed Mini champion lineage through Issue 128.
+Those checkpoints remain historical evidence, but current loaders reject them
+and they cannot be passed to `--initial-checkpoint` or `--initial-champion`.
+Further training under the widened heads must begin from a newly bootstrapped
+version-2 champion rather than warm-starting that lineage.
+
 ## Mini Twixt baseline
 
 `MINI_POLICY_VALUE_CONFIG` is the explicit default 10x10 baseline. Issue 77

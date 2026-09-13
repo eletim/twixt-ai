@@ -1,0 +1,73 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "champion_sha256": "fd5a9ee7dcd6cd12af8429ab0370b858c5271f2a71afd20956a36ea21db3bb87",
+      "mcts": {
+        "exploration": 1.4142135623730951,
+        "guidance": "policy-value",
+        "progressive_widening_constant": 1.5,
+        "progressive_widening_exponent": 0.5,
+        "rollout_limit": 4,
+        "simulations": 100
+      },
+      "workflow": "issue-151-v2-scale-1k"
+    },
+    "shard_size": 10000,
+    "split_seed": "issue-143-v2-143100",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 47561,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 1000,
+  "splits": {
+    "train": {
+      "examples": 43492,
+      "shards": [
+        {
+          "examples": 10000,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "bb784ff48f2193ec4a64f6273919fa1b633bc449c0fb249486f3eaf67b3088f9"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00001.jsonl",
+          "sha256": "29f804de7dff87c9ddf945e8e96b03f3bc72d7eddb370c61ae229a363f7a98b7"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00002.jsonl",
+          "sha256": "7c6dfa910464f52cdd4ac7c541b2ec65b06c7435783038d5c9e7acdc19edc610"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00003.jsonl",
+          "sha256": "1eece93280c8eb9b4f706b9373c0e741bde74452583e42868d10a4d534f0cc61"
+        },
+        {
+          "examples": 3492,
+          "path": "train/shard-00004.jsonl",
+          "sha256": "90208c74368c93bf7e375a8a262c8c7fafd09d07da42fc4a647d3ee44f5a5671"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 4069,
+      "shards": [
+        {
+          "examples": 4069,
+          "path": "validation/shard-00000.jsonl",
+          "sha256": "845a527da92d8c18d0ccb588b5f8c5cfdf4653337848cf4d538954d6d8997d22"
+        }
+      ]
+    }
+  },
+  "version": 1
+}

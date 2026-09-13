@@ -1,0 +1,113 @@
+{
+  "baseline": {
+    "issue": 143,
+    "selfplay_report": "experiments/issue-143/v2-selfplay-dataset/report.json",
+    "training_summary": "experiments/issue-143/v2-candidate-cuda/summary.json",
+    "value_diagnostics": "experiments/issue-143/v2-value-quality/value-head.json",
+    "strength_evaluation": "experiments/issue-143/v2-strength/evaluation.json"
+  },
+  "dataset": {
+    "shard_size": 10000,
+    "split_seed": "issue-143-v2-143100",
+    "validation_fraction": 0.1
+  },
+  "evaluation": {
+    "baselines": [
+      "matched-non-neural-mcts",
+      "heuristic-search"
+    ],
+    "games_per_matchup": 40,
+    "guidance_modes": [
+      "policy-only",
+      "value-only",
+      "policy-value"
+    ],
+    "heuristic_search": {
+      "depth": 1,
+      "node_budget": 10000
+    },
+    "paired_role_swaps": true,
+    "rollout_limit": 4,
+    "search": {
+      "exploration": 1.4142135623730951,
+      "name": "standard-20",
+      "progressive_widening_constant": 1.5,
+      "progressive_widening_exponent": 0.5,
+      "simulations": 20
+    },
+    "seed": 1289000
+  },
+  "format": "twixt-ai-issue-151-scale-stage-config",
+  "model": {
+    "architecture_name": "twixt-resnet-policy-value",
+    "architecture_version": 2,
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "encoding": {
+      "planes": 22,
+      "version": 1
+    },
+    "policy_head": [
+      800,
+      256,
+      256,
+      100
+    ],
+    "residual_blocks": 1,
+    "trunk_channels": 8,
+    "value_head": [
+      800,
+      256,
+      256,
+      1,
+      "tanh"
+    ]
+  },
+  "selfplay": {
+    "execution": {
+      "device": "cuda",
+      "inference_batch_size": 16,
+      "inference_max_wait_seconds": 0.002,
+      "worker_mode": "thread",
+      "workers": 2
+    },
+    "games": 1000,
+    "search": {
+      "exploration": 1.4142135623730951,
+      "guidance": "policy-value",
+      "progressive_widening_constant": 1.5,
+      "progressive_widening_exponent": 0.5,
+      "rollout_limit": 4,
+      "simulations": 100
+    },
+    "seed": 143100,
+    "teacher_checkpoint": "experiments/issue-143/architecture-v2-bootstrap/champion.pt",
+    "teacher_sha256": "fd5a9ee7dcd6cd12af8429ab0370b858c5271f2a71afd20956a36ea21db3bb87"
+  },
+  "stage": {
+    "games": 1000,
+    "name": "1k"
+  },
+  "training": {
+    "batch_size": 128,
+    "device": "cuda",
+    "epochs": 20,
+    "learning_rate": 0.001,
+    "optimizer": "adamw",
+    "scheduler": "none",
+    "seed": 143200,
+    "selection_metric": "value",
+    "weight_decay": 0.0001
+  },
+  "value_diagnostics": {
+    "batch_size": 512,
+    "calibration_bins": 10,
+    "confidence_bins": 5,
+    "device": "cpu",
+    "difficulty_bins": 3,
+    "ply_bucket_size": 16
+  },
+  "version": 1
+}

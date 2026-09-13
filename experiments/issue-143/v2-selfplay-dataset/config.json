@@ -1,0 +1,39 @@
+{
+  "resolved_config": {
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "dataset": {
+      "shard_size": 10000,
+      "validation_fraction": 0.1
+    },
+    "execution": {
+      "device": {
+        "cuda_available": true,
+        "cuda_runtime": "12.8",
+        "gpu_name": "NVIDIA GeForce RTX 4060",
+        "pytorch_version": "2.8.0+cu128",
+        "requested_device": "cuda",
+        "resolved_device": "cuda"
+      },
+      "inference_batch_size": 16,
+      "inference_max_wait_seconds": 0.002,
+      "worker_mode": "thread",
+      "workers": 2
+    },
+    "games": 100,
+    "search": {
+      "exploration": 1.4142135623730951,
+      "guidance": "policy-value",
+      "progressive_widening_constant": 1.5,
+      "progressive_widening_exponent": 0.5,
+      "rollout_limit": 4,
+      "simulations": 100
+    }
+  },
+  "seeds": {
+    "dataset_split": "issue-143-v2-143100",
+    "selfplay": 143100
+  }
+}

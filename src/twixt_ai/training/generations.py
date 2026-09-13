@@ -72,7 +72,9 @@ class MiniGenerationConfig:
     shard_size: int = 10_000
     promotion_win_rate: float = 0.55
     seed: int = 590_100
+    evaluation_seed: int | None = None
     device: str = "auto"
+    artifact_uri: str | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -103,10 +105,19 @@ class MiniGenerationConfig:
             )
         if isinstance(self.seed, bool) or not isinstance(self.seed, int):
             raise TypeError("seed must be an integer")
+        if self.evaluation_seed is not None and (
+            isinstance(self.evaluation_seed, bool)
+            or not isinstance(self.evaluation_seed, int)
+        ):
+            raise TypeError("evaluation_seed must be an integer or None")
         if not isinstance(self.device, str):
             raise TypeError("device must be a string")
         if self.device not in {"cpu", "cuda", "auto"}:
             raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
+        if self.artifact_uri is not None and (
+            not isinstance(self.artifact_uri, str) or not self.artifact_uri.strip()
+        ):
+            raise ValueError("artifact_uri must be a non-empty string or None")
         for name in ("learning_rate", "weight_decay"):
             value = getattr(self, name)
             if (
@@ -176,10 +187,18 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _policy_target_quality(
+def _inventory_sha256(
+    categories: dict[str, object], files: int, bytes_: int
+) -> str:
+    payload = {"categories": categories, "files": files, "bytes": bytes_}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _target_distributions(
     dataset_root: Path, manifest: dict[str, object]
 ) -> dict[str, object]:
-    """Summarize the search distributions actually consumed by training."""
+    """Summarize the policy and value targets actually consumed by training."""
 
     supports: dict[int, int] = {}
     examples = 0
@@ -187,6 +206,7 @@ def _policy_target_quality(
     entropy_total = 0.0
     normalized_entropy_total = 0.0
     maximum_probability_total = 0.0
+    outcomes: dict[int, int] = {}
     splits = manifest.get("splits")
     if not isinstance(splits, dict):
         raise ValueError("dataset manifest has no splits object")
@@ -208,6 +228,14 @@ def _policy_target_quality(
                     policy = example.get("policy")
                     if not isinstance(policy, list) or not policy:
                         raise ValueError("dataset example is missing its policy target")
+                    outcome = example.get("outcome")
+                    if (
+                        isinstance(outcome, bool)
+                        or not isinstance(outcome, (int, float))
+                        or outcome not in (-1, 0, 1)
+                    ):
+                        raise ValueError("dataset example has an invalid value target")
+                    outcomes[int(outcome)] = outcomes.get(int(outcome), 0) + 1
                     probabilities = [float(item["probability"]) for item in policy]
                     if any(
                         value <= 0 or not math.isfinite(value)
@@ -229,16 +257,44 @@ def _policy_target_quality(
     if not examples:
         raise ValueError("dataset contains no policy targets")
     return {
-        "examples": examples,
-        "support": {
-            "mean": support_total / examples,
-            "minimum": min(supports),
-            "maximum": max(supports),
-            "histogram": {str(key): supports[key] for key in sorted(supports)},
+        "policy": {
+            "examples": examples,
+            "support": {
+                "mean": support_total / examples,
+                "minimum": min(supports),
+                "maximum": max(supports),
+                "histogram": {str(key): supports[key] for key in sorted(supports)},
+            },
+            "entropy_mean_nats": entropy_total / examples,
+            "normalized_entropy_mean": normalized_entropy_total / examples,
+            "maximum_probability_mean": maximum_probability_total / examples,
         },
-        "entropy_mean_nats": entropy_total / examples,
-        "normalized_entropy_mean": normalized_entropy_total / examples,
-        "maximum_probability_mean": maximum_probability_total / examples,
+        "value": {
+            "examples": examples,
+            "counts": {str(key): outcomes.get(key, 0) for key in (-1, 0, 1)},
+            "fractions": {
+                str(key): outcomes.get(key, 0) / examples for key in (-1, 0, 1)
+            },
+        },
+    }
+
+
+def _artifact_inventory(path: Path, root: Path) -> dict[str, object]:
+    """Return a verifiable inventory for one retained artifact subtree."""
+
+    files = sorted(item for item in path.rglob("*") if item.is_file())
+    objects = [
+        {
+            "path": str(item.relative_to(root)),
+            "sha256": _sha256(item),
+            "bytes": item.stat().st_size,
+        }
+        for item in files
+    ]
+    return {
+        "files": len(files),
+        "bytes": sum(item["bytes"] for item in objects),
+        "objects": objects,
     }
 
 
@@ -472,6 +528,11 @@ def run_mini_training_generations(
         generation_root = root / f"generation-{number:04d}"
         generation_root.mkdir()
         champion_before = champion
+        evaluation_seed = (
+            config.evaluation_seed
+            if config.evaluation_seed is not None
+            else config.seed + number * 10 + 2
+        )
         generation_started = perf_counter()
         generation: dict[str, Any] = {
             "generation": number,
@@ -500,6 +561,8 @@ def run_mini_training_generations(
                 "weight_decay": config.weight_decay,
                 "selection_metric": config.selection_metric,
                 "promotion_win_rate": config.promotion_win_rate,
+                "evaluation_seed": evaluation_seed,
+                "artifact_uri": config.artifact_uri,
                 "device": device.to_dict(),
                 "worker_mode": (
                     "thread" if device.resolved_device == "cuda" else "process"
@@ -509,7 +572,7 @@ def run_mini_training_generations(
                 "selfplay": config.seed + number * 10,
                 "dataset_split": f"issue-59-{config.seed}-{number}",
                 "training": config.seed + number * 10 + 1,
-                "evaluation": config.seed + number * 10 + 2,
+                "evaluation": evaluation_seed,
             },
         }
         generations.append(generation)
@@ -536,6 +599,10 @@ def run_mini_training_generations(
             generation["selfplay"] = {
                 "runtime_seconds": runtime_seconds,
                 "games_per_hour": completed_games / runtime_seconds * 3600.0,
+                "summary_sha256": (
+                    _sha256(selfplay_root / "summary.json")
+                    if (selfplay_root / "summary.json").is_file() else None
+                ),
                 "device": device.to_dict(),
                 "inference": inference,
                 "summary": batch.to_dict(),
@@ -577,6 +644,9 @@ def run_mini_training_generations(
             )
             if not dataset.train_examples:
                 raise ValueError("training split must contain at least one example")
+            target_distributions = _target_distributions(
+                generation_root / "dataset", dataset.to_dict()
+            )
             generation["dataset"] = {
                 "runtime_seconds": perf_counter() - stage_started,
                 "source_generations": list(
@@ -586,9 +656,10 @@ def run_mini_training_generations(
                 "manifest_sha256": _sha256(
                     generation_root / "dataset" / "manifest.json"
                 ),
-                "policy_target_quality": _policy_target_quality(
-                    generation_root / "dataset", dataset.to_dict()
-                ),
+                # Preserve the original field for existing consumers while
+                # exposing both target families under one scaling-report key.
+                "policy_target_quality": target_distributions["policy"],
+                "target_distributions": target_distributions,
             }
             _write_json(generation_root / "report.json", generation)
 
@@ -625,11 +696,18 @@ def run_mini_training_generations(
                 champion_before,
                 candidate,
                 config,
-                config.seed + number * 10 + 2,
+                evaluation_seed,
                 device,
             )
             evaluation["runtime_seconds"] = perf_counter() - stage_started
             _write_json(generation_root / "evaluation.json", evaluation)
+            evaluation_artifact = {
+                "path": str(generation_root / "evaluation.json"),
+                "sha256": _sha256(generation_root / "evaluation.json"),
+                "bytes": (generation_root / "evaluation.json").stat().st_size,
+                "opponent": "parent champion",
+            }
+            generation["evaluation_artifacts"] = [evaluation_artifact]
             promoted = evaluation["promotion"]["promoted"]
             if promoted:
                 champion = candidate
@@ -638,6 +716,49 @@ def run_mini_training_generations(
             generation["champion_after"] = _checkpoint(champion)
             generation["status"] = "completed"
             generation["runtime_seconds"] = perf_counter() - generation_started
+            inventory = {
+                "selfplay": _artifact_inventory(
+                    generation_root / "selfplay", generation_root
+                ),
+                "dataset": _artifact_inventory(
+                    generation_root / "dataset", generation_root
+                ),
+                "training": _artifact_inventory(
+                    generation_root / "candidate", generation_root
+                ),
+                "evaluation": {
+                    "files": 1,
+                    "bytes": evaluation_artifact["bytes"],
+                    "objects": [{
+                        "path": "evaluation.json",
+                        "sha256": evaluation_artifact["sha256"],
+                        "bytes": evaluation_artifact["bytes"],
+                    }],
+                },
+            }
+            retained_files = sum(item["files"] for item in inventory.values())
+            retained_bytes = sum(item["bytes"] for item in inventory.values())
+            generation["retention_manifest"] = {
+                "format": "twixt-ai-artifact-retention-manifest",
+                "version": 1,
+                "external_uri": config.artifact_uri,
+                "inventory_complete": True,
+                "inventory_sha256": _inventory_sha256(
+                    inventory, retained_files, retained_bytes
+                ),
+                "storage_attestation": None,
+                "categories": inventory,
+                "files": retained_files,
+                "bytes": retained_bytes,
+            }
+            generation["artifact_storage"] = {
+                **{
+                    name: {"files": value["files"], "bytes": value["bytes"]}
+                    for name, value in inventory.items()
+                },
+                "files": generation["retention_manifest"]["files"],
+                "bytes": generation["retention_manifest"]["bytes"],
+            }
             lineage.append({
                 "generation": number,
                 "parent_sha256": _sha256(champion_before),

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from twixt_ai.game import (
@@ -164,16 +164,150 @@ def _loss_summary(training: object) -> dict[str, Any] | None:
     rows = [row for row in history if isinstance(row, Mapping)]
     if not rows:
         return None
-    best = min(
-        rows,
-        key=lambda row: float("inf")
-        if row.get("validation_loss") is None else row["validation_loss"],
+    config = summary.get("config")
+    selection_metric = (
+        config.get("selection_metric", "total")
+        if isinstance(config, Mapping) else "total"
+    )
+    best_epoch = summary.get("best_epoch")
+    best_loss = summary.get("best_loss")
+    selected = (
+        {
+            "epoch": best_epoch,
+            "loss": best_loss,
+            "metric": selection_metric,
+        }
+        if isinstance(best_epoch, int) and isinstance(best_loss, (int, float))
+        else None
     )
     return {
         "epochs": len(rows),
         "first": dict(rows[0]),
         "last": dict(rows[-1]),
-        "best_validation": dict(best) if best.get("validation_loss") is not None else None,
+        "selected_checkpoint": selected,
+    }
+
+
+def _dataset_shards(manifest: object) -> list[dict[str, Any]]:
+    if not isinstance(manifest, Mapping):
+        return []
+    records: list[dict[str, Any]] = []
+    splits = manifest.get("splits")
+    if not isinstance(splits, Mapping):
+        return records
+    for split in ("train", "validation"):
+        value = splits.get(split)
+        shards = value.get("shards") if isinstance(value, Mapping) else None
+        if not isinstance(shards, list):
+            continue
+        for shard in shards:
+            if isinstance(shard, Mapping):
+                records.append({"split": split, **dict(shard)})
+    return records
+
+
+def _valid_retention_inventory(
+    categories: object, files: object, bytes_: object
+) -> bool:
+    required_categories = {"selfplay", "dataset", "training", "evaluation"}
+    if not isinstance(categories, Mapping) or set(categories) != required_categories:
+        return False
+    if (
+        isinstance(files, bool)
+        or not isinstance(files, int)
+        or isinstance(bytes_, bool)
+        or not isinstance(bytes_, int)
+    ):
+        return False
+
+    seen_paths: set[str] = set()
+    counted_files = 0
+    counted_bytes = 0
+    for category in required_categories:
+        details = categories[category]
+        if not isinstance(details, Mapping):
+            return False
+        category_files = details.get("files")
+        category_bytes = details.get("bytes")
+        objects = details.get("objects")
+        if (
+            isinstance(category_files, bool)
+            or not isinstance(category_files, int)
+            or category_files < 1
+            or isinstance(category_bytes, bool)
+            or not isinstance(category_bytes, int)
+            or category_bytes < 0
+            or not isinstance(objects, list)
+            or category_files != len(objects)
+        ):
+            return False
+        object_bytes = 0
+        for item in objects:
+            if not isinstance(item, Mapping):
+                return False
+            path = item.get("path")
+            sha256 = item.get("sha256")
+            size = item.get("bytes")
+            if not isinstance(path, str) or not path or "\\" in path:
+                return False
+            parsed = PurePosixPath(path)
+            if parsed.is_absolute() or str(parsed) != path or ".." in parsed.parts:
+                return False
+            if path in seen_paths:
+                return False
+            if (
+                not isinstance(sha256, str)
+                or len(sha256) != 64
+                or any(character not in "0123456789abcdef" for character in sha256)
+                or isinstance(size, bool)
+                or not isinstance(size, int)
+                or size < 0
+            ):
+                return False
+            seen_paths.add(path)
+            object_bytes += size
+        if object_bytes != category_bytes:
+            return False
+        counted_files += category_files
+        counted_bytes += category_bytes
+    return counted_files == files and counted_bytes == bytes_
+
+
+def _retention_status(retention: Mapping[str, Any]) -> dict[str, bool]:
+    categories = retention.get("categories")
+    files = retention.get("files")
+    bytes_ = retention.get("bytes")
+    if not _valid_retention_inventory(categories, files, bytes_):
+        inventory_verified = False
+    else:
+        payload = {"categories": categories, "files": files, "bytes": bytes_}
+        encoded = json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ).encode()
+        inventory_verified = hashlib.sha256(encoded).hexdigest() == retention.get(
+            "inventory_sha256"
+        )
+    inventory_complete = (
+        retention.get("inventory_complete") is True and inventory_verified
+    )
+    external_uri = retention.get("external_uri")
+    attestation = retention.get("storage_attestation")
+    storage_attested = (
+        isinstance(external_uri, str)
+        and bool(external_uri.strip())
+        and isinstance(attestation, Mapping)
+        and attestation.get("verified") is True
+        and attestation.get("external_uri") == external_uri
+        and attestation.get("inventory_sha256") == retention.get("inventory_sha256")
+        and isinstance(attestation.get("verified_at"), str)
+        and bool(attestation.get("verified_at"))
+        and isinstance(attestation.get("verifier"), str)
+        and bool(attestation.get("verifier"))
+    )
+    return {
+        "inventory_complete": inventory_complete,
+        "storage_attested": storage_attested,
+        "pruning_ready": inventory_complete and storage_attested,
     }
 
 
@@ -191,8 +325,53 @@ def _generation_summary(generation: object) -> dict[str, Any]:
 
     dataset = generation.get("dataset")
     manifest = dataset.get("manifest") if isinstance(dataset, Mapping) else None
+    training = generation.get("training")
+    training_summary = (
+        training.get("summary") if isinstance(training, Mapping) else None
+    )
+    performance = (
+        training_summary.get("performance")
+        if isinstance(training_summary, Mapping) else None
+    )
+    candidate = training.get("candidate") if isinstance(training, Mapping) else None
+    teacher = generation.get("champion_before")
     evaluation = generation.get("evaluation")
     promotion = evaluation.get("promotion") if isinstance(evaluation, Mapping) else None
+    raw_evaluations = generation.get("evaluation_artifacts")
+    if isinstance(raw_evaluations, list):
+        evaluation_artifacts = [
+            dict(item) for item in raw_evaluations if isinstance(item, Mapping)
+        ]
+    else:
+        legacy_evaluation = generation.get("evaluation_artifact")
+        evaluation_artifacts = (
+            [dict(legacy_evaluation)]
+            if isinstance(legacy_evaluation, Mapping) else []
+        )
+    raw_fixed_opponents = generation.get("fixed_opponent_evaluations")
+    fixed_opponent_evaluations = (
+        [
+            dict(item)
+            for item in raw_fixed_opponents
+            if isinstance(item, Mapping)
+        ]
+        if isinstance(raw_fixed_opponents, list) else []
+    )
+    target_distributions = (
+        dataset.get("target_distributions") if isinstance(dataset, Mapping) else None
+    )
+    # Version-1 generation reports before the scaling contract recorded only
+    # the policy half. Keep them inspectable without pretending a value
+    # distribution was measured.
+    if not isinstance(target_distributions, Mapping) and isinstance(dataset, Mapping):
+        policy = dataset.get("policy_target_quality")
+        if isinstance(policy, Mapping):
+            target_distributions = {"policy": dict(policy), "value": None}
+    storage = generation.get("artifact_storage")
+    retention = generation.get("retention_manifest")
+    retention_summary = dict(retention) if isinstance(retention, Mapping) else None
+    if retention_summary is not None:
+        retention_summary["status"] = _retention_status(retention_summary)
     return {
         "generation": generation.get("generation"),
         "status": generation.get("status"),
@@ -216,12 +395,48 @@ def _generation_summary(generation: object) -> dict[str, Any]:
             "source_games": manifest.get("source_games")
             if isinstance(manifest, Mapping) else None,
             "examples": manifest.get("examples") if isinstance(manifest, Mapping) else None,
+            "manifest_sha256": dataset.get("manifest_sha256")
+            if isinstance(dataset, Mapping) else None,
+            "target_distributions": dict(target_distributions)
+            if isinstance(target_distributions, Mapping) else None,
+            "shards": _dataset_shards(manifest),
         },
-        "losses": _loss_summary(generation.get("training")),
+        "losses": _loss_summary(training),
+        "timing_seconds": {
+            "total": generation.get("runtime_seconds"),
+            "selfplay": seconds,
+            "dataset": dataset.get("runtime_seconds")
+            if isinstance(dataset, Mapping) else None,
+            "training": training.get("runtime_seconds")
+            if isinstance(training, Mapping) else None,
+            "evaluation": evaluation.get("runtime_seconds")
+            if isinstance(evaluation, Mapping) else None,
+        },
+        "throughput": {
+            "selfplay_games_per_hour": throughput,
+            "training_examples_per_second": performance.get("examples_per_second")
+            if isinstance(performance, Mapping) else None,
+        },
+        "hashes": {
+            "teacher": dict(teacher) if isinstance(teacher, Mapping) else None,
+            "selfplay_summary_sha256": selfplay.get("summary_sha256")
+            if isinstance(selfplay, Mapping) else None,
+            "dataset_manifest_sha256": dataset.get("manifest_sha256")
+            if isinstance(dataset, Mapping) else None,
+            "candidate_checkpoint_sha256": candidate.get("sha256")
+            if isinstance(candidate, Mapping) else None,
+            "dataset_shards": _dataset_shards(manifest),
+            "evaluation_artifacts": evaluation_artifacts,
+            "evaluation_sha256": evaluation_artifacts[0].get("sha256")
+            if evaluation_artifacts else None,
+        },
+        "artifact_storage": dict(storage) if isinstance(storage, Mapping) else None,
+        "retention_manifest": retention_summary,
         "evaluation": (
             {"comparison": "candidate vs parent champion", **dict(promotion)}
             if isinstance(promotion, Mapping) else None
         ),
+        "fixed_opponent_evaluations": fixed_opponent_evaluations,
         "champion_change": (
             "updated to candidate"
             if isinstance(promotion, Mapping) and promotion.get("promoted") is True
@@ -303,9 +518,9 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
     lines = [
         "# Mini Twixt training inspection",
         "",
-        f"Source: `{source['path']}`  ",
-        f"Source SHA-256: `{source['sha256']}`  ",
-        f"Run status: **{source.get('status', 'unknown')}**  ",
+        f"Source: `{source['path']}`",
+        f"Source SHA-256: `{source['sha256']}`",
+        f"Run status: **{source.get('status', 'unknown')}**",
         f"Probe set: `{report['probe_set']}`",
         "",
         "## Exact run configuration",
@@ -364,10 +579,36 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             f"{generation['decision'] or '—'} | {budget_text} |"
         )
 
+    fixed_opponents = [
+        (generation["generation"], evaluation)
+        for generation in report["generations"]
+        for evaluation in generation["fixed_opponent_evaluations"]
+    ]
+    if fixed_opponents:
+        lines.extend([
+            "", "## Fixed-opponent evaluation results", "",
+            "| Gen | Opponent | Candidate W-L-D | Candidate win rate | "
+            "Games | Paired role swaps | Seed |",
+            "| ---: | --- | ---: | ---: | ---: | --- | ---: |",
+        ])
+        for generation, evaluation in fixed_opponents:
+            win_rate = evaluation.get("candidate_win_rate")
+            lines.append(
+                f"| {generation} | {evaluation.get('opponent', '—')} | "
+                f"{_number(evaluation.get('candidate_wins'))}-"
+                f"{_number(evaluation.get('candidate_losses'))}-"
+                f"{_number(evaluation.get('candidate_draws'))} | "
+                f"{_number(None if win_rate is None else 100 * win_rate, 1)}% | "
+                f"{_number(evaluation.get('games'))} | "
+                f"{'yes' if evaluation.get('paired_role_swaps') is True else 'no'} | "
+                f"{_number(evaluation.get('seed'))} |"
+            )
+
     lines.extend([
         "", "## Training loss components", "",
         "| Gen | Train total | Train policy | Train value | Validation total | "
-        "Validation policy | Validation value | Best validation epoch/loss |",
+        "Validation policy | Validation value | Selected checkpoint epoch/loss "
+        "(metric) |",
         "| ---: | --- | --- | --- | --- | --- | --- | --- |",
     ])
     for generation in report["generations"]:
@@ -378,10 +619,11 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             )
             continue
         first, last = losses["first"], losses["last"]
-        best = losses["best_validation"]
-        best_text = (
-            "—" if best is None
-            else f"{best.get('epoch', '—')} / {_number(best.get('validation_loss'))}"
+        selected = losses["selected_checkpoint"]
+        selected_text = (
+            "—" if selected is None
+            else f"{selected.get('epoch', '—')} / "
+            f"{_number(selected.get('loss'), 6)} ({selected.get('metric', '—')})"
         )
         lines.append(
             f"| {generation['generation']} | {_change(first, last, 'train_loss')} | "
@@ -389,7 +631,137 @@ def render_mini_inspection_report(report: Mapping[str, Any]) -> str:
             f"{_change(first, last, 'train_value_loss')} | "
             f"{_change(first, last, 'validation_loss')} | "
             f"{_change(first, last, 'validation_policy_loss')} | "
-            f"{_change(first, last, 'validation_value_loss')} | {best_text} |"
+            f"{_change(first, last, 'validation_value_loss')} | {selected_text} |"
+        )
+
+    lines.extend([
+        "", "## Scaling evidence", "",
+        "| Gen | Total / self-play / dataset / training / evaluation seconds | "
+        "Training examples/s | Retained bytes (self-play / dataset / training / "
+        "evaluation) | Self-play / dataset / candidate / evaluation SHA-256 |",
+        "| ---: | --- | ---: | --- | --- |",
+    ])
+    for generation in report["generations"]:
+        timing = generation["timing_seconds"]
+        storage = generation["artifact_storage"] or {}
+        hashes = generation["hashes"]
+        lines.append(
+            f"| {generation['generation']} | "
+            f"{_number(timing['total'])} / {_number(timing['selfplay'])} / "
+            f"{_number(timing['dataset'])} / {_number(timing['training'])} / "
+            f"{_number(timing['evaluation'])} | "
+            f"{_number(generation['throughput']['training_examples_per_second'], 1)} | "
+            f"{_number(storage.get('bytes'))} "
+            f"({_number((storage.get('selfplay') or {}).get('bytes'))} / "
+            f"{_number((storage.get('dataset') or {}).get('bytes'))} / "
+            f"{_number((storage.get('training') or {}).get('bytes'))} / "
+            f"{_number((storage.get('evaluation') or {}).get('bytes'))}) | "
+            f"`{hashes['selfplay_summary_sha256'] or '—'}` / "
+            f"`{hashes['dataset_manifest_sha256'] or '—'}` / "
+            f"`{hashes['candidate_checkpoint_sha256'] or '—'}` / "
+            f"`{hashes['evaluation_sha256'] or '—'}` |"
+        )
+
+    lines.extend([
+        "", "## Artifact identities", "",
+        "| Gen | Role | Path | SHA-256 |",
+        "| ---: | --- | --- | --- |",
+    ])
+    for generation in report["generations"]:
+        hashes = generation["hashes"]
+        teacher = hashes["teacher"] or {}
+        lines.append(
+            f"| {generation['generation']} | teacher | `{teacher.get('path', '—')}` | "
+            f"`{teacher.get('sha256', '—')}` |"
+        )
+        lines.append(
+            f"| {generation['generation']} | self-play summary | `selfplay/summary.json` | "
+            f"`{hashes['selfplay_summary_sha256'] or '—'}` |"
+        )
+        lines.append(
+            f"| {generation['generation']} | dataset manifest | `dataset/manifest.json` | "
+            f"`{hashes['dataset_manifest_sha256'] or '—'}` |"
+        )
+        for shard in hashes["dataset_shards"]:
+            lines.append(
+                f"| {generation['generation']} | dataset shard ({shard['split']}) | "
+                f"`dataset/{shard.get('path', '—')}` | "
+                f"`{shard.get('sha256', '—')}` |"
+            )
+        for artifact in hashes["evaluation_artifacts"]:
+            lines.append(
+                f"| {generation['generation']} | evaluation: "
+                f"{artifact.get('opponent', 'unspecified opponent')} | "
+                f"`{artifact.get('path', '—')}` | `{artifact.get('sha256', '—')}` |"
+            )
+
+    lines.extend([
+        "", "## Retention manifests", "",
+        "| Gen | External URI | Inventory complete | Storage attested | "
+        "Pruning ready | Category | Files | Bytes |",
+        "| ---: | --- | --- | --- | --- | --- | ---: | ---: |",
+    ])
+    for generation in report["generations"]:
+        retention = generation["retention_manifest"]
+        if not retention:
+            lines.append(
+                f"| {generation['generation']} | — | no | no | no | "
+                "unavailable | — | — |"
+            )
+            continue
+        categories = retention.get("categories") or {}
+        status = retention["status"]
+        for category, details in categories.items():
+            lines.append(
+                f"| {generation['generation']} | "
+                f"`{retention.get('external_uri') or '—'}` | "
+                f"{'yes' if status['inventory_complete'] else 'no'} | "
+                f"{'yes' if status['storage_attested'] else 'no'} | "
+                f"{'yes' if status['pruning_ready'] else 'no'} | {category} | "
+                f"{_number(details.get('files'))} | {_number(details.get('bytes'))} |"
+            )
+
+    lines.extend([
+        "", "### Retained object inventory", "",
+        "| Gen | Category | Path | Bytes | SHA-256 |",
+        "| ---: | --- | --- | ---: | --- |",
+    ])
+    for generation in report["generations"]:
+        retention = generation["retention_manifest"] or {}
+        for category, details in (retention.get("categories") or {}).items():
+            for item in details.get("objects") or []:
+                lines.append(
+                    f"| {generation['generation']} | {category} | "
+                    f"`{item.get('path', '—')}` | {_number(item.get('bytes'))} | "
+                    f"`{item.get('sha256', '—')}` |"
+                )
+
+    lines.extend([
+        "", "## Training target distributions", "",
+        "| Gen | Policy support mean (min–max) | Mean max probability | "
+        "Mean entropy (nats) | Value counts (-1 / 0 / +1) |",
+        "| ---: | --- | ---: | ---: | --- |",
+    ])
+    for generation in report["generations"]:
+        targets = generation["dataset"]["target_distributions"] or {}
+        policy = targets.get("policy") or {}
+        support = policy.get("support") or {}
+        value = targets.get("value") or {}
+        counts = value.get("counts") or {}
+        support_text = "—"
+        if support:
+            support_text = (
+                f"{_number(support.get('mean'))} "
+                f"({_number(support.get('minimum'))}–{_number(support.get('maximum'))})"
+            )
+        value_text = "—" if not value else (
+            f"{_number(counts.get('-1'))} / {_number(counts.get('0'))} / "
+            f"{_number(counts.get('1'))}"
+        )
+        lines.append(
+            f"| {generation['generation']} | {support_text} | "
+            f"{_number(policy.get('maximum_probability_mean'))} | "
+            f"{_number(policy.get('entropy_mean_nats'))} | {value_text} |"
         )
 
     lines.extend(["", "## Fixed policy/value probes", ""])

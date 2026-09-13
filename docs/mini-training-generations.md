@@ -16,18 +16,33 @@ self-play, and requires a 55% candidate win rate. Seeds for every stage are
 derived from the recorded root seed. Set `PYTHONHASHSEED=0` so data ordering and
 the complete schedule are reproducible.
 
+Use `--evaluation-seed` when a protocol requires the same promotion schedule
+across otherwise independent runs. When omitted, the original per-generation
+derivation from `--seed` remains in effect. The resolved seed is recorded in
+both the generation's `seeds` and `resolved_config` objects.
+
 Self-play search strength can be changed independently of the fixed promotion
 evaluation with `--selfplay-exploration` and the two
 `--selfplay-progressive-widening-*` options. The generation report records the
-resolved search settings, dataset manifest SHA-256, policy-target support,
-entropy, and mean maximum probability. These diagnostics make it possible to
-reject a search configuration that plays strongly but emits nearly uniform
-training targets. `--selection-metric` controls whether candidate checkpoint
-selection uses combined policy/value loss or value loss.
+resolved search settings, self-play summary and dataset manifest SHA-256,
+policy-target support, entropy and mean maximum probability, and value-target
+counts/fractions. It also records per-stage wall time, self-play and training
+throughput, evaluation artifact identity, and retained file/byte totals. These
+diagnostics make it possible to reject a search configuration that plays
+strongly but emits nearly uniform or badly imbalanced training targets.
+`--selection-metric` controls whether candidate checkpoint selection uses
+combined policy/value loss or value loss.
 
 ## Run
 
-Start from the measured Issue 57 Mini checkpoint:
+The examples below record how the architecture-v1 lineage was run. The current
+architecture-v2 loader intentionally rejects the referenced Issue 57 checkpoint
+and all later champions through Issue 128 because the widened heads have
+different weights. To continue the workflow with current code, first bootstrap
+a fresh architecture-v2 champion and supply that checkpoint instead; do not use
+a pre-v2 checkpoint as `--initial-champion`.
+
+The historical lineage started from the measured Issue 57 Mini checkpoint:
 
 ```bash
 PYTHONHASHSEED=0 twixt-ai-mini-generations \
@@ -51,6 +66,15 @@ Output directories must be empty or absent. The workflow never overwrites or
 renames a champion checkpoint. A promoted candidate becomes the input path for
 the next generation; a rejected candidate remains under its generation
 directory.
+
+For large runs, pass `--artifact-uri` with the durable base location. The
+generation report then includes a retention manifest with categorized
+file/byte totals and a relative path, SHA-256, and byte size for every retained
+object. Generation records `inventory_complete` and a canonical inventory
+SHA-256, but never claims that an external transfer succeeded. After transfer,
+a separate storage verifier must add an attestation matching the external URI
+and inventory digest; inspection reports pruning readiness only when both the
+inventory and that attestation validate.
 
 ## Artifacts and recovery
 
@@ -76,8 +100,9 @@ twixt-ai-mini-report mini-generations --output mini-generations/report.md
 ```
 
 Omit `--output` to print the report. The command identifies the exact source
-report, complete configuration, checkpoint hashes and lineage; summarizes
-self-play throughput, dataset sizes, loss curves, search budgets,
+report, complete configuration, checkpoint and artifact hashes and lineage;
+summarizes stage timing, self-play/training throughput, dataset and retained
+storage sizes, policy/value target distributions, loss curves, search budgets,
 candidate-vs-parent promotion evaluations, and generation-over-generation
 champion changes; and evaluates
 every available checkpoint on the versioned `mini-fixed-positions-v1` probe

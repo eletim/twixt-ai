@@ -1,5 +1,11 @@
 """Policy/value training workflows and commands."""
 
+from .bootstrap import (
+    BOOTSTRAP_FORMAT,
+    BOOTSTRAP_VERSION,
+    DEFAULT_BOOTSTRAP_SEED,
+    bootstrap_mini_champion,
+)
 from .data import (
     DATASET_FORMAT,
     DATASET_VERSION,
@@ -49,6 +55,8 @@ from .value_diagnostics import (
 )
 
 __all__ = [
+    "BOOTSTRAP_FORMAT",
+    "BOOTSTRAP_VERSION",
     "DATASET_FORMAT",
     "DATASET_VERSION",
     "EXAMPLE_FORMAT",
@@ -66,6 +74,7 @@ __all__ = [
     "VALUE_DIAGNOSTICS_VERSION",
     "DatasetConfig",
     "DatasetSummary",
+    "DEFAULT_BOOTSTRAP_SEED",
     "EpochMetrics",
     "MatchedEncodingTrainingConfig",
     "MiniGenerationConfig",
@@ -75,6 +84,7 @@ __all__ = [
     "TrainingSummary",
     "ValueDiagnosticsConfig",
     "build_dataset",
+    "bootstrap_mini_champion",
     "build_mini_inspection_report",
     "diagnose_value_model",
     "render_mini_inspection_report",

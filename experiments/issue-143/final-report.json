@@ -1,0 +1,92 @@
+{
+  "format": "twixt-ai-issue-143-final-report",
+  "version": 1,
+  "architecture_question": "Did the widened architecture-v2 policy/value heads materially improve value quality and playing strength over the architecture-v1 Mini lineage?",
+  "source_artifacts": {
+    "architecture_v2_value_quality": "experiments/issue-143/v2-value-quality/value-head.json",
+    "architecture_v2_strength": "experiments/issue-143/v2-strength/evaluation.json",
+    "architecture_v1_matched_1k": "experiments/issue-128/matched-1k/report.json",
+    "architecture_v1_5k": "experiments/issue-128/5k/report.json",
+    "architecture_v1_value_context": "experiments/issue-125/diagnostics/generation-2-value-head.json"
+  },
+  "matched_strength_protocol": {
+    "games_per_matchup": 40,
+    "paired_role_swaps": true,
+    "seed": 1289000,
+    "setting": "standard-20",
+    "simulations": 20,
+    "rollout_limit": 4,
+    "progressive_widening_constant": 1.5,
+    "progressive_widening_exponent": 0.5,
+    "opponents": [
+      "matched-non-neural-mcts",
+      "heuristic-search"
+    ]
+  },
+  "architecture_v2_strength_wins_draws_losses": {
+    "policy-only": {
+      "matched-non-neural-mcts": [13, 8, 19],
+      "heuristic-search": [0, 0, 40]
+    },
+    "value-only": {
+      "matched-non-neural-mcts": [5, 6, 29],
+      "heuristic-search": [0, 0, 40]
+    },
+    "policy-value": {
+      "matched-non-neural-mcts": [4, 4, 32],
+      "heuristic-search": [0, 0, 40]
+    }
+  },
+  "architecture_v1_policy_value_strength_wins_draws_losses": {
+    "matched-1k": {
+      "matched-non-neural-mcts": [32, 4, 4],
+      "heuristic-search": [6, 0, 34]
+    },
+    "5k": {
+      "matched-non-neural-mcts": [34, 3, 3],
+      "heuristic-search": [14, 0, 26]
+    }
+  },
+  "architecture_v2_value_quality": {
+    "training_positions": 4371,
+    "training_mse": 0.1655371598882566,
+    "training_mae": 0.2568669396248353,
+    "validation_positions": 331,
+    "validation_source_games": 9,
+    "validation_draw_targets": 0,
+    "validation_mse": 0.803875350267938,
+    "validation_mae": 0.7125303785673981,
+    "validation_calibration_error": 0.0038868700916628446,
+    "validation_minus_training_mse": 0.6383381903796814,
+    "most_confident_signed_bins": {
+      "negative_calibration_error": -0.4146,
+      "positive_calibration_error": 0.2924,
+      "wrong_sign_predictions": 19,
+      "predictions": 82
+    }
+  },
+  "comparison_limits": [
+    "The architecture-v1 value audit used a different checkpoint and probe dataset, so its 0.4239 validation MSE is context rather than a controlled head-width comparison.",
+    "Architecture-v1 matched candidates used 1,000- and 5,000-game datasets; the first fresh architecture-v2 lineage used 100 games, so the run does not isolate head width as the sole causal variable."
+  ],
+  "decision": {
+    "material_value_quality_improvement": false,
+    "material_playing_strength_improvement": false,
+    "outcome": "negative",
+    "promote_candidate": false,
+    "continue_generation_from_candidate": false,
+    "conclusion": "The widened heads did not materially improve the realized architecture-v2 lineage. Held-out value error was high, value guidance weakened matched-MCTS play relative to policy-only guidance, and every v2 guidance mode lost all 40 games to the unchanged heuristic baseline."
+  },
+  "next_apparent_bottleneck": {
+    "name": "bootstrap self-play learning-signal quality and coverage, especially value-target generalization",
+    "evidence": "Fresh random-bootstrap self-play supplied only 100 games, 331 validation positions from nine held-out games, and no validation draws; the widened value head reached 0.1655 training MSE but 0.8039 validation MSE, while adding value guidance changed matched-MCTS play from 13-8-19 to 4-4-32.",
+    "next_experiment": "Improve or enlarge bootstrap teacher/search data under a frozen comparison contract, and require held-out value diagnostics plus paired strength gates before attributing gains to head capacity."
+  },
+  "verification": {
+    "full_test_suite": "498 passed",
+    "compileall": "passed",
+    "json_validation": "passed",
+    "cited_artifact_regression_cross_check": "passed",
+    "game_search_or_model_semantics_changed": false
+  }
+}

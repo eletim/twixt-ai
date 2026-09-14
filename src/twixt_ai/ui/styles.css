@@ -30,7 +30,7 @@ h1, .eyebrow, #status, #message, footer { margin: 0; }
 h1 { font: 700 clamp(2rem, 6vw, 3.5rem)/0.9 Georgia, serif; }
 .eyebrow { margin-bottom: 8px; color: #6d665d; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
 
-button, select {
+button, select, input, .button-link {
   border: 1px solid #4c4842;
   border-radius: 999px;
   padding: 10px 17px;
@@ -39,6 +39,9 @@ button, select {
   font: inherit;
   cursor: pointer;
 }
+
+.button-link { display: inline-block; text-decoration: none; }
+.header-actions { display: flex; align-items: center; gap: 9px; }
 
 button:hover { background: white; }
 button:disabled, select:disabled { cursor: wait; opacity: .55; }
@@ -60,6 +63,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .intersection:f
 .setup { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .setup label { display: grid; gap: 5px; color: #5c574f; font-size: .8rem; font-weight: 700; }
 .setup select { min-width: 150px; padding: 7px 30px 7px 11px; }
+.setup input { width: 110px; padding: 7px 11px; }
 .overlay-toggle { align-content: end; grid-template-columns: auto 1fr; align-items: center; }
 .overlay-toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: #307db8; }
 
@@ -103,6 +107,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .intersection:f
   text-anchor: middle;
 }
 .selected-move-overlay { fill: none; stroke: #f3c623; stroke-width: 3; }
+.last-move-overlay { fill: none; stroke: #fff8dc; stroke-width: 2; pointer-events: none; }
 .inspection {
   display: flex;
   flex-wrap: wrap;
@@ -116,6 +121,38 @@ button:focus-visible, select:focus-visible, input:focus-visible, .intersection:f
 }
 .inspection[hidden] { display: none; }
 
+.viewer-setup { display: grid; gap: 12px; }
+.viewer-setup[hidden] { display: none; }
+.viewer-actions, .artifact-loader, .replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+}
+.artifact-loader { padding-top: 12px; border-top: 1px solid #ddd4c7; }
+.artifact-loader label, .replay-controls label { display: grid; gap: 4px; color: #5c574f; font-size: .8rem; font-weight: 700; }
+.artifact-loader select { width: min(520px, 70vw); border-radius: 8px; padding: 7px 11px; }
+#search-settings { color: #6d665d; font-size: .82rem; }
+.replay-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #eee9df;
+  font-size: .88rem;
+}
+.replay-summary[hidden], .replay-controls[hidden], .candidate-table-wrap[hidden] { display: none; }
+.replay-summary .draw-warning { color: #9b2c27; font-weight: 800; }
+.replay-controls { margin-top: 12px; }
+.replay-controls button { min-width: 48px; padding: 7px 12px; }
+#move-counter { min-width: 110px; text-align: center; }
+.candidate-table-wrap { max-height: 240px; overflow: auto; margin-top: 10px; }
+.candidate-table-wrap table { width: 100%; border-collapse: collapse; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.candidate-table-wrap th, .candidate-table-wrap td { padding: 5px 9px; border-bottom: 1px solid #ddd4c7; text-align: right; }
+.candidate-table-wrap th:first-child, .candidate-table-wrap td:first-child { text-align: left; }
+
 #message { min-height: 1.4em; margin-top: 12px; color: #9b2c27; }
 footer { padding: 14px 4px 0; color: #5c574f; font-size: .9rem; }
 .red-key { color: #ad2824; font-weight: 700; }
@@ -124,6 +161,7 @@ footer { padding: 14px 4px 0; color: #5c574f; font-size: .9rem; }
 @media (max-width: 600px) {
   main { width: 100%; padding-top: 20px; }
   header { padding: 0 16px; }
+  .header-actions { align-items: stretch; flex-direction: column; }
   .game { border-radius: 0; border-left: 0; border-right: 0; padding-inline: 10px; }
   footer { padding-inline: 16px; }
 }

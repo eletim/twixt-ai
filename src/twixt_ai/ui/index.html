@@ -10,13 +10,16 @@
     <main>
       <header>
         <div>
-          <p class="eyebrow">Human vs AI</p>
+          <p id="eyebrow" class="eyebrow">Human vs AI</p>
           <h1>Twixt</h1>
         </div>
-        <button id="reset" type="button" disabled>New game</button>
+        <div class="header-actions">
+          <a id="mode-link" class="button-link" href="/viewer">AI vs AI Viewer</a>
+          <button id="reset" type="button" disabled>New game</button>
+        </div>
       </header>
       <section class="game" aria-labelledby="status">
-        <div id="setup" class="setup">
+        <div id="human-setup" class="setup">
           <label>Your side
             <select id="human-side" disabled>
               <option value="red">Red (first)</option>
@@ -34,11 +37,62 @@
             AI inspection
           </label>
         </div>
+        <div id="viewer-setup" class="viewer-setup" hidden>
+          <div class="setup">
+            <label>Red agent
+              <select id="red-agent" disabled></select>
+            </label>
+            <label>Red checkpoint
+              <select id="red-checkpoint" disabled></select>
+            </label>
+            <label>Black agent
+              <select id="black-agent" disabled></select>
+            </label>
+            <label>Black checkpoint
+              <select id="black-checkpoint" disabled></select>
+            </label>
+            <label>Seed
+              <input id="viewer-seed" type="number" value="1" step="1" disabled>
+            </label>
+          </div>
+          <div class="viewer-actions">
+            <button id="generate-game" type="button" disabled>Generate AI game</button>
+            <span id="search-settings"></span>
+          </div>
+          <div class="artifact-loader">
+            <label>Saved game artifact
+              <select id="artifact" disabled></select>
+            </label>
+            <button id="load-artifact" type="button" disabled>Load replay</button>
+          </div>
+        </div>
         <p id="status" role="status" aria-live="polite">Loading game…</p>
+        <div id="replay-summary" class="replay-summary" hidden></div>
         <div class="board-frame">
           <svg id="board" role="grid" aria-label="Twixt board"></svg>
         </div>
+        <div id="replay-controls" class="replay-controls" hidden>
+          <button id="replay-first" type="button" aria-label="First move">|&lt;</button>
+          <button id="replay-back" type="button" aria-label="Previous move">&lt;</button>
+          <button id="replay-play" type="button">Play</button>
+          <button id="replay-next" type="button" aria-label="Next move">&gt;</button>
+          <button id="replay-last" type="button" aria-label="Last move">&gt;|</button>
+          <strong id="move-counter">move 0 / 0</strong>
+          <label>Overlay
+            <select id="overlay-mode">
+              <option value="off">Off</option>
+              <option value="visits">Visit share</option>
+              <option value="prior">Prior</option>
+            </select>
+          </label>
+        </div>
         <aside id="inspection" class="inspection" aria-live="polite" hidden></aside>
+        <div id="candidate-table-wrap" class="candidate-table-wrap" hidden>
+          <table>
+            <thead><tr><th>Candidate</th><th>Prior</th><th>Visits</th><th>Visit %</th><th>Q</th></tr></thead>
+            <tbody id="candidate-table"></tbody>
+          </table>
+        </div>
         <p id="message" role="alert" aria-live="assertive"></p>
       </section>
       <footer><span class="red-key">Red</span> connects top to bottom. <span class="black-key">Black</span> connects left to right.</footer>

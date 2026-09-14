@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from twixt_ai.agents import AgentRequest, AgentResult
-from twixt_ai.backend import GameApplication, GameSession
+from twixt_ai.backend import GameApplication, GameSession, ViewerService
 from twixt_ai.game import (
     BoardDimensions,
     Coordinate,
@@ -173,6 +173,90 @@ def test_packaged_ui_preserves_custom_board_on_reset() -> None:
     assert status == "200 OK"
     assert b'presets.push(["custom", view.state.board])' in body
     assert b'if (presetSelect.value !== "custom") reset.preset' in body
+
+
+def test_viewer_page_reuses_packaged_board_ui() -> None:
+    status, _, body = request(GameApplication(), "/viewer")
+
+    assert status == "200 OK"
+    assert b'id="board"' in body
+    assert b'id="replay-controls"' in body
+    assert b'id="generate-game"' in body
+
+
+def test_viewer_configuration_lists_modes_and_workspace_assets(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "experiments" / "current" / "best.pt"
+    artifact = tmp_path / "experiments" / "current" / "games" / "game-000000.json"
+    checkpoint.parent.mkdir(parents=True)
+    artifact.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"checkpoint")
+    artifact.write_text("{}", encoding="utf-8")
+    application = GameApplication(
+        ui_root=tmp_path,
+        viewer=ViewerService(tmp_path, simulations=7, rollout_limit=3),
+    )
+
+    status, _, body = request(application, "/api/viewer/config")
+    config = json.loads(body)
+
+    assert status == "200 OK"
+    assert config["agent_modes"] == [
+        "non-neural-mcts",
+        "learned-policy-only",
+        "learned-value-only",
+        "learned-policy-value",
+    ]
+    assert config["checkpoints"][0]["id"] == "experiments/current/best.pt"
+    assert config["artifacts"][0]["id"].endswith("game-000000.json")
+    assert config["search"] == {"simulations": 7, "rollout_limit": 3}
+
+
+def test_viewer_generates_complete_inspectable_non_neural_replay(tmp_path: Path) -> None:
+    application = GameApplication(
+        ui_root=tmp_path,
+        viewer=ViewerService(tmp_path, simulations=2, rollout_limit=1),
+    )
+    payload = {
+        "red": {"mode": "non-neural-mcts", "checkpoint": None},
+        "black": {"mode": "non-neural-mcts", "checkpoint": None},
+        "seed": 17,
+    }
+
+    status, _, body = request(application, "/api/viewer/games", "POST", payload)
+    replay = json.loads(body)
+
+    assert status == "200 OK"
+    assert replay["board"] == {"width": 10, "height": 10}
+    assert replay["result"]["status"] in {"red_wins", "black_wins", "draw"}
+    assert len(replay["frames"]) == replay["result"]["move_count"] + 1
+    assert replay["frames"][0]["last_move"] is None
+    decision = replay["frames"][1]["decision"]
+    assert decision["metadata"]["guidance_mode"] == "none"
+    assert decision["metadata"]["simulations"] == 2
+    assert decision["metadata"]["root_moves"][0].keys() == {
+        "x", "y", "visits", "value", "prior"
+    }
+
+
+def test_viewer_loads_existing_match_artifact(tmp_path: Path) -> None:
+    source = Path(__file__).parents[2] / "experiments" / "issue-56" / "smoke" / "selfplay" / "games" / "game-000000.json"
+    target = tmp_path / "experiments" / "sample" / "games" / "game-000000.json"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(source.read_bytes())
+    application = GameApplication(ui_root=tmp_path, viewer=ViewerService(tmp_path))
+
+    status, _, body = request(
+        application,
+        "/api/viewer/artifacts",
+        "POST",
+        {"artifact": "experiments/sample/games/game-000000.json"},
+    )
+    replay = json.loads(body)
+
+    assert status == "200 OK"
+    assert replay["source"]["type"] == "artifact"
+    assert len(replay["frames"]) == replay["result"]["move_count"] + 1
+    assert replay["frames"][1]["decision"]["metadata"]["root_moves"]
 
 
 def test_session_selects_side_and_runs_registered_agent_through_contract(

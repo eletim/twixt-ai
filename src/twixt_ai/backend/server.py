@@ -25,6 +25,8 @@ from twixt_ai.game import (
 )
 from twixt_ai.search import MCTSAgent, SearchAgent
 
+from .viewer import ViewerService
+
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
 Response = Iterable[bytes]
@@ -49,6 +51,7 @@ class SessionConflictError(ValueError):
 DEFAULT_UI_ROOT = resources.files("twixt_ai.ui")
 _STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
+    "/viewer": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
 }
@@ -229,9 +232,11 @@ class GameApplication:
         self,
         session: GameSession | None = None,
         ui_root: Path | ResourceRoot | None = None,
+        viewer: ViewerService | None = None,
     ) -> None:
         self.session = session or GameSession()
         self.ui_root = ui_root if ui_root is not None else DEFAULT_UI_ROOT
+        self.viewer = viewer or ViewerService()
 
     @staticmethod
     def _json(
@@ -295,6 +300,26 @@ class GameApplication:
             return self._json(start_response, "200 OK", state)
         if method == "GET" and path == "/api/session":
             return self._json(start_response, "200 OK", self.session.view())
+        if method == "GET" and path == "/api/viewer/config":
+            return self._json(start_response, "200 OK", self.viewer.configuration())
+        if method == "POST" and path in {
+            "/api/viewer/games",
+            "/api/viewer/artifacts",
+        }:
+            try:
+                payload = self._read_json(environ)
+                replay = (
+                    self.viewer.generate(payload)
+                    if path.endswith("games")
+                    else self.viewer.load_artifact(payload)
+                )
+            except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
+                return self._json(
+                    start_response,
+                    "400 Bad Request",
+                    {"error": "invalid_request", "detail": str(exc)},
+                )
+            return self._json(start_response, "200 OK", replay)
         if method == "POST" and path == "/api/session/reset":
             try:
                 payload = self._read_json(environ)

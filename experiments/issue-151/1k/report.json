@@ -1,0 +1,117 @@
+{
+  "artifacts": {
+    "best_checkpoint": {
+      "path": "experiments/issue-151/1k/candidate/best.pt",
+      "sha256": "0a5809b1123e77d92869c97d49df5536f752ca88ad1f657126a971b41c0a1716"
+    },
+    "dataset_manifest": {
+      "path": "experiments/issue-151/1k/dataset/manifest.json",
+      "sha256": "c3877371ed27b83188ca968ae829ff7c79b3704e1ad3a193e0be0e56b2e99cee"
+    },
+    "evaluation": {
+      "path": "experiments/issue-151/1k/evaluation.json",
+      "sha256": "a220f836f49a895497efcc53f1973f45966c3e4d327b468280bcb8d08840c58d"
+    },
+    "metrics": {
+      "path": "experiments/issue-151/1k/candidate/metrics.jsonl",
+      "sha256": "d263ca3077c0bd7069de58ed8db5b28f33eb848673ba90f4f72a4b0d9c494220"
+    },
+    "selfplay_report": {
+      "path": "experiments/issue-151/1k/selfplay-report.json",
+      "sha256": "8aece9ed2310f24ed6ea7b4aea333f741b592dad3af4afcaae6bf60f276d742a"
+    },
+    "value_diagnostics": {
+      "path": "experiments/issue-151/1k/value-head.json",
+      "sha256": "c149a624646e6e824c024128a7a2a8cb2169b6e45a2201b5daf120d5b2c78ba7"
+    }
+  },
+  "baseline_100_games": {
+    "held_out_value": {
+      "mae": 0.7125303785673981,
+      "mse": 0.803875350267938,
+      "mse_gap": 0.6383381903796814
+    },
+    "strength": {
+      "policy-only": {
+        "heuristic-search": [0, 0, 40],
+        "matched-non-neural-mcts": [13, 8, 19]
+      },
+      "policy-value": {
+        "heuristic-search": [0, 0, 40],
+        "matched-non-neural-mcts": [4, 4, 32]
+      },
+      "value-only": {
+        "heuristic-search": [0, 0, 40],
+        "matched-non-neural-mcts": [5, 6, 29]
+      }
+    }
+  },
+  "comparison": {
+    "held_out_mae_delta": -0.007995948587842694,
+    "held_out_mse_delta": -0.06705637731345482,
+    "held_out_mse_relative_change": -0.08341638699470558,
+    "mse_gap_delta": -0.2961421255093815,
+    "policy_value_caught_policy_only": false,
+    "value_only_clearly_harmful_relative_to_policy_only": false
+  },
+  "dataset": {
+    "games": 1000,
+    "positions": 47561,
+    "runtime_seconds": 7007.386980033014,
+    "train_positions": 43492,
+    "validation_positions": 4069,
+    "validation_source_games": 83
+  },
+  "decision": {
+    "architecture_v1_matched_1k_exceeded": false,
+    "conclusion": "More data improved value generalization and value-guided strength, but did not make the fixed v2 candidate competitive with either the matched non-neural MCTS or the architecture-v1 matched-1k reference.",
+    "next_bottleneck": "The remaining conditional miscalibration and weak paired strength indicate that data quantity alone is not sufficient at 1k; teacher/search signal quality or trunk capacity should be tested only in separately controlled follow-up work.",
+    "promote": false
+  },
+  "format": "twixt-ai-issue-151-scale-stage-report",
+  "stage": "1k",
+  "strength": {
+    "policy-only": {
+      "heuristic-search": [1, 0, 39],
+      "matched-non-neural-mcts": [13, 5, 22]
+    },
+    "policy-value": {
+      "heuristic-search": [0, 0, 40],
+      "matched-non-neural-mcts": [11, 8, 21]
+    },
+    "value-only": {
+      "heuristic-search": [1, 0, 39],
+      "matched-non-neural-mcts": [13, 6, 21]
+    }
+  },
+  "training": {
+    "best_epoch": 1,
+    "best_validation_policy_loss": 4.233018278636169,
+    "best_validation_value_loss": 0.7368189599039983,
+    "final_epoch": 20,
+    "final_train_policy_loss": 3.8933924549825165,
+    "final_train_value_loss": 0.0560634783546658,
+    "final_validation_policy_loss": 4.103908672412452,
+    "final_validation_value_loss": 0.9783253742981145
+  },
+  "value_quality": {
+    "most_confident_signed_bins": {
+      "negative_calibration_error": -0.4282250929046685,
+      "positive_calibration_error": 0.4655605564071874,
+      "predictions": 456,
+      "wrong_sign_predictions": 107
+    },
+    "train": {
+      "mae": 0.48136385572982193,
+      "mse": 0.39462290808418327
+    },
+    "validation": {
+      "calibration_error": 0.0545760674535971,
+      "draw_targets": 1047,
+      "mae": 0.7045344299795554,
+      "mse": 0.7368189729544832
+    },
+    "validation_minus_train_mse": 0.3421960648702999
+  },
+  "version": 1
+}

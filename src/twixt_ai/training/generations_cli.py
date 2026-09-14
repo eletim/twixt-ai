@@ -42,7 +42,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--shard-size", type=int, default=10_000)
     parser.add_argument("--promotion-win-rate", type=float, default=0.55)
     parser.add_argument("--seed", type=int, default=590_100)
+    parser.add_argument(
+        "--evaluation-seed",
+        type=int,
+        help="fixed promotion-evaluation seed; defaults to derivation from --seed",
+    )
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
+    parser.add_argument(
+        "--artifact-uri",
+        help="durable base URI recorded with the verifiable retention inventory",
+    )
     return parser
 
 

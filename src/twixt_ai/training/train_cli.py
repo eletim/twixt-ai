@@ -37,6 +37,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--residual-blocks", type=int, default=3)
     parser.add_argument("--value-hidden", type=int, default=64)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--initial-checkpoint",
+        type=Path,
+        help="warm-start a new run from a compatible checkpoint",
+    )
     return parser
 
 
@@ -73,6 +78,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 board_height=board.height,
             ),
             resume=args.resume,
+            initial_checkpoint=args.initial_checkpoint,
         )
     except (OSError, TypeError, ValueError) as exc:
         parser.error(str(exc))

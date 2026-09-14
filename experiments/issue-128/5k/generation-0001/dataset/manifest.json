@@ -1,0 +1,182 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "champion_sha256": "aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9",
+      "generation": 1,
+      "mcts": {
+        "exploration": 0.7,
+        "guidance": "policy-value",
+        "progressive_widening_constant": 3.0,
+        "progressive_widening_exponent": 0.5,
+        "rollout_limit": 4,
+        "simulations": 64
+      },
+      "window_generations": [
+        1
+      ],
+      "workflow": "twixt-ai-mini-training-generations"
+    },
+    "shard_size": 5000,
+    "split_seed": "issue-59-1285000-1",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 130825,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 5000,
+  "splits": {
+    "train": {
+      "examples": 117999,
+      "shards": [
+        {
+          "examples": 5000,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "df7ab963f9ab4bf2b1c769178a4d034c3ad65e7e61b772f5438f6120ef67d89e"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00001.jsonl",
+          "sha256": "7e947a511e06e10ee6aeb12a7b1bccfdbff85176dba60fc1b76948b2817ae611"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00002.jsonl",
+          "sha256": "b4c64fb5e4b82afacc90c526ab3f166bb9ab982149ea6639e2821f0c792ebd98"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00003.jsonl",
+          "sha256": "6d752db195373d638b12c952fdc4c8b3ea1b639eea78b2359e9b4dd22be3a976"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00004.jsonl",
+          "sha256": "a0d5745048f06824fde7d79f7de06c9ced78c73bef424b8d353bf391b9d00958"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00005.jsonl",
+          "sha256": "2006f3076169651836dcc605ecc30498fb1da6e51263c270cdf6821f0cced7a3"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00006.jsonl",
+          "sha256": "855db18b0943909a0d6f29d863474afdbb7b06dca75deceb559094d34170d681"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00007.jsonl",
+          "sha256": "53a862c6d203299d8167643f1e887ca68bcadf3d61a63f986bcaf0f5dde8098c"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00008.jsonl",
+          "sha256": "169a496ffce9539ac251aeaafaa40ed87eb10aa89fde0f29768e4c5b9f9f9237"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00009.jsonl",
+          "sha256": "0a67a3926cab72f32d606a992945a9b24779ac1ee9b87bec9d26a1e6e98e0cfa"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00010.jsonl",
+          "sha256": "c5bd648f3ebcd6e44a8fe9b28d3cf8206d348528c0fc346e346a247b4e9053fa"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00011.jsonl",
+          "sha256": "94a3742ee08ba9089318056c07401d47e65d9bf53233a0df076eb80543c60eb7"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00012.jsonl",
+          "sha256": "bdd9dd9ddcaeefa7f1a0f1a81dfc024dbb6a5810cb6343fb29ad5f4dcd3a2e7b"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00013.jsonl",
+          "sha256": "fa4fbbc5433ee644acdf18f5037ade843eac8cd2d2a301fb7ec2c19f87733fe9"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00014.jsonl",
+          "sha256": "5d7b75cebed692f64d75c380b73df36f49ce256f654f271b6d113a7c183985a1"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00015.jsonl",
+          "sha256": "bb5bd2adb412c35e1db35abc79d281f04455381844eeeb51390f44c53e5ade78"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00016.jsonl",
+          "sha256": "de2f4cf4fb7e7386831ee99e9f681e670eb662712a0bee4d4327254184dde61a"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00017.jsonl",
+          "sha256": "318f7320521717c58b35502104283bbc7c2f4cdca06f2474eb15e433e4282bd1"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00018.jsonl",
+          "sha256": "bdea6c7f8546109f24c53935101f27de77bfa7b9556d6b21306a9e6fe6a3aa28"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00019.jsonl",
+          "sha256": "1dd2fbab50dbb7af1923ebf6fe65776373dac3cf1368b28d322f629b809e38f1"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00020.jsonl",
+          "sha256": "fbbc1a5076104106aae0f5358d46470fcbd3ecbe66f4853e4768fa58c49400ee"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00021.jsonl",
+          "sha256": "0024f6fcdceb8efe5dbedf3e5256e6b65b3f3060fdd43a31a518e1221c02dc0b"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00022.jsonl",
+          "sha256": "ddbed6d9cb8b7f1d0d8aea80630e961835b33b6b29caf7afb5c67941497c2719"
+        },
+        {
+          "examples": 2999,
+          "path": "train/shard-00023.jsonl",
+          "sha256": "016673ccaca3566e2032381acf689d9c293926653d045a50e6b5f94a1bb38297"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 12826,
+      "shards": [
+        {
+          "examples": 5000,
+          "path": "validation/shard-00000.jsonl",
+          "sha256": "722601460bfda5ffb291694f6eb766325176aa26726e35806389ffc5a6a8af9d"
+        },
+        {
+          "examples": 5000,
+          "path": "validation/shard-00001.jsonl",
+          "sha256": "63abdf73a7d2b7c1ed50f78e257610a59713d4282267a6f9e1b0d029129fd78c"
+        },
+        {
+          "examples": 2826,
+          "path": "validation/shard-00002.jsonl",
+          "sha256": "a2db44bd7ecbbc581d6315cca9fefe866f757c5c501d30e68f5ff3a2ce4a28d9"
+        }
+      ]
+    }
+  },
+  "version": 1
+}

@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "best_checkpoint": {
+      "path": "best.pt",
+      "sha256": "0a5809b1123e77d92869c97d49df5536f752ca88ad1f657126a971b41c0a1716"
+    },
+    "latest_checkpoint": {
+      "path": "latest.pt",
+      "sha256": "ab9e10cc619aa7b940996023c30b8196d5b039ba0007614157917fffe028702d"
+    },
+    "metrics": {
+      "path": "metrics.jsonl",
+      "sha256": "d263ca3077c0bd7069de58ed8db5b28f33eb848673ba90f4f72a4b0d9c494220"
+    },
+    "summary": {
+      "path": "summary.json",
+      "sha256": "5ccfc356f722f453552a4be057b0b8afec7901353eced3291aec23a3030fc8ec"
+    }
+  },
+  "device": {
+    "cuda_available": true,
+    "cuda_driver": "550.163.01",
+    "cuda_runtime": "12.8",
+    "gpu_memory_mib": 8188,
+    "gpu_name": "NVIDIA GeForce RTX 4060",
+    "pytorch_version": "2.8.0+cu128",
+    "requested_device": "cuda",
+    "resolved_device": "cuda"
+  },
+  "format": "twixt-ai-cuda-candidate-run",
+  "inputs": {
+    "dataset_manifest": "../dataset/manifest.json",
+    "dataset_manifest_sha256": "c3877371ed27b83188ca968ae829ff7c79b3704e1ad3a193e0be0e56b2e99cee",
+    "initial_checkpoint": "../../../issue-143/architecture-v2-bootstrap/champion.pt",
+    "initial_checkpoint_sha256": "fd5a9ee7dcd6cd12af8429ab0370b858c5271f2a71afd20956a36ea21db3bb87"
+  },
+  "loss_curves": {
+    "epochs": 20,
+    "path": "metrics.jsonl",
+    "series": [
+      "train_policy_loss",
+      "train_value_loss",
+      "validation_policy_loss",
+      "validation_value_loss"
+    ]
+  },
+  "runtime": {
+    "examples_per_second": 69099.8662068754,
+    "peak_cuda_memory_bytes": 33388032,
+    "training_seconds": 12.588157513877377,
+    "wall_clock_seconds": 38.69
+  },
+  "version": 1
+}

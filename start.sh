@@ -13,6 +13,22 @@ cleanup() {
     fi
 }
 
+wait_for_server() {
+    for _ in {1..50}; do
+        kill -0 "$SERVER_PID" 2>/dev/null || return 1
+        if python3 -c '
+import socket
+with socket.create_connection(("127.0.0.1", 8000), timeout=0.1):
+    pass
+' 2>/dev/null; then
+            sleep 0.1
+            kill -0 "$SERVER_PID" 2>/dev/null && return 0
+        fi
+        sleep 0.1
+    done
+    return 1
+}
+
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -25,6 +41,18 @@ fi
 cd "$SCRIPT_DIR"
 twixt-ai-web --host 127.0.0.1 --port 8000 &
 SERVER_PID=$!
+
+if ! wait_for_server; then
+    echo "Error: twixt-ai-web failed to start on $LOCAL_URL." >&2
+    if kill -0 "$SERVER_PID" 2>/dev/null; then
+        exit 1
+    fi
+    wait "$SERVER_PID"
+    SERVER_STATUS=$?
+    SERVER_PID=""
+    (( SERVER_STATUS == 0 )) && SERVER_STATUS=1
+    exit "$SERVER_STATUS"
+fi
 
 echo "Local Twixt UI:     $LOCAL_URL/"
 echo "Local AI viewer:    $LOCAL_URL/viewer"

@@ -281,3 +281,12 @@ newer position. Enable **AI inspection** to overlay candidate scores or
 probabilities and the selected move, plus the agent-provided value estimate and
 search statistics. The overlay is off by default and does not evaluate moves in
 the browser.
+
+Open <http://127.0.0.1:8000/viewer> for the developer AI-vs-AI Mini viewer.
+Choose independent Red and Black guidance modes/checkpoints, generate a complete
+game, and use the first/previous/play/next/last controls to replay it. Each frame
+shows the canonical pegs and links, the last move, result and move count, plus
+the recorded MCTS root priors, visits, Q values, simulations, and maximum depth.
+The artifact selector can also replay sampled `experiments/**/games/game-*.json`
+match artifacts; aggregate evaluation JSON without move history is not
+replayable.

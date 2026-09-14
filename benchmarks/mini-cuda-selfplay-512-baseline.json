@@ -1,0 +1,123 @@
+{
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-contract.json",
+    "sha256": "8ee5656c32143045feac17853f29bfdf623b393edd1dbf38208308b6f3888bba",
+    "verified_unchanged": true
+  },
+  "environment": {
+    "cuda_runtime": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4060, 550.163.01, 8188 MiB",
+    "hostname": "E-ryzen",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "timestamp_timezone": "2026-09-11T04:09:37+09:00"
+  },
+  "format": "twixt-ai-mini-cuda-selfplay-baseline",
+  "gpu_sampling": {
+    "average_memory_mib": 472.97340425531917,
+    "average_utilization_percent": 11.199024822695035,
+    "median_utilization_percent": 12.0,
+    "method": "nvidia-smi samples during the complete timed scope",
+    "peak_memory_mib": 473.0,
+    "peak_utilization_percent": 13.0,
+    "pytorch_peak_allocated_memory_bytes": 9737216,
+    "sample_interval_seconds": 0.1,
+    "samples": 2256
+  },
+  "inference": {
+    "average_queue_wait_seconds": 0.0007553559777151676,
+    "batch_size_distribution": {
+      "1": 164,
+      "2": 1372,
+      "3": 1662,
+      "4": 36195
+    },
+    "batches": 39393,
+    "flushes": {
+      "forced": 0,
+      "full_batch": 0,
+      "latency": 39393
+    },
+    "inference_seconds": 211.82066655880772,
+    "maximum_batch_size": 4,
+    "positions_per_second": 720.7700857537108,
+    "requests": 152674,
+    "total_queue_wait_seconds": 115.32321854168549
+  },
+  "phase_breakdown": {
+    "method": "5 ms exclusive wall-state sampling; priority serialization/I/O, GPU inference, CPU/MCTS, batching/queueing, idle",
+    "phases": {
+      "batching_queueing": {
+        "estimated_wall_seconds": 44.34817766311461,
+        "percent": 16.712625365116327,
+        "samples": 8182
+      },
+      "cpu_mcts": {
+        "estimated_wall_seconds": 0.032521274257967206,
+        "percent": 0.012255652919909309,
+        "samples": 6
+      },
+      "gpu_inference": {
+        "estimated_wall_seconds": 218.47792046502371,
+        "percent": 82.33347631595073,
+        "samples": 40308
+      },
+      "idle": {
+        "estimated_wall_seconds": 0.021680849505311472,
+        "percent": 0.008170435279939539,
+        "samples": 4
+      },
+      "serialization_io": {
+        "estimated_wall_seconds": 2.4770370559818358,
+        "percent": 0.9334722307330923,
+        "samples": 457
+      },
+      "synchronization": {
+        "estimated_wall_seconds": 0.0,
+        "percent": 0.0,
+        "samples": 0
+      }
+    },
+    "sample_interval_seconds": 0.005,
+    "samples": 48957,
+    "synchronization_note": "No separately observable synchronization-only samples; Future waits before dispatch are batching/queueing and waits during execution are GPU inference."
+  },
+  "rates": {
+    "games_per_hour": 6946.105273363552,
+    "positions_per_second": 575.3524720624496,
+    "simulations_per_second": 466.22415364553234
+  },
+  "source": {
+    "branch_base": "dev/v0.0.5",
+    "git_commit": "1bf7c6f989e37d8cb1e8a3d4f43f1ea0cbc9fb3b",
+    "implementation": "pre-optimization"
+  },
+  "timing": {
+    "end_to_end_wall_seconds": 265.3573373078834,
+    "scope": "End-to-end wall time from immediately before self-play dispatch until all 512 per-game artifacts and summary.json have been durably written; checkpoint load and one-time process setup are reported separately and excluded.",
+    "serialization_io_call_seconds": 3.592467016307637,
+    "setup_seconds_excluded": 0.08561887894757092
+  },
+  "validation": {
+    "all_game_seeds_match_contract_derivation": true,
+    "all_policy_root_visit_sums_valid": true,
+    "all_required_artifacts_valid": true,
+    "policy_root_visit_sum_expected": 4,
+    "summary_format": "twixt-ai-selfplay-batch",
+    "summary_version": 1,
+    "validated_decisions": 30929
+  },
+  "version": 1,
+  "workload": {
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "completed": 512,
+    "failed": 0,
+    "game_artifacts": 512,
+    "games": 512,
+    "output_summary_sha256": "5c8a2444af6c5653872e4f725af0cb550c084705befb7899130242389b12f171",
+    "total_inference_positions": 152674,
+    "total_moves": 30929,
+    "total_simulations": 123716
+  }
+}

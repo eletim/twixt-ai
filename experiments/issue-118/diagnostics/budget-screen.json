@@ -1,0 +1,1774 @@
+{
+  "checkpoint": "experiments/issue-89/training/best.pt",
+  "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+  "device": "NVIDIA GeForce RTX 4060",
+  "games_per_configuration": 4,
+  "heuristic": {
+    "depth": 1,
+    "node_budget": 10000
+  },
+  "paired_role_swaps": true,
+  "results": [
+    {
+      "mode": "policy-value",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-value",
+                "rollout_limit": 4,
+                "simulations": 20
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1181020
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 4905186609561144648
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 4905186609561144648
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 14,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 2603534011026497279
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 2603534011026497279
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 4
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 4,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 2,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.15003898915214958,
+              "upper": 0.8499610108478504,
+              "value": 0.5
+            },
+            "wins": 2
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "learned-teacher": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                }
+              },
+              "wins": {
+                "heuristic-search": 4,
+                "learned-teacher": 0
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 0.770356175955385,
+      "seed": 1181020,
+      "simulations": 20
+    },
+    {
+      "mode": "policy-value",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-value",
+                "rollout_limit": 4,
+                "simulations": 64
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1181064
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 14,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 11562321276770836406
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 46,
+              "winner": "learned-teacher",
+              "winning_side": "black"
+            },
+            "seed": 11562321276770836406
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 9929451758698759326
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 19,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 9929451758698759326
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.300641842582402,
+                  "upper": 0.9544127391902995,
+                  "value": 0.75
+                },
+                "wins": 3
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.09453120573423074,
+                  "upper": 0.9054687942657693,
+                  "value": 0.5
+                },
+                "wins": 1
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.09453120573423074,
+                  "upper": 0.9054687942657693,
+                  "value": 0.5
+                },
+                "wins": 1
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 3,
+                "win_rate": {
+                  "lower": 0.0455872608097006,
+                  "upper": 0.699358157417598,
+                  "value": 0.25
+                },
+                "wins": 1
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 3,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.0455872608097006,
+              "upper": 0.699358157417598,
+              "value": 0.25
+            },
+            "wins": 1
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.300641842582402,
+                  "upper": 0.9544127391902995,
+                  "value": 0.75
+                },
+                "learned-teacher": {
+                  "lower": 0.0455872608097006,
+                  "upper": 0.699358157417598,
+                  "value": 0.25
+                }
+              },
+              "wins": {
+                "heuristic-search": 3,
+                "learned-teacher": 1
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 2.5890866520348936,
+      "seed": 1181064,
+      "simulations": 64
+    },
+    {
+      "mode": "policy-value",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-value",
+                "rollout_limit": 4,
+                "simulations": 128
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1181128
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 7665933836768799312
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 7665933836768799312
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 13141344128514203403
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 94,
+              "winner": null,
+              "winning_side": null
+            },
+            "seed": 13141344128514203403
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.25,
+                "draws": 1,
+                "games": 4,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.300641842582402,
+                  "upper": 0.9544127391902995,
+                  "value": 0.75
+                },
+                "wins": 3
+              },
+              "red": {
+                "draw_rate": 0.5,
+                "draws": 1,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.09453120573423074,
+                  "upper": 0.9054687942657693,
+                  "value": 0.5
+                },
+                "wins": 1
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.5,
+                "draws": 1,
+                "games": 2,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.25,
+                "draws": 1,
+                "games": 4,
+                "losses": 3,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 1,
+            "games": 4,
+            "losses": 2,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.0455872608097006,
+              "upper": 0.699358157417598,
+              "value": 0.25
+            },
+            "wins": 1
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 1,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.300641842582402,
+                  "upper": 0.9544127391902995,
+                  "value": 0.75
+                },
+                "learned-teacher": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                }
+              },
+              "wins": {
+                "heuristic-search": 3,
+                "learned-teacher": 0
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 6.095359434140846,
+      "seed": 1181128,
+      "simulations": 128
+    },
+    {
+      "mode": "policy-value",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-value",
+                "rollout_limit": 4,
+                "simulations": 256
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1181256
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 23,
+              "winner": "learned-teacher",
+              "winning_side": "red"
+            },
+            "seed": 50949577581550276
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 50949577581550276
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 20,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 15376566036377857500
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 15376566036377857500
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.09453120573423074,
+                  "upper": 0.9054687942657693,
+                  "value": 0.5
+                },
+                "wins": 1
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.300641842582402,
+                  "upper": 0.9544127391902995,
+                  "value": 0.75
+                },
+                "wins": 3
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 3,
+                "win_rate": {
+                  "lower": 0.0455872608097006,
+                  "upper": 0.699358157417598,
+                  "value": 0.25
+                },
+                "wins": 1
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 1,
+                "win_rate": {
+                  "lower": 0.09453120573423074,
+                  "upper": 0.9054687942657693,
+                  "value": 0.5
+                },
+                "wins": 1
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 1,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.300641842582402,
+              "upper": 0.9544127391902995,
+              "value": 0.75
+            },
+            "wins": 3
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.300641842582402,
+                  "upper": 0.9544127391902995,
+                  "value": 0.75
+                },
+                "learned-teacher": {
+                  "lower": 0.0455872608097006,
+                  "upper": 0.699358157417598,
+                  "value": 0.25
+                }
+              },
+              "wins": {
+                "heuristic-search": 3,
+                "learned-teacher": 1
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 5.3415555991232395,
+      "seed": 1181256,
+      "simulations": 256
+    },
+    {
+      "mode": "policy-only",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-only",
+                "rollout_limit": 4,
+                "simulations": 20
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1191020
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 8105282143243905705
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 8105282143243905705
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 14827915936305346167
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 14827915936305346167
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 4
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 4,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 2,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.15003898915214958,
+              "upper": 0.8499610108478504,
+              "value": 0.5
+            },
+            "wins": 2
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "learned-teacher": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                }
+              },
+              "wins": {
+                "heuristic-search": 4,
+                "learned-teacher": 0
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 0.6279273910913616,
+      "seed": 1191020,
+      "simulations": 20
+    },
+    {
+      "mode": "policy-only",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-only",
+                "rollout_limit": 4,
+                "simulations": 64
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1191064
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 17279123528295324214
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 17279123528295324214
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 5803072952930515235
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 5803072952930515235
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 4
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 4,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 2,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.15003898915214958,
+              "upper": 0.8499610108478504,
+              "value": 0.5
+            },
+            "wins": 2
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "learned-teacher": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                }
+              },
+              "wins": {
+                "heuristic-search": 4,
+                "learned-teacher": 0
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 1.4984044320881367,
+      "seed": 1191064,
+      "simulations": 64
+    },
+    {
+      "mode": "policy-only",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-only",
+                "rollout_limit": 4,
+                "simulations": 128
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1191128
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 9706055945410108961
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 9706055945410108961
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 15217516273814599577
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 15217516273814599577
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 4
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 4,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 2,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.15003898915214958,
+              "upper": 0.8499610108478504,
+              "value": 0.5
+            },
+            "wins": 2
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "learned-teacher": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                }
+              },
+              "wins": {
+                "heuristic-search": 4,
+                "learned-teacher": 0
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 2.784922956954688,
+      "seed": 1191128,
+      "simulations": 128
+    },
+    {
+      "mode": "policy-only",
+      "result": {
+        "config": {
+          "agents": [
+            {
+              "configuration": {
+                "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+                "guidance": "policy-only",
+                "rollout_limit": 4,
+                "simulations": 256
+              },
+              "name": "learned-teacher",
+              "version": "0.0.1"
+            },
+            {
+              "configuration": {
+                "depth": 1,
+                "node_budget": 10000
+              },
+              "name": "heuristic-search",
+              "version": "0.0.1"
+            }
+          ],
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "confidence_level": 0.95,
+          "games_per_pair": 4,
+          "include_elo": false,
+          "seed": 1191256
+        },
+        "format": "twixt-ai-benchmark",
+        "games": [
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 0,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 3220659246787601704
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 1,
+            "pair_index": 0,
+            "pair_round": 0,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 3220659246787601704
+          },
+          {
+            "agents": {
+              "black": "heuristic-search",
+              "red": "learned-teacher"
+            },
+            "index": 2,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 12,
+              "winner": "heuristic-search",
+              "winning_side": "black"
+            },
+            "seed": 17364521862603159161
+          },
+          {
+            "agents": {
+              "black": "learned-teacher",
+              "red": "heuristic-search"
+            },
+            "index": 3,
+            "pair_index": 0,
+            "pair_round": 1,
+            "result": {
+              "move_count": 11,
+              "winner": "heuristic-search",
+              "winning_side": "red"
+            },
+            "seed": 17364521862603159161
+          }
+        ],
+        "summary": {
+          "agents": {
+            "heuristic-search": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 4
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 0,
+                "win_rate": {
+                  "lower": 0.3423802275066532,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "wins": 2
+              }
+            },
+            "learned-teacher": {
+              "black": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "overall": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 4,
+                "losses": 4,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                },
+                "wins": 0
+              },
+              "red": {
+                "draw_rate": 0.0,
+                "draws": 0,
+                "games": 2,
+                "losses": 2,
+                "win_rate": {
+                  "lower": 0.0,
+                  "upper": 0.6576197724933468,
+                  "value": 0.0
+                },
+                "wins": 0
+              }
+            }
+          },
+          "first_player": {
+            "draws": 0,
+            "games": 4,
+            "losses": 2,
+            "side": "red",
+            "win_rate": {
+              "lower": 0.15003898915214958,
+              "upper": 0.8499610108478504,
+              "value": 0.5
+            },
+            "wins": 2
+          },
+          "pairs": [
+            {
+              "agents": [
+                "learned-teacher",
+                "heuristic-search"
+              ],
+              "draws": 0,
+              "games": 4,
+              "win_rate": {
+                "heuristic-search": {
+                  "lower": 0.5101091635454027,
+                  "upper": 1.0,
+                  "value": 1.0
+                },
+                "learned-teacher": {
+                  "lower": 0.0,
+                  "upper": 0.4898908364545972,
+                  "value": 0.0
+                }
+              },
+              "wins": {
+                "heuristic-search": 4,
+                "learned-teacher": 0
+              }
+            }
+          ]
+        },
+        "version": 1
+      },
+      "runtime_seconds": 5.498240121873096,
+      "seed": 1191256,
+      "simulations": 256
+    }
+  ],
+  "torch": "2.8.0+cu128"
+}

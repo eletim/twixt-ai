@@ -1,0 +1,50 @@
+{
+  "conclusion": {
+    "diagnosis": "Value perspective is correct end-to-end. The earlier failure was dominated by limited-data generalization and combined-loss checkpoint selection, not a sign inversion.",
+    "loss_decision": "Retain MSE: decisive targets are balanced by phase and MSE is a proper loss for the expected outcome. No alternative loss was justified.",
+    "negative_results": [
+      "All learned guidance modes lost 0-20 to heuristic search.",
+      "Twenty-game matchup confidence intervals remain too wide for a final strength ranking."
+    ]
+  },
+  "dataset": {
+    "examples": 302299,
+    "manifest_sha256": "a47eda5c2bb48fcd103a3380517a91470054170b24c176969d81c33df16290e6",
+    "path": "experiments/issue-88/5k/dataset",
+    "source_games": 5000,
+    "train_examples": 271890,
+    "validation_examples": 30409
+  },
+  "diagnostics": {
+    "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+    "path": "experiments/issue-89/value-diagnostics.json",
+    "train_mse": 0.42921895828587964,
+    "validation_mse": 0.4610127541399602,
+    "validation_minus_train_mse": 0.03179379585408054
+  },
+  "evaluation": {
+    "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+    "games_per_matchup": 20,
+    "path": "experiments/issue-89/strength.json",
+    "rollout_limit": 4,
+    "seed": 890200,
+    "simulations": 20,
+    "versus_non_neural_mcts": {
+      "policy_only": {"draws": 4, "losses": 4, "wins": 12},
+      "policy_value": {"draws": 4, "losses": 5, "wins": 11},
+      "value_only": {"draws": 4, "losses": 4, "wins": 12}
+    }
+  },
+  "format": "twixt-ai-mini-value-experiment",
+  "training": {
+    "best_checkpoint": "experiments/issue-89/training/best.pt",
+    "best_checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+    "best_epoch": 2,
+    "best_validation_value_loss": 0.4610127540227282,
+    "device": "cuda",
+    "latest_checkpoint_sha256": "815d448c999090cff1b4af28b9494c78c66d7b8d10fda8a2c1b31cc89e59c140",
+    "selection_metric": "value",
+    "summary": "experiments/issue-89/training/summary.json"
+  },
+  "version": 1
+}

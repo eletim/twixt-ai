@@ -20,6 +20,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--rollout-limit", type=int, default=4)
     parser.add_argument("--search-depth", type=int, default=1)
     parser.add_argument("--search-node-budget", type=int, default=10_000)
+    parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
     return parser
 
 
@@ -38,6 +39,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 rollout_limit=args.rollout_limit,
                 search_depth=args.search_depth,
                 search_node_budget=args.search_node_budget,
+                device=args.device,
             ),
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)

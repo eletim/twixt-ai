@@ -1,0 +1,71 @@
+{
+  "format": "twixt-ai-issue-125-final-report",
+  "version": 1,
+  "evaluation_protocol": {
+    "artifact": "experiments/issue-125/generation-3-evaluation.json",
+    "games_per_matchup": 40,
+    "paired_role_swaps": true,
+    "promotion_rule": "candidate wins / all generation-2 champion games >= 0.55",
+    "rollout_limit": 4,
+    "seed": 1251300,
+    "simulations": 20,
+    "heuristic_search": {
+      "depth": 1,
+      "node_budget": 10000
+    }
+  },
+  "promotion_decision": {
+    "candidate": "generation-3",
+    "candidate_checkpoint": "experiments/issue-125/generation-3/generation-0001/candidate/best.pt",
+    "candidate_checkpoint_sha256": "aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9",
+    "versus_generation_2_champion_wins_losses_draws": [
+      34,
+      6,
+      0
+    ],
+    "win_rate": 0.85,
+    "required_win_rate": 0.55,
+    "decision": "promote"
+  },
+  "final_champion": {
+    "checkpoint": "experiments/issue-125/generation-3/generation-0001/candidate/best.pt",
+    "checkpoint_sha256": "aee1036dbda115eeec0e245909d30e1f8330454a82099e852e1b6a9c26c0dab9"
+  },
+  "generation_3_results_wins_losses_draws": {
+    "generation-2-champion": [
+      34,
+      6,
+      0
+    ],
+    "issue-57": [
+      38,
+      0,
+      2
+    ],
+    "matched-non-neural-mcts": [
+      33,
+      2,
+      5
+    ],
+    "heuristic-search": [
+      7,
+      33,
+      0
+    ]
+  },
+  "attempted_interventions": {
+    "value_retraining": "rejected; neither candidate passed the generation-2 champion gate and both lost decisively to heuristic search",
+    "search_configuration": "rejected; neither 200-game combined Wilson interval excluded 50% and no setting passed the predeclared adoption gate",
+    "generation_3": "promoted over generation 2 but lost 7-33-0 to the unchanged heuristic search"
+  },
+  "closing_synthesis": {
+    "original_heuristic_result_wins_losses_draws": [
+      6,
+      14,
+      0
+    ],
+    "material_heuristic_strength_improvement": false,
+    "stopping_criterion": "plateau",
+    "conclusion": "Generation 3 is the new champion by the unchanged parent gate, but no attempted intervention established heuristic-search strength beyond the original 6-14-0. Further progress now requires a qualitatively larger architecture or learning/search formulation change rather than another iteration of the tested value, configuration, or same-architecture generation changes."
+  }
+}

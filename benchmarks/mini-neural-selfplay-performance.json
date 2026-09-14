@@ -1,0 +1,67 @@
+{
+  "format": "twixt-ai-mini-neural-selfplay-performance",
+  "version": 1,
+  "checkpoint": {
+    "path": "experiments/issue-57/baseline/best.pt",
+    "sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8"
+  },
+  "config": {
+    "games": 4,
+    "workers": 4,
+    "simulations": 4,
+    "rollout_limit": 4,
+    "seed": 860100,
+    "shared_batch_size": 8,
+    "max_wait_seconds": 0.002
+  },
+  "environment": {
+    "platform": "Linux 6.8.0-138-generic x86_64",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4060"
+  },
+  "results": {
+    "shared_cuda": {
+      "resolved_device": "cuda",
+      "model_instances": 1,
+      "wall_seconds": 3.782471228041686,
+      "games_per_hour": 3807.0349070322923,
+      "inference": {
+        "requests": 1635,
+        "batches": 473,
+        "maximum_batch_size": 4,
+        "batch_size_distribution": {"1": 6, "2": 4, "3": 231, "4": 232},
+        "flushes": {"full_batch": 0, "latency": 473, "forced": 0},
+        "positions_per_second": 675.4933090601669
+      }
+    },
+    "synchronous_cuda": {
+      "resolved_device": "cuda",
+      "model_instances": 1,
+      "batch_size": 1,
+      "wall_seconds": 3.220058534061536,
+      "games_per_hour": 4471.968396747415,
+      "inference": {
+        "requests": 1635,
+        "batches": 1635,
+        "maximum_batch_size": 1,
+        "batch_size_distribution": {"1": 1635},
+        "flushes": {"full_batch": 1635, "latency": 0, "forced": 0},
+        "positions_per_second": 519.4905617622136
+      }
+    },
+    "synchronous_cpu": {
+      "resolved_device": "cpu",
+      "wall_seconds": 42.66756938002072,
+      "games_per_hour": 337.49285954739344
+    }
+  },
+  "comparison": {
+    "identical_completed_games_per_mode": 4,
+    "identical_total_moves_per_mode": 332,
+    "shared_cuda_inference_speedup_over_synchronous_cuda": 1.300299287662746,
+    "shared_cuda_games_per_hour_speedup_over_cpu": 11.280341237557146,
+    "note": "For this small four-game workload, batching improved model throughput but its flush latency made end-to-end shared CUDA slower than serialized CUDA; larger worker counts are needed to fill the configured batch size."
+  }
+}

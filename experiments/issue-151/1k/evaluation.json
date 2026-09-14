@@ -1,0 +1,4576 @@
+{
+  "checkpoint": {
+    "bytes": 6875148,
+    "metadata": {
+      "best_epoch": 1,
+      "best_loss": 0.7368189599039983,
+      "board": {
+        "height": 10,
+        "width": 10
+      },
+      "dataset_sha256": "c3877371ed27b83188ca968ae829ff7c79b3704e1ad3a193e0be0e56b2e99cee",
+      "device": {
+        "cuda_available": true,
+        "cuda_runtime": "12.8",
+        "gpu_name": "NVIDIA GeForce RTX 4060",
+        "pytorch_version": "2.8.0+cu128",
+        "requested_device": "cuda",
+        "resolved_device": "cuda"
+      },
+      "epoch": 1,
+      "training_config": {
+        "batch_size": 128,
+        "device": "cuda",
+        "epochs": 20,
+        "learning_rate": 0.001,
+        "optimizer": "adamw",
+        "scheduler": "none",
+        "scheduler_gamma": 0.1,
+        "scheduler_step_size": 1,
+        "seed": 143200,
+        "selection_metric": "value",
+        "weight_decay": 0.0001
+      },
+      "training_format": "twixt-ai-training-checkpoint",
+      "training_version": 1
+    },
+    "model_config": {
+      "board_height": 10,
+      "board_width": 10,
+      "channels": 8,
+      "encoding_version": 1,
+      "input_channels": 22,
+      "residual_blocks": 1,
+      "value_hidden": 256
+    },
+    "path": "experiments/issue-151/1k/candidate/best.pt",
+    "sha256": "0a5809b1123e77d92869c97d49df5536f752ca88ad1f657126a971b41c0a1716"
+  },
+  "config": {
+    "baselines": [
+      "matched-non-neural-mcts",
+      "heuristic-search"
+    ],
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "confidence_level": 0.95,
+    "device": "cuda",
+    "games_per_matchup": 40,
+    "guidance_modes": [
+      "policy-only",
+      "value-only",
+      "policy-value"
+    ],
+    "heuristic_search": {
+      "depth": 1,
+      "node_budget": 10000
+    },
+    "rollout_limit": 4,
+    "seed": 1289000,
+    "settings": [
+      {
+        "exploration": 1.4142135623730951,
+        "name": "standard-20",
+        "progressive_widening_constant": 1.5,
+        "progressive_widening_exponent": 0.5,
+        "simulations": 20
+      }
+    ]
+  },
+  "environment": {
+    "available_cpus": 24,
+    "device": {
+      "cuda_available": true,
+      "cuda_runtime": "12.8",
+      "gpu_name": "NVIDIA GeForce RTX 4060",
+      "pytorch_version": "2.8.0+cu128",
+      "requested_device": "cuda",
+      "resolved_device": "cuda"
+    },
+    "implementation": "CPython",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "torch": "2.8.0+cu128"
+  },
+  "format": "twixt-ai-matched-search-analysis",
+  "matchups": [
+    {
+      "baseline": "matched-non-neural-mcts",
+      "baseline_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "candidate": "learned-policy-only-standard-20",
+      "candidate_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "first_player": {
+        "draws": 5,
+        "games": 40,
+        "losses": 11,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.4459589366034619,
+          "upper": 0.7365167431570807,
+          "value": 0.6
+        },
+        "wins": 24
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 33,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 37,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 13,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 39,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 29,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 30,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 31,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 46,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 92,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 21,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 29,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 27,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 39,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 33,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 31,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 35,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 24,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 93,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 20,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 32,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 21,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 27,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 22,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 30,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 23,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 23,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 24,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 14,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 25,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 23,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 26,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 25,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 27,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 36,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 28,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 35,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 29,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 29,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 30,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 38,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 31,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 35,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 32,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 31,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 33,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 33,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 34,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 35,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 27,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 36,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 24,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 37,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 27,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 38,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 42,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11279272985791775831
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 39,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 20,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 11279272985791775831
+        }
+      ],
+      "guidance": "policy-only",
+      "role_splits": {
+        "learned-policy-only-standard-20": {
+          "black": {
+            "draw_rate": 0.05,
+            "draws": 1,
+            "games": 20,
+            "losses": 15,
+            "win_rate": {
+              "lower": 0.08065766257979806,
+              "upper": 0.4160174322518935,
+              "value": 0.2
+            },
+            "wins": 4
+          },
+          "overall": {
+            "draw_rate": 0.125,
+            "draws": 5,
+            "games": 40,
+            "losses": 22,
+            "win_rate": {
+              "lower": 0.20084502231782703,
+              "upper": 0.4798225381012233,
+              "value": 0.325
+            },
+            "wins": 13
+          },
+          "red": {
+            "draw_rate": 0.2,
+            "draws": 4,
+            "games": 20,
+            "losses": 7,
+            "win_rate": {
+              "lower": 0.25819785825562425,
+              "upper": 0.6579146575496576,
+              "value": 0.45
+            },
+            "wins": 9
+          }
+        },
+        "matched-non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.2,
+            "draws": 4,
+            "games": 20,
+            "losses": 9,
+            "win_rate": {
+              "lower": 0.1811918241010821,
+              "upper": 0.5671457233147637,
+              "value": 0.35
+            },
+            "wins": 7
+          },
+          "overall": {
+            "draw_rate": 0.125,
+            "draws": 5,
+            "games": 40,
+            "losses": 13,
+            "win_rate": {
+              "lower": 0.3982909179893206,
+              "upper": 0.6929469218909508,
+              "value": 0.55
+            },
+            "wins": 22
+          },
+          "red": {
+            "draw_rate": 0.05,
+            "draws": 1,
+            "games": 20,
+            "losses": 4,
+            "win_rate": {
+              "lower": 0.531299122381256,
+              "upper": 0.8881382985923343,
+              "value": 0.75
+            },
+            "wins": 15
+          }
+        }
+      },
+      "runtime": {
+        "wall_seconds": 30.971541933948174
+      },
+      "setting": "standard-20",
+      "strength": {
+        "agents": [
+          "learned-policy-only-standard-20",
+          "matched-non-neural-mcts"
+        ],
+        "draws": 5,
+        "games": 40,
+        "win_rate": {
+          "learned-policy-only-standard-20": {
+            "lower": 0.20084502231782703,
+            "upper": 0.4798225381012233,
+            "value": 0.325
+          },
+          "matched-non-neural-mcts": {
+            "lower": 0.3982909179893206,
+            "upper": 0.6929469218909508,
+            "value": 0.55
+          }
+        },
+        "wins": {
+          "learned-policy-only-standard-20": 13,
+          "matched-non-neural-mcts": 22
+        }
+      }
+    },
+    {
+      "baseline": "heuristic-search",
+      "baseline_search": {
+        "depth": 1,
+        "node_budget": 10000,
+        "type": "search"
+      },
+      "candidate": "learned-policy-only-standard-20",
+      "candidate_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "first_player": {
+        "draws": 0,
+        "games": 40,
+        "losses": 21,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.3293547011267891,
+          "upper": 0.6250263789330752,
+          "value": 0.475
+        },
+        "wins": 19
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 20,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 21,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 22,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 23,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 24,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 22,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 25,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 26,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 27,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 28,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 29,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 30,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 31,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 32,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 33,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 34,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 35,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 34,
+            "winner": "learned-policy-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 36,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 37,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-only-standard-20"
+          },
+          "index": 38,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 11279272985791775831
+        },
+        {
+          "agents": {
+            "black": "learned-policy-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 39,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 11279272985791775831
+        }
+      ],
+      "guidance": "policy-only",
+      "role_splits": {
+        "heuristic-search": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.8388748419471808,
+              "upper": 1.0,
+              "value": 1.0
+            },
+            "wins": 20
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 40,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.8711863103652591,
+              "upper": 0.9955731684973186,
+              "value": 0.975
+            },
+            "wins": 39
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.763868806553258,
+              "upper": 0.9911185511992047,
+              "value": 0.95
+            },
+            "wins": 19
+          }
+        },
+        "learned-policy-only-standard-20": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 19,
+            "win_rate": {
+              "lower": 0.008881448800795375,
+              "upper": 0.236131193446742,
+              "value": 0.05
+            },
+            "wins": 1
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 40,
+            "losses": 39,
+            "win_rate": {
+              "lower": 0.004426831502681396,
+              "upper": 0.12881368963474088,
+              "value": 0.025
+            },
+            "wins": 1
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 20,
+            "win_rate": {
+              "lower": 1.3877787807814457e-17,
+              "upper": 0.1611251580528193,
+              "value": 0.0
+            },
+            "wins": 0
+          }
+        }
+      },
+      "runtime": {
+        "wall_seconds": 8.013286967994645
+      },
+      "setting": "standard-20",
+      "strength": {
+        "agents": [
+          "learned-policy-only-standard-20",
+          "heuristic-search"
+        ],
+        "draws": 0,
+        "games": 40,
+        "win_rate": {
+          "heuristic-search": {
+            "lower": 0.8711863103652591,
+            "upper": 0.9955731684973186,
+            "value": 0.975
+          },
+          "learned-policy-only-standard-20": {
+            "lower": 0.004426831502681396,
+            "upper": 0.12881368963474088,
+            "value": 0.025
+          }
+        },
+        "wins": {
+          "heuristic-search": 39,
+          "learned-policy-only-standard-20": 1
+        }
+      }
+    },
+    {
+      "baseline": "matched-non-neural-mcts",
+      "baseline_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "candidate": "learned-value-only-standard-20",
+      "candidate_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "first_player": {
+        "draws": 6,
+        "games": 40,
+        "losses": 12,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.3982909179893206,
+          "upper": 0.6929469218909508,
+          "value": 0.55
+        },
+        "wins": 22
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 54,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 41,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 43,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 17,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 29,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 93,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 34,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 26,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 21,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 28,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 29,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 18,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 25,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 31,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 26,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 62,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 35,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 59,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 20,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 21,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 64,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 22,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 23,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 25,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 24,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 33,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 25,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 37,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 26,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 33,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 27,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 50,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 28,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 29,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 39,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 30,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 48,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 31,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 28,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 32,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 37,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 33,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 34,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 53,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 35,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 29,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 36,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 54,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 37,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 33,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 38,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 29,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 11279272985791775831
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 39,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 31,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 11279272985791775831
+        }
+      ],
+      "guidance": "value-only",
+      "role_splits": {
+        "learned-value-only-standard-20": {
+          "black": {
+            "draw_rate": 0.05,
+            "draws": 1,
+            "games": 20,
+            "losses": 14,
+            "win_rate": {
+              "lower": 0.11186170140766566,
+              "upper": 0.46870087761874396,
+              "value": 0.25
+            },
+            "wins": 5
+          },
+          "overall": {
+            "draw_rate": 0.15,
+            "draws": 6,
+            "games": 40,
+            "losses": 21,
+            "win_rate": {
+              "lower": 0.20084502231782703,
+              "upper": 0.4798225381012233,
+              "value": 0.325
+            },
+            "wins": 13
+          },
+          "red": {
+            "draw_rate": 0.25,
+            "draws": 5,
+            "games": 20,
+            "losses": 7,
+            "win_rate": {
+              "lower": 0.2188065323728171,
+              "upper": 0.6134184992377468,
+              "value": 0.4
+            },
+            "wins": 8
+          }
+        },
+        "matched-non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.25,
+            "draws": 5,
+            "games": 20,
+            "losses": 8,
+            "win_rate": {
+              "lower": 0.1811918241010821,
+              "upper": 0.5671457233147637,
+              "value": 0.35
+            },
+            "wins": 7
+          },
+          "overall": {
+            "draw_rate": 0.15,
+            "draws": 6,
+            "games": 40,
+            "losses": 13,
+            "win_rate": {
+              "lower": 0.3749736210669248,
+              "upper": 0.670645298873211,
+              "value": 0.525
+            },
+            "wins": 21
+          },
+          "red": {
+            "draw_rate": 0.05,
+            "draws": 1,
+            "games": 20,
+            "losses": 5,
+            "win_rate": {
+              "lower": 0.4810271816464765,
+              "upper": 0.8545227551323956,
+              "value": 0.7
+            },
+            "wins": 14
+          }
+        }
+      },
+      "runtime": {
+        "wall_seconds": 26.484176657162607
+      },
+      "setting": "standard-20",
+      "strength": {
+        "agents": [
+          "learned-value-only-standard-20",
+          "matched-non-neural-mcts"
+        ],
+        "draws": 6,
+        "games": 40,
+        "win_rate": {
+          "learned-value-only-standard-20": {
+            "lower": 0.20084502231782703,
+            "upper": 0.4798225381012233,
+            "value": 0.325
+          },
+          "matched-non-neural-mcts": {
+            "lower": 0.3749736210669248,
+            "upper": 0.670645298873211,
+            "value": 0.525
+          }
+        },
+        "wins": {
+          "learned-value-only-standard-20": 13,
+          "matched-non-neural-mcts": 21
+        }
+      }
+    },
+    {
+      "baseline": "heuristic-search",
+      "baseline_search": {
+        "depth": 1,
+        "node_budget": 10000,
+        "type": "search"
+      },
+      "candidate": "learned-value-only-standard-20",
+      "candidate_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "first_player": {
+        "draws": 0,
+        "games": 40,
+        "losses": 19,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.3749736210669248,
+          "upper": 0.670645298873211,
+          "value": 0.525
+        },
+        "wins": 21
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 47,
+            "winner": "learned-value-only-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 20,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 21,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 22,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 23,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 24,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 25,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 26,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 27,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 15,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 28,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 29,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 30,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 31,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 32,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 33,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 34,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 35,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 36,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 37,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-value-only-standard-20"
+          },
+          "index": 38,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 11279272985791775831
+        },
+        {
+          "agents": {
+            "black": "learned-value-only-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 39,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 11279272985791775831
+        }
+      ],
+      "guidance": "value-only",
+      "role_splits": {
+        "heuristic-search": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.763868806553258,
+              "upper": 0.9911185511992047,
+              "value": 0.95
+            },
+            "wins": 19
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 40,
+            "losses": 1,
+            "win_rate": {
+              "lower": 0.8711863103652591,
+              "upper": 0.9955731684973186,
+              "value": 0.975
+            },
+            "wins": 39
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.8388748419471808,
+              "upper": 1.0,
+              "value": 1.0
+            },
+            "wins": 20
+          }
+        },
+        "learned-value-only-standard-20": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 20,
+            "win_rate": {
+              "lower": 1.3877787807814457e-17,
+              "upper": 0.1611251580528193,
+              "value": 0.0
+            },
+            "wins": 0
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 40,
+            "losses": 39,
+            "win_rate": {
+              "lower": 0.004426831502681396,
+              "upper": 0.12881368963474088,
+              "value": 0.025
+            },
+            "wins": 1
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 19,
+            "win_rate": {
+              "lower": 0.008881448800795375,
+              "upper": 0.236131193446742,
+              "value": 0.05
+            },
+            "wins": 1
+          }
+        }
+      },
+      "runtime": {
+        "wall_seconds": 6.2398192919790745
+      },
+      "setting": "standard-20",
+      "strength": {
+        "agents": [
+          "learned-value-only-standard-20",
+          "heuristic-search"
+        ],
+        "draws": 0,
+        "games": 40,
+        "win_rate": {
+          "heuristic-search": {
+            "lower": 0.8711863103652591,
+            "upper": 0.9955731684973186,
+            "value": 0.975
+          },
+          "learned-value-only-standard-20": {
+            "lower": 0.004426831502681396,
+            "upper": 0.12881368963474088,
+            "value": 0.025
+          }
+        },
+        "wins": {
+          "heuristic-search": 39,
+          "learned-value-only-standard-20": 1
+        }
+      }
+    },
+    {
+      "baseline": "matched-non-neural-mcts",
+      "baseline_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "candidate": "learned-policy-value-standard-20",
+      "candidate_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "first_player": {
+        "draws": 8,
+        "games": 40,
+        "losses": 16,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.26348325684291923,
+          "upper": 0.554041063396538,
+          "value": 0.4
+        },
+        "wins": 16
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 24,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 32,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 58,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 37,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 93,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 44,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 36,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 22,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 33,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 28,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 30,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 58,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 96,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 37,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 52,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 31,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 31,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 20,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 24,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 21,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 21,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 22,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 26,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 23,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 95,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 24,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 31,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 25,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 39,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 26,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 24,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 27,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 23,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 28,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 21,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 29,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 27,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 30,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 45,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "red"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 31,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 33,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 32,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 22,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 33,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 39,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 34,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 35,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 51,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 36,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 38,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "black"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 37,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 37,
+            "winner": "matched-non-neural-mcts",
+            "winning_side": "red"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "matched-non-neural-mcts",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 38,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 94,
+            "winner": null,
+            "winning_side": null
+          },
+          "seed": 11279272985791775831
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "matched-non-neural-mcts"
+          },
+          "index": 39,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 36,
+            "winner": "learned-policy-value-standard-20",
+            "winning_side": "black"
+          },
+          "seed": 11279272985791775831
+        }
+      ],
+      "guidance": "policy-value",
+      "role_splits": {
+        "learned-policy-value-standard-20": {
+          "black": {
+            "draw_rate": 0.25,
+            "draws": 5,
+            "games": 20,
+            "losses": 10,
+            "win_rate": {
+              "lower": 0.11186170140766566,
+              "upper": 0.46870087761874396,
+              "value": 0.25
+            },
+            "wins": 5
+          },
+          "overall": {
+            "draw_rate": 0.2,
+            "draws": 8,
+            "games": 40,
+            "losses": 21,
+            "win_rate": {
+              "lower": 0.16108016247667342,
+              "upper": 0.4283495580621056,
+              "value": 0.275
+            },
+            "wins": 11
+          },
+          "red": {
+            "draw_rate": 0.15,
+            "draws": 3,
+            "games": 20,
+            "losses": 11,
+            "win_rate": {
+              "lower": 0.1454772448676043,
+              "upper": 0.5189728183535234,
+              "value": 0.3
+            },
+            "wins": 6
+          }
+        },
+        "matched-non-neural-mcts": {
+          "black": {
+            "draw_rate": 0.15,
+            "draws": 3,
+            "games": 20,
+            "losses": 6,
+            "win_rate": {
+              "lower": 0.3420853424503424,
+              "upper": 0.7418021417443758,
+              "value": 0.55
+            },
+            "wins": 11
+          },
+          "overall": {
+            "draw_rate": 0.2,
+            "draws": 8,
+            "games": 40,
+            "losses": 11,
+            "win_rate": {
+              "lower": 0.3749736210669248,
+              "upper": 0.670645298873211,
+              "value": 0.525
+            },
+            "wins": 21
+          },
+          "red": {
+            "draw_rate": 0.25,
+            "draws": 5,
+            "games": 20,
+            "losses": 5,
+            "win_rate": {
+              "lower": 0.2992980081982124,
+              "upper": 0.7007019918017876,
+              "value": 0.5
+            },
+            "wins": 10
+          }
+        }
+      },
+      "runtime": {
+        "wall_seconds": 26.496361803030595
+      },
+      "setting": "standard-20",
+      "strength": {
+        "agents": [
+          "learned-policy-value-standard-20",
+          "matched-non-neural-mcts"
+        ],
+        "draws": 8,
+        "games": 40,
+        "win_rate": {
+          "learned-policy-value-standard-20": {
+            "lower": 0.16108016247667342,
+            "upper": 0.4283495580621056,
+            "value": 0.275
+          },
+          "matched-non-neural-mcts": {
+            "lower": 0.3749736210669248,
+            "upper": 0.670645298873211,
+            "value": 0.525
+          }
+        },
+        "wins": {
+          "learned-policy-value-standard-20": 11,
+          "matched-non-neural-mcts": 21
+        }
+      }
+    },
+    {
+      "baseline": "heuristic-search",
+      "baseline_search": {
+        "depth": 1,
+        "node_budget": 10000,
+        "type": "search"
+      },
+      "candidate": "learned-policy-value-standard-20",
+      "candidate_search": {
+        "exploration": 1.4142135623730951,
+        "progressive_widening": {
+          "constant": 1.5,
+          "exponent": 0.5
+        },
+        "rollout_limit": 4,
+        "simulations": 20,
+        "type": "mcts"
+      },
+      "first_player": {
+        "draws": 0,
+        "games": 40,
+        "losses": 20,
+        "side": "red",
+        "win_rate": {
+          "lower": 0.35199526933465386,
+          "upper": 0.6480047306653461,
+          "value": 0.5
+        },
+        "wins": 20
+      },
+      "games": [
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 0,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 1,
+          "pair_index": 0,
+          "pair_round": 0,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 2615964203525631948
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 2,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 16,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 3,
+          "pair_index": 0,
+          "pair_round": 1,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8216417307919248038
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 4,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 5,
+          "pair_index": 0,
+          "pair_round": 2,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 3708995981298735610
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 6,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 7,
+          "pair_index": 0,
+          "pair_round": 3,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 2444814498966729075
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 8,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 9,
+          "pair_index": 0,
+          "pair_round": 4,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8921071966114278025
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 10,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 11,
+          "pair_index": 0,
+          "pair_round": 5,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 12480267274410719854
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 12,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 13,
+          "pair_index": 0,
+          "pair_round": 6,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 11269926193681855824
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 14,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 15,
+          "pair_index": 0,
+          "pair_round": 7,
+          "result": {
+            "move_count": 15,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 6800715440284017031
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 16,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 17,
+          "pair_index": 0,
+          "pair_round": 8,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 10960268711596028962
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 18,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 19,
+          "pair_index": 0,
+          "pair_round": 9,
+          "result": {
+            "move_count": 15,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 13166953261884679019
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 20,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 21,
+          "pair_index": 0,
+          "pair_round": 10,
+          "result": {
+            "move_count": 15,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 10413407491385544511
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 22,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 23,
+          "pair_index": 0,
+          "pair_round": 11,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 15364221054374746814
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 24,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 16,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 25,
+          "pair_index": 0,
+          "pair_round": 12,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 5233794584289867372
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 26,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 16,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 27,
+          "pair_index": 0,
+          "pair_round": 13,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 14986968078631566461
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 28,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 29,
+          "pair_index": 0,
+          "pair_round": 14,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 8110836733318890935
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 30,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 31,
+          "pair_index": 0,
+          "pair_round": 15,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 4847813553475122827
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 32,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 33,
+          "pair_index": 0,
+          "pair_round": 16,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 4388901038102126616
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 34,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 12,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 35,
+          "pair_index": 0,
+          "pair_round": 17,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 12923851821400148080
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 36,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 37,
+          "pair_index": 0,
+          "pair_round": 18,
+          "result": {
+            "move_count": 13,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 6241534237021821375
+        },
+        {
+          "agents": {
+            "black": "heuristic-search",
+            "red": "learned-policy-value-standard-20"
+          },
+          "index": 38,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 14,
+            "winner": "heuristic-search",
+            "winning_side": "black"
+          },
+          "seed": 11279272985791775831
+        },
+        {
+          "agents": {
+            "black": "learned-policy-value-standard-20",
+            "red": "heuristic-search"
+          },
+          "index": 39,
+          "pair_index": 0,
+          "pair_round": 19,
+          "result": {
+            "move_count": 11,
+            "winner": "heuristic-search",
+            "winning_side": "red"
+          },
+          "seed": 11279272985791775831
+        }
+      ],
+      "guidance": "policy-value",
+      "role_splits": {
+        "heuristic-search": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.8388748419471808,
+              "upper": 1.0,
+              "value": 1.0
+            },
+            "wins": 20
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 40,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.9123783988027133,
+              "upper": 0.9999999999999999,
+              "value": 1.0
+            },
+            "wins": 40
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 0,
+            "win_rate": {
+              "lower": 0.8388748419471808,
+              "upper": 1.0,
+              "value": 1.0
+            },
+            "wins": 20
+          }
+        },
+        "learned-policy-value-standard-20": {
+          "black": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 20,
+            "win_rate": {
+              "lower": 1.3877787807814457e-17,
+              "upper": 0.1611251580528193,
+              "value": 0.0
+            },
+            "wins": 0
+          },
+          "overall": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 40,
+            "losses": 40,
+            "win_rate": {
+              "lower": 6.938893903907228e-18,
+              "upper": 0.0876216011972866,
+              "value": 0.0
+            },
+            "wins": 0
+          },
+          "red": {
+            "draw_rate": 0.0,
+            "draws": 0,
+            "games": 20,
+            "losses": 20,
+            "win_rate": {
+              "lower": 1.3877787807814457e-17,
+              "upper": 0.1611251580528193,
+              "value": 0.0
+            },
+            "wins": 0
+          }
+        }
+      },
+      "runtime": {
+        "wall_seconds": 5.937697632005438
+      },
+      "setting": "standard-20",
+      "strength": {
+        "agents": [
+          "learned-policy-value-standard-20",
+          "heuristic-search"
+        ],
+        "draws": 0,
+        "games": 40,
+        "win_rate": {
+          "heuristic-search": {
+            "lower": 0.9123783988027133,
+            "upper": 0.9999999999999999,
+            "value": 1.0
+          },
+          "learned-policy-value-standard-20": {
+            "lower": 6.938893903907228e-18,
+            "upper": 0.0876216011972866,
+            "value": 0.0
+          }
+        },
+        "wins": {
+          "heuristic-search": 40,
+          "learned-policy-value-standard-20": 0
+        }
+      }
+    }
+  ],
+  "methodology": {
+    "all_scheduled_settings_recorded": true,
+    "baselines": [
+      "matched-non-neural-mcts",
+      "heuristic-search"
+    ],
+    "confidence_interval": "Wilson score interval for win rate",
+    "guidance_modes": [
+      "policy-only",
+      "value-only",
+      "policy-value"
+    ],
+    "heuristic_configuration_fixed_across_every_matchup": true,
+    "non_neural_mcts_settings_match_candidate": true,
+    "paired_role_swaps": true,
+    "shared_pair_seed_schedule": true
+  },
+  "runtime": {
+    "wall_seconds": 104.14501907490194
+  },
+  "version": 1
+}

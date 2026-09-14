@@ -19,6 +19,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=760_100)
     parser.add_argument("--simulations", type=int, default=20)
     parser.add_argument("--rollout-limit", type=int, default=4)
+    parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
     return parser
 
 
@@ -36,6 +37,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 seed=args.seed,
                 simulations=args.simulations,
                 rollout_limit=args.rollout_limit,
+                device=args.device,
             ),
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)

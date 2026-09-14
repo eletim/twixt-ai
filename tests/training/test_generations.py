@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from twixt_ai.device import DeviceSelection
 from twixt_ai.models import (
     MINI_POLICY_VALUE_CONFIG,
     PolicyValueNetwork,
     save_policy_value_checkpoint,
 )
 from twixt_ai.training import generations
+from twixt_ai.training import generations_cli
 from twixt_ai.training.generations import (
     MiniGenerationConfig,
     run_mini_training_generations,
@@ -44,11 +47,21 @@ def test_runs_two_generations_with_explicit_lineage(
         validation_fraction=0,
         promotion_win_rate=0,
         seed=59,
+        evaluation_seed=1_289_000,
+        artifact_uri="s3://twixt-ai/issue-128/test-stage",
     )
 
     report = run_mini_training_generations(champion, output, config=config)
 
     assert report["status"] == "completed"
+    assert report["environment"]["device"]["requested_device"] == "auto"
+    assert report["environment"]["device"]["resolved_device"] in {"cpu", "cuda"}
+    expected_worker_mode = (
+        "thread"
+        if report["environment"]["device"]["resolved_device"] == "cuda"
+        else "process"
+    )
+    assert report["generations"][0]["resolved_config"]["worker_mode"] == expected_worker_mode
     assert len(report["generations"]) == 2
     assert [item["status"] for item in report["generations"]] == [
         "completed", "completed"
@@ -61,6 +74,52 @@ def test_runs_two_generations_with_explicit_lineage(
     assert report["lineage"][1]["parent_sha256"] == report["lineage"][0][
         "candidate_sha256"
     ]
+    first_dataset = report["generations"][0]["dataset"]
+    manifest_path = output / "generation-0001" / "dataset" / "manifest.json"
+    assert first_dataset["manifest_sha256"] == hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    targets = first_dataset["target_distributions"]
+    assert targets["policy"]["examples"] == first_dataset["manifest"]["examples"]
+    assert targets["policy"]["maximum_probability_mean"] > 0
+    assert sum(targets["value"]["counts"].values()) == first_dataset["manifest"][
+        "examples"
+    ]
+    assert sum(targets["value"]["fractions"].values()) == pytest.approx(1)
+    first = report["generations"][0]
+    assert first["seeds"]["evaluation"] == 1_289_000
+    assert first["resolved_config"]["evaluation_seed"] == 1_289_000
+    assert first["evaluation"]["config"]["seed"] == 1_289_000
+    assert first["selfplay"]["summary_sha256"] == hashlib.sha256(
+        (output / "generation-0001" / "selfplay" / "summary.json").read_bytes()
+    ).hexdigest()
+    assert first["evaluation_artifacts"][0]["sha256"] == hashlib.sha256(
+        (output / "generation-0001" / "evaluation.json").read_bytes()
+    ).hexdigest()
+    assert first["artifact_storage"]["bytes"] > first["training"]["candidate"]["bytes"]
+    assert first["artifact_storage"]["files"] > 4
+    retention = first["retention_manifest"]
+    assert retention["external_uri"] == "s3://twixt-ai/issue-128/test-stage"
+    assert retention["inventory_complete"] is True
+    assert retention["storage_attestation"] is None
+    assert "pruning_ready" not in retention
+    assert len(retention["inventory_sha256"]) == 64
+    assert retention["files"] == sum(
+        category["files"] for category in retention["categories"].values()
+    )
+    assert all(
+        len(item["sha256"]) == 64
+        for category in retention["categories"].values()
+        for item in category["objects"]
+    )
+    generation_root = output / "generation-0001"
+    for category in retention["categories"].values():
+        for item in category["objects"]:
+            retained_path = generation_root / item["path"]
+            assert retained_path.stat().st_size == item["bytes"]
+            assert hashlib.sha256(retained_path.read_bytes()).hexdigest() == item[
+                "sha256"
+            ]
     assert (output / "generation-0001" / "candidate" / "best.pt").is_file()
     assert (output / "generation-0002" / "evaluation.json").is_file()
     assert json.loads((output / "report.json").read_text()) == report
@@ -73,11 +132,165 @@ def test_runs_two_generations_with_explicit_lineage(
         {"evaluation_games": 3},
         {"promotion_win_rate": 1.1},
         {"validation_fraction": 1},
+        {"inference_batch_size": 0},
+        {"inference_max_wait_seconds": -0.1},
+        {"selfplay_exploration": -0.1},
+        {"selfplay_progressive_widening_constant": 0},
+        {"selfplay_progressive_widening_exponent": float("inf")},
+        {"selection_metric": "policy"},
+        {"artifact_uri": ""},
+        {"evaluation_seed": True},
     ],
 )
 def test_generation_config_rejects_invalid_values(kwargs: dict[str, object]) -> None:
     with pytest.raises((TypeError, ValueError)):
         MiniGenerationConfig(**kwargs)  # type: ignore[arg-type]
+
+
+def test_cuda_selfplay_loads_one_shared_model_and_records_batches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    champion = tmp_path / "champion.pt"
+    save_policy_value_checkpoint(
+        champion, PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    )
+    original_load = generations.load_policy_value_checkpoint
+    loads: list[object] = []
+
+    def load_once(path: object, **kwargs: object) -> object:
+        loads.append(path)
+        # Exercise shared-path orchestration on CPU-only CI while presenting
+        # the same DeviceSelection contract as a CUDA host.
+        return original_load(path, map_location="cpu")
+
+    monkeypatch.setattr(generations, "load_policy_value_checkpoint", load_once)
+    device = DeviceSelection("cuda", "cuda", True, "fixture GPU", "12.1", "2")
+    config = MiniGenerationConfig(
+        generations=1,
+        games_per_generation=2,
+        selfplay_simulations=1,
+        evaluation_games=2,
+        evaluation_simulations=1,
+        workers=2,
+        inference_batch_size=2,
+        inference_max_wait_seconds=0.05,
+        epochs=1,
+    )
+
+    batch, inference = generations.run_generation_selfplay(
+        champion, tmp_path / "selfplay", config, 86, device
+    )
+
+    assert batch.completed == 2
+    assert loads == [champion]
+    assert inference["mode"] == "shared-batched"
+    assert inference["model_instances"] == 1
+    assert inference["device"]["resolved_device"] == "cuda"
+    statistics = inference["statistics"]
+    assert statistics["requests"] > 0
+    assert statistics["maximum_batch_size"] == 2
+
+
+def test_selfplay_search_settings_are_applied_and_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    champion = tmp_path / "champion.pt"
+    save_policy_value_checkpoint(
+        champion, PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    )
+    observed: list[generations.MCTSAgent] = []
+    original = generations.MCTSAgent
+
+    def capturing_agent(*args: object, **kwargs: object) -> generations.MCTSAgent:
+        agent = original(*args, **kwargs)
+        observed.append(agent)
+        return agent
+
+    monkeypatch.setattr(generations, "MCTSAgent", capturing_agent)
+    device = DeviceSelection("cpu", "cpu", False, None, None, "2")
+    config = MiniGenerationConfig(
+        generations=1,
+        games_per_generation=1,
+        selfplay_simulations=2,
+        selfplay_exploration=0.7,
+        selfplay_progressive_widening_constant=3.0,
+        selfplay_progressive_widening_exponent=0.4,
+        evaluation_games=2,
+        evaluation_simulations=1,
+        workers=1,
+        epochs=1,
+    )
+
+    generations._agent(
+        str(champion),
+        config.selfplay_simulations,
+        config.rollout_limit,
+        device.resolved_device,
+        config.selfplay_exploration,
+        config.selfplay_progressive_widening_constant,
+        config.selfplay_progressive_widening_exponent,
+    )
+
+    assert observed[0].exploration == pytest.approx(0.7)
+    assert observed[0].progressive_widening_constant == pytest.approx(3.0)
+    assert observed[0].progressive_widening_exponent == pytest.approx(0.4)
+
+
+def test_cuda_selfplay_snapshots_statistics_after_batcher_shutdown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class DelayedStatistics:
+        def __init__(self, batcher: DelayedStatisticsBatcher) -> None:
+            self.batcher = batcher
+
+        def to_dict(self) -> dict[str, int]:
+            return {"requests": int(self.batcher.closed)}
+
+    class DelayedStatisticsBatcher:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            self.closed = False
+
+        @property
+        def statistics(self) -> DelayedStatistics:
+            return DelayedStatistics(self)
+
+        def __enter__(self) -> DelayedStatisticsBatcher:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            self.closed = True
+
+    champion = tmp_path / "champion.pt"
+    model = PolicyValueNetwork(MINI_POLICY_VALUE_CONFIG)
+    monkeypatch.setattr(
+        generations,
+        "load_policy_value_checkpoint",
+        lambda *args, **kwargs: SimpleNamespace(model=model),
+    )
+    monkeypatch.setattr(
+        generations, "NeuralInferenceBatcher", DelayedStatisticsBatcher
+    )
+    monkeypatch.setattr(
+        generations,
+        "run_batch",
+        lambda *args, **kwargs: SimpleNamespace(completed=1, failed=0),
+    )
+    device = DeviceSelection("cuda", "cuda", True, "fixture GPU", "12.1", "2")
+    config = MiniGenerationConfig(
+        generations=1,
+        games_per_generation=1,
+        selfplay_simulations=1,
+        evaluation_games=2,
+        evaluation_simulations=1,
+        workers=1,
+        epochs=1,
+    )
+
+    _, inference = generations.run_generation_selfplay(
+        champion, tmp_path / "selfplay", config, 86, device
+    )
+
+    assert inference["statistics"] == {"requests": 1}
 
 
 def test_generation_cli_rejects_all_validation_split(
@@ -97,6 +310,26 @@ def test_generation_cli_rejects_all_validation_split(
     assert "validation_fraction must be in [0, 1)" in capsys.readouterr().err
 
 
+def test_generation_cli_passes_fixed_evaluation_seed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[MiniGenerationConfig] = []
+
+    def run_stub(*args: object, **kwargs: object) -> dict[str, object]:
+        observed.append(kwargs["config"])  # type: ignore[arg-type]
+        return {"status": "fixture"}
+
+    monkeypatch.setattr(generations_cli, "run_mini_training_generations", run_stub)
+
+    assert generations_cli.main([
+        "--initial-champion", "champion.pt",
+        "--output-dir", "output",
+        "--evaluation-seed", "1289000",
+    ]) == 0
+
+    assert observed[0].evaluation_seed == 1_289_000
+
+
 def test_generation_rejects_empty_training_split_after_dataset_build(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -113,7 +346,7 @@ def test_generation_rejects_empty_training_split_after_dataset_build(
         ),
     )
     monkeypatch.setattr(
-        generations, "_game_paths", lambda roots: (tmp_path / "game.json",)
+        generations, "completed_game_paths", lambda roots: (tmp_path / "game.json",)
     )
     monkeypatch.setattr(
         generations,

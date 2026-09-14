@@ -23,6 +23,9 @@ The versioned, reproducible training shard schema is defined in
 [docs/training-data-format.md](docs/training-data-format.md).
 The model training, metrics, and resume workflow is documented in
 [docs/model-training.md](docs/model-training.md).
+The larger-data value-target audit, calibration results, and learned-MCTS
+ablations are documented in
+[docs/mini-value-diagnostics.md](docs/mini-value-diagnostics.md).
 
 ## Experiment presets
 
@@ -45,6 +48,8 @@ twixt-ai-train --dataset mini-dataset --output-dir mini-training --seed 1234
 The first measured 100-game Mini MCTS dataset and its exact reproduction command
 are documented in
 [`docs/mini-dataset-experiment.md`](docs/mini-dataset-experiment.md).
+The larger staged neural dataset procedure and measured configuration are in
+[`docs/large-mini-dataset.md`](docs/large-mini-dataset.md).
 The first learned Mini model, optimization sanity checks, and measured training
 run are documented in
 [`docs/mini-training-experiment.md`](docs/mini-training-experiment.md).
@@ -54,6 +59,16 @@ policy-only and value-only ablations, is documented in
 The repeatable self-play, windowed training, paired evaluation, and explicit
 checkpoint-promotion loop is documented in
 [`docs/mini-training-generations.md`](docs/mini-training-generations.md).
+The generation-2 matched search-mode bottleneck screen and its retained
+negative settings are documented in
+[`docs/issue-118-strength-scaling.md`](docs/issue-118-strength-scaling.md).
+The follow-on fixed-teacher data-volume protocol is defined in
+[`docs/issue-128-strength-scaling-contract.md`](docs/issue-128-strength-scaling-contract.md).
+The widened-head architecture-v2 bootstrap outcome and retained negative
+strength/value evidence are summarized in
+[`experiments/issue-143/README.md`](experiments/issue-143/README.md).
+The controlled 1,000-game architecture-v2 scaling stage is recorded in
+[`experiments/issue-151/README.md`](experiments/issue-151/README.md).
 Summarize one of those runs, including checkpoint lineage, promotion-driven
 champion changes, and fixed-position policy/value probes, with
 `twixt-ai-mini-report RUN`.
@@ -115,12 +130,32 @@ Splits are assigned at game granularity, and examples retain match
 configuration, decision seeds, and agent metadata. MCTS visit counts are
 normalized into policy targets when present.
 
+Audit value-target balance by game phase and, optionally, measure a checkpoint's
+train/validation calibration and error without loading the full dataset into
+memory:
+
+```bash
+twixt-ai-value-diagnostics --dataset dataset --checkpoint model.pt \
+  --output value-diagnostics.json --device auto
+```
+
 Train the policy/value network with reproducible shuffling, recorded optimizer
 and scheduler settings, and resumable best/latest checkpoints:
 
 ```bash
 twixt-ai-train --dataset dataset --output-dir training-run \
-  --epochs 20 --batch-size 64 --learning-rate 0.001 --seed 1234
+  --epochs 20 --batch-size 64 --learning-rate 0.001 --seed 1234 \
+  --device auto
+```
+
+Neural commands accept exactly `cpu`, `cuda`, or `auto`. `auto` deterministically
+uses CUDA when PyTorch reports it available and CPU otherwise; an explicit
+`cuda` request fails instead of falling back. Training, learned self-play, and
+inference reports record the request, resolved device, CUDA availability, GPU
+name, CUDA runtime, and PyTorch version. Check a machine without starting a run:
+
+```bash
+twixt-ai-device --device auto
 ```
 
 Compare two agents head-to-head, or repeat `--agent` three or more times for a
@@ -166,6 +201,21 @@ one to two workers. It also projects the measured wall-clock cost of 1,000 and
 [`docs/mini-performance.md`](docs/mini-performance.md) for methodology and the
 checked-in baseline. The existing `twixt-ai-engine-benchmark` command remains
 the independent standard 24×24 engine workload.
+
+Tune end-to-end Mini training and neural self-play on an RTX-class CUDA host:
+
+```bash
+PYTHONHASHSEED=0 twixt-ai-cuda-tuning \
+  --dataset experiments/issue-56/baseline/dataset \
+  --checkpoint experiments/issue-57/baseline/best.pt \
+  --output benchmarks/mini-cuda-tuning.json
+```
+
+The versioned report compares CPU and CUDA training, sweeps synchronous and
+shared-batched CUDA self-play settings, samples GPU utilization and memory during
+each workload, projects 1k/5k/10k game runtimes, and selects measured defaults
+with an explicit CPU/MCTS-versus-GPU bottleneck classification. See
+[`docs/cuda-throughput-tuning.md`](docs/cuda-throughput-tuning.md).
 
 MCTS is the primary non-neural search baseline. It uses a reproducible
 simulation-count budget, seeded random rollouts with a finite default horizon,

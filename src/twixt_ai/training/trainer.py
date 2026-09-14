@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import asdict, dataclass
 import hashlib
 import json
 import math
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 import torch
 from torch import Tensor
 from torch.nn import functional as F
 
+from twixt_ai.device import DeviceSelection, select_device
 from twixt_ai.game import BoardDimensions, Coordinate, GameState
 from twixt_ai.models import (
     ARCHITECTURE_NAME,
@@ -29,7 +31,6 @@ from twixt_ai.models import (
 )
 
 from .data import DATASET_FORMAT, DATASET_VERSION, EXAMPLE_FORMAT, EXAMPLE_VERSION
-
 
 TRAINING_FORMAT = "twixt-ai-training-checkpoint"
 TRAINING_VERSION = 1
@@ -49,6 +50,7 @@ class TrainingConfig:
     scheduler_gamma: float = 0.1
     seed: int = 0
     device: str = "cpu"
+    selection_metric: str = "total"
 
     def __post_init__(self) -> None:
         for name in ("epochs", "batch_size", "scheduler_step_size"):
@@ -77,8 +79,14 @@ class TrainingConfig:
             raise ValueError("optimizer must be 'adamw' or 'sgd'")
         if self.scheduler not in {"none", "step"}:
             raise ValueError("scheduler must be 'none' or 'step'")
-        if not isinstance(self.device, str) or not self.device:
-            raise ValueError("device must be a non-empty string")
+        if not isinstance(self.device, str):
+            raise TypeError("device must be a string")
+        if self.device not in {"cpu", "cuda", "auto"}:
+            raise ValueError("device must be 'cpu', 'cuda', or 'auto'")
+        if not isinstance(self.selection_metric, str):
+            raise TypeError("selection_metric must be a string")
+        if self.selection_metric not in {"total", "value"}:
+            raise ValueError("selection_metric must be 'total' or 'value'")
         object.__setattr__(self, "learning_rate", float(self.learning_rate))
         object.__setattr__(self, "weight_decay", float(self.weight_decay))
         object.__setattr__(self, "scheduler_gamma", float(self.scheduler_gamma))
@@ -91,9 +99,16 @@ class TrainingConfig:
         if not isinstance(value, Mapping):
             raise TypeError("training config must be a mapping")
         expected = set(cls.__dataclass_fields__)
-        if set(value) != expected:
-            raise ValueError(f"training config must contain exactly {sorted(expected)}")
-        return cls(**dict(value))  # type: ignore[arg-type]
+        legacy = expected - {"selection_metric"}
+        keys = set(value)
+        if keys != expected and keys != legacy:
+            raise ValueError(
+                "training config must contain exactly "
+                f"{sorted(expected)} (selection_metric may be omitted by legacy checkpoints)"
+            )
+        restored = dict(value)
+        restored.setdefault("selection_metric", "total")
+        return cls(**restored)  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +138,10 @@ class TrainingSummary:
     best_checkpoint: str
     metrics_path: str
     history: tuple[EpochMetrics, ...]
+    device: DeviceSelection
+    training_seconds: float
+    examples_per_second: float
+    peak_cuda_memory_bytes: int | None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -144,6 +163,12 @@ class TrainingSummary:
             },
             "metrics": self.metrics_path,
             "history": [item.to_dict() for item in self.history],
+            "device": self.device.to_dict(),
+            "performance": {
+                "training_seconds": self.training_seconds,
+                "examples_per_second": self.examples_per_second,
+                "peak_cuda_memory_bytes": self.peak_cuda_memory_bytes,
+            },
         }
 
     def to_json(self, *, indent: int | None = None) -> str:
@@ -291,6 +316,11 @@ def _optimizer(model: PolicyValueNetwork, config: TrainingConfig) -> torch.optim
     )
 
 
+def _synchronize(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+
+
 def _batches(examples: _Examples, batch_size: int, order: Tensor) -> list[tuple[Tensor, Tensor, Tensor]]:
     batches = []
     for start in range(0, len(order), batch_size):
@@ -306,6 +336,7 @@ def _epoch(
     *,
     optimizer: torch.optim.Optimizer | None,
     order: Tensor,
+    device: torch.device,
 ) -> tuple[float, float, float]:
     training = optimizer is not None
     model.train(training)
@@ -314,9 +345,9 @@ def _epoch(
     context = torch.enable_grad() if training else torch.no_grad()
     with context:
         for inputs, policy_targets, value_targets in _batches(examples, config.batch_size, order):
-            inputs = inputs.to(config.device)
-            policy_targets = policy_targets.to(config.device)
-            value_targets = value_targets.to(config.device)
+            inputs = inputs.to(device)
+            policy_targets = policy_targets.to(device)
+            value_targets = value_targets.to(device)
             if optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
             logits, values = model(inputs)
@@ -343,6 +374,7 @@ def _checkpoint_payload(
     best_epoch: int,
     best_loss: float,
     history: list[EpochMetrics],
+    device: DeviceSelection,
 ) -> dict[str, object]:
     return {
         "format": CHECKPOINT_FORMAT,
@@ -364,6 +396,7 @@ def _checkpoint_payload(
                 "width": model.config.board_width,
                 "height": model.config.board_height,
             },
+            "device": device.to_dict(),
         },
         "training_state": {
             "format": TRAINING_FORMAT,
@@ -376,6 +409,7 @@ def _checkpoint_payload(
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict() if scheduler is not None else None,
             "history": [item.to_dict() for item in history],
+            "device": device.to_dict(),
         },
     }
 
@@ -449,9 +483,10 @@ def train_model(
 
     torch.manual_seed(training_config.seed)
     try:
-        device = torch.device(training_config.device)
+        device_selection = select_device(training_config.device)
+        device = torch.device(device_selection.resolved_device)
         model = PolicyValueNetwork(architecture_config).to(device)
-    except (RuntimeError, TypeError) as exc:
+    except (RuntimeError, TypeError, ValueError) as exc:
         raise ValueError(f"could not initialize device {training_config.device!r}: {exc}") from exc
     optimizer = _optimizer(model, training_config)
     scheduler = (
@@ -467,6 +502,12 @@ def train_model(
     best_epoch = 0
     best_loss = math.inf
     history: list[EpochMetrics] = []
+    training_seconds = 0.0
+    trained_examples = 0
+    previous_performance: Mapping[str, object] = {}
+
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
 
     if initial_checkpoint is not None:
         initialized = load_policy_value_checkpoint(
@@ -479,7 +520,10 @@ def train_model(
     if resume:
         if not latest_path.is_file():
             raise ValueError("cannot resume without latest.pt")
-        payload = torch.load(latest_path, map_location=device, weights_only=True)
+        # Loading on CPU preserves non-capturable optimizer step counters on
+        # CPU. Optimizer.load_state_dict moves parameter-associated state to
+        # each parameter's device according to the optimizer's own policy.
+        payload = torch.load(latest_path, map_location="cpu", weights_only=True)
         if not isinstance(payload, Mapping) or not isinstance(payload.get("training_state"), Mapping):
             raise ValueError("latest.pt is not a resumable training checkpoint")
         state = payload["training_state"]
@@ -488,6 +532,12 @@ def train_model(
         comparable["epochs"] = saved_config.epochs
         if comparable != saved_config.to_dict():
             raise ValueError("resume training configuration does not match latest.pt")
+        saved_device = state.get("device")
+        if (
+            isinstance(saved_device, Mapping)
+            and saved_device.get("resolved_device") != device_selection.resolved_device
+        ):
+            raise ValueError("resume resolved device does not match latest.pt")
         if training_config.epochs < saved_config.epochs:
             raise ValueError("resumed epochs cannot be less than the original target")
         if state.get("dataset_sha256") != dataset_sha256:
@@ -512,6 +562,15 @@ def train_model(
         if not isinstance(raw_history, list):
             raise ValueError("resume checkpoint has invalid metric history")
         history = [EpochMetrics(**item) for item in raw_history]
+        if summary_path.is_file():
+            try:
+                prior_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                prior_summary = {}
+            if isinstance(prior_summary, Mapping) and isinstance(
+                prior_summary.get("performance"), Mapping
+            ):
+                previous_performance = prior_summary["performance"]
         # The checkpoint is the resume source of truth. This also repairs a
         # metrics file left stale by a process interrupted after an older
         # version of the trainer saved latest.pt.
@@ -524,13 +583,19 @@ def train_model(
 
     for epoch in range(start_epoch, training_config.epochs + 1):
         learning_rate = float(optimizer.param_groups[0]["lr"])
+        _synchronize(device)
+        training_started = perf_counter()
         train_values = _epoch(
             model,
             train,
             training_config,
             optimizer=optimizer,
             order=torch.randperm(len(train), generator=generator),
+            device=device,
         )
+        _synchronize(device)
+        training_seconds += perf_counter() - training_started
+        trained_examples += len(train)
         validation_values = (
             _epoch(
                 model,
@@ -538,11 +603,17 @@ def train_model(
                 training_config,
                 optimizer=None,
                 order=torch.arange(len(validation)),
+                device=device,
             )
             if len(validation)
             else (None, None, None)
         )
-        selection_loss = validation_values[2] if validation_values[2] is not None else train_values[2]
+        metric_index = 1 if training_config.selection_metric == "value" else 2
+        selection_loss = (
+            validation_values[metric_index]
+            if validation_values[metric_index] is not None
+            else train_values[metric_index]
+        )
         improved = selection_loss < best_loss
         if improved:
             best_epoch, best_loss = epoch, selection_loss
@@ -557,7 +628,7 @@ def train_model(
         history.append(metrics)
         payload = _checkpoint_payload(
             model, optimizer, scheduler, training_config, dataset_sha256,
-            epoch, best_epoch, best_loss, history,
+            epoch, best_epoch, best_loss, history, device_selection,
         )
         # latest.pt is the epoch commit point. Its referenced best checkpoint
         # and metric history must be durable before it advances.
@@ -568,6 +639,20 @@ def train_model(
 
     if not history:
         raise ValueError("training target is already complete; increase config.epochs")
+    if trained_examples:
+        examples_per_second = trained_examples / training_seconds
+        peak_cuda_memory_bytes = (
+            torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None
+        )
+    else:
+        training_seconds = float(previous_performance.get("training_seconds", 0.0))
+        examples_per_second = float(
+            previous_performance.get("examples_per_second", 0.0)
+        )
+        raw_peak_memory = previous_performance.get("peak_cuda_memory_bytes")
+        peak_cuda_memory_bytes = (
+            int(raw_peak_memory) if isinstance(raw_peak_memory, int) else None
+        )
     summary = TrainingSummary(
         training_config,
         architecture_config,
@@ -579,6 +664,10 @@ def train_model(
         best_path.name,
         metrics_path.name,
         tuple(history),
+        device_selection,
+        training_seconds,
+        examples_per_second,
+        peak_cuda_memory_bytes,
     )
     _write_text(summary_path, summary.to_json(indent=2) + "\n")
     return summary

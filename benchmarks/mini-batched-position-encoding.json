@@ -1,0 +1,100 @@
+{
+  "format": "twixt-ai-mini-batched-position-encoding-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "1e211c4fc66a5511bae820a86ae0a047571f7878",
+    "implementation_git_commit": "0784b1564e4946075147ece7c6954ebaea9cd63a",
+    "branch": "feature/work-item-optimize-batched-position-encoding",
+    "candidate": "bulk version-1 batch encoder"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "baseline": {
+      "implementation": "per-position encoding followed by torch.stack",
+      "end_to_end_wall_seconds": 108.40914169000462,
+      "games_per_hour": 17002.25618675795,
+      "positions_per_second": 1408.3129671533654,
+      "simulations_per_second": 1141.1952725699578,
+      "inference_positions_per_second": 2595.106279760567,
+      "effective_batch_size_average": 7.835061069485785,
+      "average_gpu_utilization_percent": 1.9413118527042577,
+      "peak_gpu_memory_mib": 434.0
+    },
+    "optimized": {
+      "implementation": "one preallocated batch with bulk dynamic-feature writes",
+      "end_to_end_wall_seconds": 83.773266636068,
+      "games_per_hour": 22002.24575230331,
+      "positions_per_second": 1822.4668337603928,
+      "simulations_per_second": 1476.7957006792299,
+      "inference_positions_per_second": 4365.6109615439655,
+      "effective_batch_size_average": 7.831443959989741,
+      "average_gpu_utilization_percent": 2.4654377880184333,
+      "peak_gpu_memory_mib": 434.0
+    },
+    "result": {
+      "speedup": 1.294078004156,
+      "wall_time_reduction_percent": 22.724905547525,
+      "games_per_hour_increase_percent": 29.407800415568,
+      "retained": true
+    }
+  },
+  "detailed_source_observer": {
+    "baseline": {
+      "source_artifact": "benchmarks/mini-cuda-selfplay-512-inference-host-profile.json",
+      "cpu_encoding_and_stack_seconds": 38.230223167454824,
+      "milliseconds_per_batch": 1.968093856754431,
+      "percent_of_profiled_evaluate_batch": 63.72745990926304
+    },
+    "optimized": {
+      "batches": 19435,
+      "positions": 152674,
+      "cpu_encoding_and_stack_seconds": 13.924191487720236,
+      "milliseconds_per_batch": 0.7164492661548874,
+      "percent_of_profiled_evaluate_batch": 37.64407086946873
+    },
+    "encoding_time_reduction_percent": 63.578,
+    "note": "Observer overhead makes this diagnostic rather than the throughput claim."
+  },
+  "equivalence": {
+    "output_summary_sha256_baseline": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "output_summary_sha256_optimized": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "games_completed": 512,
+    "games_failed": 0,
+    "validated_decisions": 30929,
+    "checks": [
+      "all match records replay",
+      "game and decision seeds match the contract",
+      "search parameters match the contract",
+      "policy root visits and value targets are valid",
+      "differential tests compare complete version-1 tensor byte buffers"
+    ]
+  },
+  "representative_batch_microbenchmark": {
+    "method": "Nine samples of 1000 calls after warmup; median for eight deterministic 10x10 legal-play positions on CPU.",
+    "legacy_stack_microseconds_per_batch": 1309.420753037557,
+    "retained_bulk_batch_microseconds_per_batch": 200.42800600640476,
+    "retained_speedup": 6.533122686435917,
+    "rejected_attempts": [
+      {
+        "implementation": "encode each position, unsqueeze, then torch.cat",
+        "microseconds_per_batch": 1316.8688479345292,
+        "change_vs_legacy_percent": -0.5655912438550237,
+        "reason_rejected": "Regressed the measured encoding path while preserving the same per-position allocations."
+      }
+    ]
+  }
+}

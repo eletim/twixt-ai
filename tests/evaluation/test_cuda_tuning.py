@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -67,6 +68,45 @@ def test_gpu_sampler_uses_physical_uuid_for_logical_device(
         ]
     ]
     assert sampler.samples == [(17.0, 256.0)]
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_detail"),
+    (
+        (FileNotFoundError("nvidia-smi unavailable"), "FileNotFoundError"),
+        (
+            subprocess.CalledProcessError(
+                1, ["nvidia-smi"], stderr="driver communication failed"
+            ),
+            "driver communication failed",
+        ),
+    ),
+)
+def test_gpu_sampler_fails_when_nvidia_smi_produces_no_valid_sample(
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Exception,
+    expected_detail: str,
+) -> None:
+    sampler: cuda_tuning._GpuSampler
+
+    def run(*args: object, **kwargs: object) -> None:
+        sampler._stop.set()
+        raise failure
+
+    monkeypatch.setattr(
+        cuda_tuning.torch.cuda,
+        "get_device_properties",
+        lambda _: SimpleNamespace(uuid="GPU-test"),
+    )
+    monkeypatch.setattr(cuda_tuning.subprocess, "run", run)
+    sampler = cuda_tuning._GpuSampler("cuda:0", 0.1)
+
+    sampler._poll()
+
+    with pytest.raises(RuntimeError, match="no valid nvidia-smi sample") as caught:
+        sampler.to_dict()
+    assert expected_detail in str(caught.value)
+    assert sampler.failure_count == 1
 
 
 def test_report_selects_measured_settings_and_projects_scale(

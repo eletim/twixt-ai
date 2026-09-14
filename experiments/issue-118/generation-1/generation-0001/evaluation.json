@@ -1,0 +1,767 @@
+{
+  "config": {
+    "agents": [
+      {
+        "configuration": {
+          "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+          "guidance": "policy-value",
+          "rollout_limit": 4,
+          "simulations": 20,
+          "type": "mcts"
+        },
+        "name": "champion",
+        "version": "0.0.1"
+      },
+      {
+        "configuration": {
+          "checkpoint_sha256": "b79f3a0b6745518d815b5873c65c2ded4102915b3dc50b01cb8ab1e6e8365b38",
+          "guidance": "policy-value",
+          "rollout_limit": 4,
+          "simulations": 20,
+          "type": "mcts"
+        },
+        "name": "candidate",
+        "version": "0.0.1"
+      }
+    ],
+    "board": {
+      "height": 10,
+      "width": 10
+    },
+    "confidence_level": 0.95,
+    "games_per_pair": 40,
+    "include_elo": false,
+    "seed": 1185012
+  },
+  "format": "twixt-ai-benchmark",
+  "games": [
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 0,
+      "pair_index": 0,
+      "pair_round": 0,
+      "result": {
+        "move_count": 32,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 9972833095856504578
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 1,
+      "pair_index": 0,
+      "pair_round": 0,
+      "result": {
+        "move_count": 39,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 9972833095856504578
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 2,
+      "pair_index": 0,
+      "pair_round": 1,
+      "result": {
+        "move_count": 56,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 6381416447017313433
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 3,
+      "pair_index": 0,
+      "pair_round": 1,
+      "result": {
+        "move_count": 22,
+        "winner": "champion",
+        "winning_side": "black"
+      },
+      "seed": 6381416447017313433
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 4,
+      "pair_index": 0,
+      "pair_round": 2,
+      "result": {
+        "move_count": 48,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 7462730666560626025
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 5,
+      "pair_index": 0,
+      "pair_round": 2,
+      "result": {
+        "move_count": 96,
+        "winner": null,
+        "winning_side": null
+      },
+      "seed": 7462730666560626025
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 6,
+      "pair_index": 0,
+      "pair_round": 3,
+      "result": {
+        "move_count": 34,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 13657819165796279218
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 7,
+      "pair_index": 0,
+      "pair_round": 3,
+      "result": {
+        "move_count": 29,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 13657819165796279218
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 8,
+      "pair_index": 0,
+      "pair_round": 4,
+      "result": {
+        "move_count": 50,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 6448694187442593666
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 9,
+      "pair_index": 0,
+      "pair_round": 4,
+      "result": {
+        "move_count": 27,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 6448694187442593666
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 10,
+      "pair_index": 0,
+      "pair_round": 5,
+      "result": {
+        "move_count": 52,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 13587669034553492525
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 11,
+      "pair_index": 0,
+      "pair_round": 5,
+      "result": {
+        "move_count": 39,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 13587669034553492525
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 12,
+      "pair_index": 0,
+      "pair_round": 6,
+      "result": {
+        "move_count": 23,
+        "winner": "champion",
+        "winning_side": "red"
+      },
+      "seed": 83721022871319848
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 13,
+      "pair_index": 0,
+      "pair_round": 6,
+      "result": {
+        "move_count": 26,
+        "winner": "champion",
+        "winning_side": "black"
+      },
+      "seed": 83721022871319848
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 14,
+      "pair_index": 0,
+      "pair_round": 7,
+      "result": {
+        "move_count": 22,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 7323697995814776527
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 15,
+      "pair_index": 0,
+      "pair_round": 7,
+      "result": {
+        "move_count": 23,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 7323697995814776527
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 16,
+      "pair_index": 0,
+      "pair_round": 8,
+      "result": {
+        "move_count": 42,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 3837897224893482808
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 17,
+      "pair_index": 0,
+      "pair_round": 8,
+      "result": {
+        "move_count": 33,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 3837897224893482808
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 18,
+      "pair_index": 0,
+      "pair_round": 9,
+      "result": {
+        "move_count": 56,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 9309478244717689784
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 19,
+      "pair_index": 0,
+      "pair_round": 9,
+      "result": {
+        "move_count": 94,
+        "winner": null,
+        "winning_side": null
+      },
+      "seed": 9309478244717689784
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 20,
+      "pair_index": 0,
+      "pair_round": 10,
+      "result": {
+        "move_count": 96,
+        "winner": null,
+        "winning_side": null
+      },
+      "seed": 7311644006701591046
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 21,
+      "pair_index": 0,
+      "pair_round": 10,
+      "result": {
+        "move_count": 27,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 7311644006701591046
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 22,
+      "pair_index": 0,
+      "pair_round": 11,
+      "result": {
+        "move_count": 27,
+        "winner": "champion",
+        "winning_side": "red"
+      },
+      "seed": 8587098720379916659
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 23,
+      "pair_index": 0,
+      "pair_round": 11,
+      "result": {
+        "move_count": 27,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 8587098720379916659
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 24,
+      "pair_index": 0,
+      "pair_round": 12,
+      "result": {
+        "move_count": 94,
+        "winner": null,
+        "winning_side": null
+      },
+      "seed": 6944763706206005374
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 25,
+      "pair_index": 0,
+      "pair_round": 12,
+      "result": {
+        "move_count": 23,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 6944763706206005374
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 26,
+      "pair_index": 0,
+      "pair_round": 13,
+      "result": {
+        "move_count": 53,
+        "winner": "champion",
+        "winning_side": "red"
+      },
+      "seed": 12349897195571704214
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 27,
+      "pair_index": 0,
+      "pair_round": 13,
+      "result": {
+        "move_count": 33,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 12349897195571704214
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 28,
+      "pair_index": 0,
+      "pair_round": 14,
+      "result": {
+        "move_count": 43,
+        "winner": "champion",
+        "winning_side": "red"
+      },
+      "seed": 1920478852413710164
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 29,
+      "pair_index": 0,
+      "pair_round": 14,
+      "result": {
+        "move_count": 17,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 1920478852413710164
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 30,
+      "pair_index": 0,
+      "pair_round": 15,
+      "result": {
+        "move_count": 31,
+        "winner": "champion",
+        "winning_side": "red"
+      },
+      "seed": 13895385193747342474
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 31,
+      "pair_index": 0,
+      "pair_round": 15,
+      "result": {
+        "move_count": 27,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 13895385193747342474
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 32,
+      "pair_index": 0,
+      "pair_round": 16,
+      "result": {
+        "move_count": 48,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 4815513487037835494
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 33,
+      "pair_index": 0,
+      "pair_round": 16,
+      "result": {
+        "move_count": 23,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 4815513487037835494
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 34,
+      "pair_index": 0,
+      "pair_round": 17,
+      "result": {
+        "move_count": 78,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 1580169966586385221
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 35,
+      "pair_index": 0,
+      "pair_round": 17,
+      "result": {
+        "move_count": 15,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 1580169966586385221
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 36,
+      "pair_index": 0,
+      "pair_round": 18,
+      "result": {
+        "move_count": 22,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 5197544291531503865
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 37,
+      "pair_index": 0,
+      "pair_round": 18,
+      "result": {
+        "move_count": 33,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 5197544291531503865
+    },
+    {
+      "agents": {
+        "black": "candidate",
+        "red": "champion"
+      },
+      "index": 38,
+      "pair_index": 0,
+      "pair_round": 19,
+      "result": {
+        "move_count": 30,
+        "winner": "candidate",
+        "winning_side": "black"
+      },
+      "seed": 831952172533108014
+    },
+    {
+      "agents": {
+        "black": "champion",
+        "red": "candidate"
+      },
+      "index": 39,
+      "pair_index": 0,
+      "pair_round": 19,
+      "result": {
+        "move_count": 25,
+        "winner": "candidate",
+        "winning_side": "red"
+      },
+      "seed": 831952172533108014
+    }
+  ],
+  "promotion": {
+    "candidate_wins": 29,
+    "games": 40,
+    "promoted": true,
+    "required_win_rate": 0.55,
+    "rule": "candidate wins / all games >= required_win_rate",
+    "win_rate": 0.725
+  },
+  "runtime_seconds": 22.132634431123734,
+  "summary": {
+    "agents": {
+      "candidate": {
+        "black": {
+          "draw_rate": 0.1,
+          "draws": 2,
+          "games": 20,
+          "losses": 5,
+          "win_rate": {
+            "lower": 0.4328542766852363,
+            "upper": 0.8188081758989179,
+            "value": 0.65
+          },
+          "wins": 13
+        },
+        "overall": {
+          "draw_rate": 0.1,
+          "draws": 4,
+          "games": 40,
+          "losses": 7,
+          "win_rate": {
+            "lower": 0.5716504419378944,
+            "upper": 0.8389198375233266,
+            "value": 0.725
+          },
+          "wins": 29
+        },
+        "red": {
+          "draw_rate": 0.1,
+          "draws": 2,
+          "games": 20,
+          "losses": 2,
+          "win_rate": {
+            "lower": 0.5839825677481065,
+            "upper": 0.9193423374202019,
+            "value": 0.8
+          },
+          "wins": 16
+        }
+      },
+      "champion": {
+        "black": {
+          "draw_rate": 0.1,
+          "draws": 2,
+          "games": 20,
+          "losses": 16,
+          "win_rate": {
+            "lower": 0.027866481213768224,
+            "upper": 0.30103364522848725,
+            "value": 0.1
+          },
+          "wins": 2
+        },
+        "overall": {
+          "draw_rate": 0.1,
+          "draws": 4,
+          "games": 40,
+          "losses": 29,
+          "win_rate": {
+            "lower": 0.0874541374603592,
+            "upper": 0.3194999033178771,
+            "value": 0.175
+          },
+          "wins": 7
+        },
+        "red": {
+          "draw_rate": 0.1,
+          "draws": 2,
+          "games": 20,
+          "losses": 13,
+          "win_rate": {
+            "lower": 0.11186170140766566,
+            "upper": 0.46870087761874396,
+            "value": 0.25
+          },
+          "wins": 5
+        }
+      }
+    },
+    "first_player": {
+      "draws": 4,
+      "games": 40,
+      "losses": 15,
+      "side": "red",
+      "win_rate": {
+        "lower": 0.3749736210669248,
+        "upper": 0.670645298873211,
+        "value": 0.525
+      },
+      "wins": 21
+    },
+    "pairs": [
+      {
+        "agents": [
+          "champion",
+          "candidate"
+        ],
+        "draws": 4,
+        "games": 40,
+        "win_rate": {
+          "candidate": {
+            "lower": 0.5716504419378944,
+            "upper": 0.8389198375233266,
+            "value": 0.725
+          },
+          "champion": {
+            "lower": 0.0874541374603592,
+            "upper": 0.3194999033178771,
+            "value": 0.175
+          }
+        },
+        "wins": {
+          "candidate": 29,
+          "champion": 7
+        }
+      }
+    ]
+  },
+  "version": 1
+}

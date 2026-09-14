@@ -1,0 +1,127 @@
+{
+  "format": "twixt-ai-issue-118-final-report",
+  "version": 1,
+  "issue": 118,
+  "baseline": {
+    "checkpoint": "experiments/issue-57/baseline/best.pt",
+    "checkpoint_sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "evaluation": {
+      "artifact": "experiments/issue-118/baseline-strength.json",
+      "seed": 580100,
+      "simulations": 20,
+      "rollout_limit": 4,
+      "results_wins_losses_draws": {
+        "policy-value": {
+          "random": [11, 1, 8],
+          "heuristic-search": [0, 20, 0],
+          "non-neural-mcts": [1, 14, 5]
+        },
+        "policy-only": {
+          "random": [18, 0, 2],
+          "heuristic-search": [0, 20, 0],
+          "non-neural-mcts": [11, 6, 3]
+        },
+        "value-only": {
+          "random": [3, 6, 11],
+          "heuristic-search": [0, 20, 0],
+          "non-neural-mcts": [0, 18, 2]
+        }
+      }
+    }
+  },
+  "teacher": {
+    "starting_checkpoint": "experiments/issue-89/training/best.pt",
+    "starting_checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+    "selected": {
+      "guidance": "policy-value",
+      "simulations": 64,
+      "exploration": 0.7,
+      "rollout_limit": 4,
+      "progressive_widening_constant": 3.0,
+      "progressive_widening_exponent": 0.5,
+      "heuristic_screen_wins_losses_draws": [9, 11, 0],
+      "policy_target_support_mean": 23.206122448979592,
+      "policy_target_maximum_probability_mean": 0.3992984693877551
+    },
+    "rejected": {
+      "reason": "Strong head-to-head play produced nearly uniform policy targets",
+      "progressive_widening_constant": 12.0,
+      "heuristic_screen_wins_losses_draws": [19, 1, 0],
+      "policy_target_support_mean": 56.256,
+      "policy_target_maximum_probability_mean": 0.05025
+    }
+  },
+  "device": {
+    "gpu_name": "NVIDIA GeForce RTX 4060",
+    "cuda_runtime": "12.8",
+    "pytorch_version": "2.8.0+cu128"
+  },
+  "generations": [
+    {
+      "number": 1,
+      "games": 1000,
+      "positions": 32388,
+      "dataset_manifest_sha256": "dad89888e94ea78ebe97022e6dc7e390dc79f921b0b5df434b489d6ce0be87c1",
+      "checkpoint_sha256": "b79f3a0b6745518d815b5873c65c2ded4102915b3dc50b01cb8ab1e6e8365b38",
+      "best_epoch": 1,
+      "best_validation_loss": 4.286144622355212,
+      "candidate_champion_wins_losses_draws": [29, 7, 4],
+      "candidate_win_rate": 0.725,
+      "promotion_threshold": 0.55,
+      "decision": "promoted"
+    },
+    {
+      "number": 2,
+      "games": 1000,
+      "positions": 27469,
+      "dataset_manifest_sha256": "9b6fca3d3c08f08e5eccccfba67ca0e09c809dcaeaf9ed9ac73024f4b8a72fad",
+      "checkpoint_sha256": "742229c59caf251a07c7ecac6dc77ff75cbf09643a22cca16b92fe083df5a5ec",
+      "best_epoch": 4,
+      "best_validation_loss": 3.900710181659319,
+      "candidate_champion_wins_losses_draws": [28, 8, 4],
+      "candidate_win_rate": 0.7,
+      "promotion_threshold": 0.55,
+      "decision": "promoted"
+    }
+  ],
+  "final_champion": {
+    "checkpoint": "experiments/issue-118/generation-2/generation-0001/candidate/best.pt",
+    "checkpoint_sha256": "742229c59caf251a07c7ecac6dc77ff75cbf09643a22cca16b92fe083df5a5ec",
+    "evaluation": {
+      "artifact": "experiments/issue-118/generation-2/strength.json",
+      "seed": 1188000,
+      "simulations": 20,
+      "rollout_limit": 4,
+      "results_wins_losses_draws": {
+        "policy-value": {
+          "random": [18, 1, 1],
+          "heuristic-search": [6, 14, 0],
+          "non-neural-mcts": [14, 1, 5]
+        },
+        "policy-only": {
+          "random": [20, 0, 0],
+          "heuristic-search": [5, 15, 0],
+          "non-neural-mcts": [17, 2, 1]
+        },
+        "value-only": {
+          "random": [17, 0, 3],
+          "heuristic-search": [0, 19, 1],
+          "non-neural-mcts": [9, 4, 7]
+        }
+      }
+    },
+    "versus_baseline_wins_losses_draws": [39, 0, 1]
+  },
+  "generation_count": 2,
+  "conclusion": "Playing strength materially improved under fixed head-to-head evaluation, but the final champion still loses a majority of games to heuristic search.",
+  "main_remaining_bottleneck": "Value-only guidance remains ineffective against heuristic search; the learnable teacher configuration also tops out near parity, so stronger value/search targets are higher leverage than repeating the same generation.",
+  "verification": {
+    "reviewed_range": "dev/v0.0.6..dev/v0.0.7",
+    "full_test_suite": "448 passed",
+    "compileall": "passed",
+    "json_validation": "passed",
+    "diff_check": "passed",
+    "game_search_encoding_semantics_changed": false,
+    "provenance_pairing_and_aggregation_cross_check": "passed"
+  }
+}

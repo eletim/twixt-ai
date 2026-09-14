@@ -1,0 +1,67 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "champion_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+      "generation": 1,
+      "mcts": {
+        "exploration": 0.7,
+        "guidance": "policy-value",
+        "progressive_widening_constant": 3.0,
+        "progressive_widening_exponent": 0.5,
+        "rollout_limit": 4,
+        "simulations": 64
+      },
+      "window_generations": [
+        1
+      ],
+      "workflow": "twixt-ai-mini-training-generations"
+    },
+    "shard_size": 10000,
+    "split_seed": "issue-59-1185000-1",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 32388,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 1000,
+  "splits": {
+    "train": {
+      "examples": 28842,
+      "shards": [
+        {
+          "examples": 10000,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "e5689426640dc7bf0981b832843826b666a0926a44b1da2da433f10343d48b39"
+        },
+        {
+          "examples": 10000,
+          "path": "train/shard-00001.jsonl",
+          "sha256": "d5bcd5a447c8fa872b876862dceaaefd6cb1525e1d2334aa50219315ddcbd708"
+        },
+        {
+          "examples": 8842,
+          "path": "train/shard-00002.jsonl",
+          "sha256": "79b8cf6f7c125ee162b92ddf64fdd776a69339f063e4a39b8487eba766df72ad"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 3546,
+      "shards": [
+        {
+          "examples": 3546,
+          "path": "validation/shard-00000.jsonl",
+          "sha256": "3165f4139422eb3993a8a5dc59a06453f24545b93ce0ef938a36f466f51f6912"
+        }
+      ]
+    }
+  },
+  "version": 1
+}

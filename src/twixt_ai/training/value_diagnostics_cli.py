@@ -17,6 +17,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--ply-bucket-size", type=int, default=16)
     parser.add_argument("--calibration-bins", type=int, default=10)
+    parser.add_argument("--difficulty-bins", type=int, default=3)
+    parser.add_argument("--confidence-bins", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=512)
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
     return parser
@@ -34,6 +36,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             config=ValueDiagnosticsConfig(
                 ply_bucket_size=args.ply_bucket_size,
                 calibration_bins=args.calibration_bins,
+                difficulty_bins=args.difficulty_bins,
+                confidence_bins=args.confidence_bins,
                 batch_size=args.batch_size,
                 device=args.device,
             ),

@@ -1,0 +1,92 @@
+{
+  "format": "twixt-ai-mini-cuda-selfplay-benchmark-contract",
+  "version": 2,
+  "release": "v0.0.6",
+  "description": "Canonical fixed-semantics contract for v0.0.6 CUDA neural self-play throughput comparisons.",
+  "board": {
+    "preset": "mini",
+    "width": 10,
+    "height": 10,
+    "rules": {
+      "version": "v0.0.1",
+      "move": "peg-placement-only",
+      "links": "automatic",
+      "pie_or_swap": false
+    }
+  },
+  "checkpoint": {
+    "path": "experiments/issue-57/baseline/best.pt",
+    "sha256": "ce20f05c8a3d687fce4860595d40d710177f5901298c0bea95afb488cadcc3c8",
+    "encoding_version": 1
+  },
+  "config": {
+    "games": 512,
+    "device": "cuda",
+    "agents": {
+      "red": "checkpoint-mcts",
+      "black": "checkpoint-mcts",
+      "guidance": "policy-value"
+    },
+    "mcts": {
+      "simulations": 4,
+      "exploration": 1.4142135623730951,
+      "rollout_limit": 4,
+      "rollout_evaluator": "heuristic_rollout_value",
+      "progressive_widening": {
+        "constant": 1.5,
+        "exponent": 0.5
+      }
+    },
+    "seeds": {
+      "python_hash_seed": 0,
+      "batch_seed": 980000512,
+      "game_seed_derivation": "python-random.Random(batch_seed).getrandbits(64), once per game in zero-based game-index order",
+      "decision_seed_derivation": "python-random.Random(game_seed).randrange(2**64), once per ply in move order"
+    },
+    "workers": {
+      "mode": "thread"
+    },
+    "shared_inference": {
+      "model_instances": 1
+    }
+  },
+  "optimization_variables": {
+    "worker_concurrency": {
+      "default": 4,
+      "minimum": 1,
+      "description": "Number of concurrent self-play game threads."
+    },
+    "inference_batch_size": {
+      "default": 8,
+      "minimum": 1,
+      "description": "Maximum positions submitted in one shared model inference call."
+    },
+    "queue_flush_max_wait_seconds": {
+      "default": 0.0005,
+      "minimum": 0.0,
+      "description": "Maximum time the shared inference queue waits for a fuller batch."
+    }
+  },
+  "output": {
+    "timing_scope": "End-to-end wall time from immediately before self-play dispatch until all 512 per-game artifacts and summary.json have been written; checkpoint load and one-time process setup are reported separately and excluded.",
+    "required_artifacts": {
+      "games": "Exactly 512 version 1 twixt-ai-match JSON artifacts at games/game-NNNNNN.json, one for every zero-based game index, containing replay-valid terminal records, complete move history, derived decision seeds, and per-decision MCTS metadata.",
+      "summary": "Exactly one version 1 twixt-ai-selfplay-batch summary.json reporting the resolved configuration, games=512, completed=512, failed=0, and an ordered entry matching every game artifact."
+    },
+    "target_semantics": {
+      "policy": "For every recorded position, the sparse policy target is the complete legal root-move visit distribution: each probability is visits / 4 and the probabilities sum to 1.",
+      "value": "The terminal game result from the recorded position's side-to-move perspective: win=1, draw=0, loss=-1.",
+      "primary_performance_target": "Minimize end-to-end wall time while changing only declared optimization variables or semantics-preserving implementation details.",
+      "reported_rates": "games_per_hour = 512 / end_to_end_wall_seconds * 3600; positions_per_second and simulations_per_second use the same wall-time denominator."
+    }
+  },
+  "invariants": {
+    "fixed_semantics": "Board/rules, checkpoint/model identity, encoding, both agents, game count, every MCTS/search-quality parameter, seeds and their derivation, CUDA execution, model instance count, artifact schemas, and policy/value targets are fixed.",
+    "allowed_optimization_variables": [
+      "worker_concurrency",
+      "inference_batch_size",
+      "queue_flush_max_wait_seconds"
+    ],
+    "equivalence": "A comparable run may differ only in the three allowed optimization variables and semantics-preserving implementation code; it must pass every runner validation."
+  }
+}

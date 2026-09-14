@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+from random import Random
+
 import pytest
 import torch
 
-from twixt_ai.game import BoardDimensions, Coordinate, GameState, Link, Peg, Player
+from twixt_ai.game import (
+    BoardDimensions,
+    Coordinate,
+    GameState,
+    Link,
+    Peg,
+    Player,
+    apply_move,
+    legal_peg_placements,
+)
 from twixt_ai.models import (
     CHANNEL_NAMES,
     INPUT_SHAPE,
@@ -11,6 +22,7 @@ from twixt_ai.models import (
     SYMMETRIES,
     BoardSymmetry,
     encode_position,
+    encode_positions,
     transform_coordinate,
     transform_encoding,
     transform_state,
@@ -56,6 +68,103 @@ def test_encoding_is_deterministic_and_does_not_alias() -> None:
     assert torch.equal(first, second)
     first.zero_()
     assert second.count_nonzero() > 0
+
+
+@pytest.mark.parametrize(
+    "board",
+    (
+        BoardDimensions(1, 1),
+        BoardDimensions(2, 3),
+        BoardDimensions(10, 10),
+        BoardDimensions(24, 24),
+    ),
+)
+def test_batched_encoding_is_byte_exact_for_deterministic_trajectories(
+    board: BoardDimensions,
+) -> None:
+    """Differentially cover every state shape and feature used by version 1."""
+
+    random = Random(board.width * 1000 + board.height)
+    state = GameState.initial(board)
+    states = [state]
+    for _ in range(min(board.width * board.height, 80)):
+        moves = legal_peg_placements(state)
+        if not moves:
+            break
+        state = apply_move(state, random.choice(moves))
+        states.append(state)
+        if state.is_terminal:
+            break
+
+    expected = torch.stack([encode_position(state) for state in states])
+    actual = encode_positions(states)
+
+    assert actual.shape == expected.shape
+    assert actual.dtype is expected.dtype is torch.float32
+    assert torch.equal(actual.view(torch.uint8), expected.view(torch.uint8))
+
+
+def test_batched_encoding_rejects_empty_or_mixed_board_batches() -> None:
+    with pytest.raises(ValueError, match="non-empty"):
+        encode_positions([])
+    with pytest.raises(ValueError, match="same board dimensions"):
+        encode_positions(
+            [
+                GameState.initial(BoardDimensions(10, 10)),
+                GameState.initial(BoardDimensions(24, 24)),
+            ]
+        )
+
+
+def test_batched_encodings_do_not_alias_cached_static_planes() -> None:
+    states = [GameState.initial(BoardDimensions(10, 10))]
+
+    first = encode_positions(states)
+    first.zero_()
+    second = encode_positions(states)
+
+    assert second.count_nonzero() > 0
+    assert torch.equal(second, torch.stack([encode_position(states[0])]))
+
+
+def test_batched_encoding_respects_default_device_across_cpu_cache_reuse() -> None:
+    states = [GameState.initial(BoardDimensions(10, 10))]
+    original_default = torch.empty(0).device
+    non_cpu_device = torch.device("cuda" if torch.cuda.is_available() else "meta")
+
+    try:
+        torch.set_default_device(non_cpu_device)
+        default_encoded = encode_positions(states)
+        explicit_cpu = encode_positions(states, device="cpu")
+        default_encoded_again = encode_positions(states)
+    finally:
+        torch.set_default_device(original_default)
+
+    assert default_encoded.device.type == non_cpu_device.type
+    assert default_encoded_again.device.type == non_cpu_device.type
+    assert explicit_cpu.device.type == "cpu"
+    assert torch.equal(
+        explicit_cpu,
+        torch.stack([encode_position(states[0], device="cpu")]),
+    )
+
+
+def test_batched_encoding_resolves_default_device_without_torch_2_3_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    states = [GameState.initial(BoardDimensions(10, 10))]
+    original_default = torch.empty(0).device
+    non_cpu_device = torch.device("cuda" if torch.cuda.is_available() else "meta")
+
+    try:
+        torch.set_default_device(non_cpu_device)
+        with monkeypatch.context() as context:
+            context.delattr(torch, "get_default_device", raising=False)
+            encoded = encode_positions(states)
+    finally:
+        torch.set_default_device(original_default)
+
+    assert encoded.device.type == non_cpu_device.type
 
 
 @pytest.mark.parametrize("symmetry", SYMMETRIES)

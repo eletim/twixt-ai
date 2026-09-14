@@ -267,11 +267,19 @@ agent = HeuristicSearchAgent(depth=2, node_budget=20_000)
 
 ## Browser play
 
-Start the minimal local human-vs-agent UI after installing the project:
+After installing the project, start the human-vs-agent UI and AI-vs-AI viewer
+from a checkout with:
 
 ```bash
-twixt-ai-web
+./start.sh
 ```
+
+The launcher keeps `twixt-ai-web` bound to <http://127.0.0.1:8000> and, when
+Tailscale is installed and logged in, configures an HTTPS Tailscale Serve proxy
+for tailnet-only access. It prints the local and tailnet URLs for both pages.
+If Tailscale is unavailable, local access still works. Press Ctrl+C to stop the
+web server. To run the server directly or select another bind address, use
+`twixt-ai-web --host HOST --port PORT`.
 
 Open <http://127.0.0.1:8000>, choose a side and an available agent, then start a
 new game. The browser only renders state and submits human/agent turn requests;

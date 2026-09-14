@@ -1,0 +1,115 @@
+{
+  "format": "twixt-ai-mini-residual-batched-position-encoding-benchmark",
+  "version": 1,
+  "recorded_on": "2026-09-11",
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "python": "3.10.12",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "source": {
+    "base_git_commit": "622ba2a3e9285d9f86ff703d643436c611e54df2",
+    "implementation_git_commit": "2ec32855cb752e01d01eab46bf358332b9bfe41a",
+    "branch": "feature/work-item-reduce-residual-encoding-overhead",
+    "candidate": "one flattened dynamic-feature update plus a bounded immutable CPU goal-plane template"
+  },
+  "contract": {
+    "path": "benchmarks/mini-cuda-selfplay-512-v006-contract.json",
+    "sha256": "fea8e036f4a0d9aa68b275658c7e536ab80723e8ba290ffb92cea5f1d904109f",
+    "worker_concurrency": 8,
+    "inference_batch_size": 8,
+    "queue_flush_max_wait_seconds": 0.002,
+    "encoding_version": 1
+  },
+  "canonical_throughput": {
+    "method": "Two adjacent unprofiled runs per implementation on the same host; arithmetic means summarize the recorded runs.",
+    "baseline": {
+      "implementation_git_commit": "622ba2a3e9285d9f86ff703d643436c611e54df2",
+      "end_to_end_wall_seconds": [77.07890183501877, 76.57844553608447],
+      "games_per_hour": [23913.158544282614, 24069.436080828607],
+      "positions_per_second": [1980.7495483885655, 1993.6941646074363],
+      "simulations_per_second": [1605.0565985592816, 1615.5459820832205],
+      "inference_positions_per_second": [4580.550368103995, 4668.4478348390185],
+      "effective_batch_size_average": [7.819010550035849, 7.8214139344262295],
+      "mean_end_to_end_wall_seconds": 76.82867368555162,
+      "mean_games_per_hour": 23991.29731255561
+    },
+    "optimized": {
+      "implementation_git_commit": "2ec32855cb752e01d01eab46bf358332b9bfe41a",
+      "end_to_end_wall_seconds": [73.7409010429401, 73.69163832301274],
+      "games_per_hour": [24995.62622548761, 25012.335754033546],
+      "positions_per_second": [2070.411370632647, 2071.7954366923377],
+      "simulations_per_second": [1677.712073628703, 1678.8336209559536],
+      "inference_positions_per_second": [5012.736768229046, 5062.299596807126],
+      "effective_batch_size_average": [7.820212057573119, 7.81981151403401],
+      "mean_end_to_end_wall_seconds": 73.71626968297642,
+      "mean_games_per_hour": 25003.980989760577
+    },
+    "result": {
+      "speedup": 1.0422213985591022,
+      "wall_time_reduction_percent": 4.051096879940701,
+      "games_per_hour_increase_percent": 4.222139855910223,
+      "both_optimized_runs_beat_both_baseline_runs": true,
+      "retained": true
+    }
+  },
+  "detailed_source_observer": {
+    "baseline": {
+      "source": "benchmarks/mini-batched-position-encoding.json optimized observer",
+      "cpu_encoding_and_stack_seconds": 13.924191487720236,
+      "milliseconds_per_batch": 0.7164492661548874,
+      "percent_of_profiled_evaluate_batch": 37.64407086946873
+    },
+    "optimized": {
+      "implementation_git_commit": "2ec32855cb752e01d01eab46bf358332b9bfe41a",
+      "batches": 19513,
+      "positions": 152674,
+      "cpu_encoding_and_stack_seconds": 7.544629204086959,
+      "milliseconds_per_batch": 0.3866462975496827,
+      "percent_of_profiled_evaluate_batch": 22.84607643772365
+    },
+    "encoding_time_reduction_percent": 45.81639292492797,
+    "note": "Observer overhead makes this diagnostic; only the two unprofiled canonical runs per implementation support the throughput claim."
+  },
+  "equivalence": {
+    "output_summary_sha256": "f6dc7621b70a017cff91bf00825de0bd6e7f4483ca2d984a48201d4f07bdc52f",
+    "canonical_runs": 5,
+    "games_completed_per_run": 512,
+    "games_failed_per_run": 0,
+    "validated_decisions_per_run": 30929,
+    "differential_test_scope": "Complete version-1 float32 byte buffers on deterministic legal trajectories for 1x1, 2x3, 10x10, and 24x24 boards; cached-template results additionally prove independent returned storage.",
+    "single_position_encoder_changed": false,
+    "version_2_encoder_changed": false
+  },
+  "representative_batch_microbenchmark": {
+    "method": "Nine samples of 1000 calls after 100 warmups; median for eight deterministic 10x10 legal-play positions at plies 8 through 64, seed 2401, on CPU. Both implementations ran in the same process.",
+    "reference_microseconds_per_batch": 252.70872912369668,
+    "optimized_microseconds_per_batch": 122.81084014102817,
+    "optimized_speedup": 2.05770703004313,
+    "latency_reduction_percent": 51.40221686568084,
+    "rejected_approaches": [
+      {
+        "implementation": "one flattened dynamic-feature update without a static goal-plane template",
+        "microseconds_per_batch": 135.47196881845593,
+        "reason_rejected": "It removed repeated advanced-index conversion but still rebuilt and populated four identical goal borders for every batch; the immutable spatial template measured 117.99 us in the same exploratory nine-sample, 5000-call test."
+      },
+      {
+        "implementation": "replace owner-to-channel lookup tables with Player identity branches",
+        "reference_index_construction_microseconds": 79.63206397835165,
+        "candidate_index_construction_microseconds": 89.80692154727876,
+        "reason_rejected": "Identity branches were 12.78% slower in the isolated deterministic index-construction trial."
+      },
+      {
+        "implementation": "cache a complete batch-sized static tensor instead of one spatial template",
+        "spatial_template_allocation_microseconds": 2.8245609952136874,
+        "batch_template_allocation_microseconds": 2.124150446616113,
+        "reason_rejected": "The 0.70 us allocation difference did not justify retaining a separate full tensor for every batch-size and board-size combination; the spatial template bounds cached storage independently of batch size."
+      },
+      {
+        "implementation": "reuse mutable output tensors across evaluate_batch calls",
+        "reason_rejected": "Returned encodings are caller-owned and inference batches can overlap. Pooling mutable output storage would risk cross-request aliasing or require synchronization whose end-to-end value was not established."
+      }
+    ]
+  }
+}

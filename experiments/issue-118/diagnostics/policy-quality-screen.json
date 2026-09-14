@@ -1,0 +1,424 @@
+{
+  "checkpoint": "experiments/issue-89/training/best.pt",
+  "checkpoint_sha256": "4b722180316bdf3eb0ff709bda9491fcb72c3a1cb0096cb49be794ddd9dafd07",
+  "device": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "torch": "2.8.0+cu128"
+  },
+  "results": [
+    {
+      "batch_summary": {
+        "aggregate": {
+          "completed": 16,
+          "failed": 0,
+          "total_moves": 490,
+          "wins": {
+            "black": 5,
+            "draw": 1,
+            "red": 10
+          }
+        },
+        "config": {
+          "agents": {
+            "black": "teacher",
+            "red": "teacher"
+          },
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "games": 16,
+          "seed": 1184000,
+          "worker_mode": "thread",
+          "workers": 8
+        },
+        "format": "twixt-ai-selfplay-batch",
+        "games": [
+          {
+            "artifact": "games/game-000000.json",
+            "index": 0,
+            "move_count": 19,
+            "seed": 7518603988703255212,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000001.json",
+            "index": 1,
+            "move_count": 22,
+            "seed": 6884515993078128242,
+            "status": "completed",
+            "winner": "black"
+          },
+          {
+            "artifact": "games/game-000002.json",
+            "index": 2,
+            "move_count": 23,
+            "seed": 8442744099760877947,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000003.json",
+            "index": 3,
+            "move_count": 22,
+            "seed": 18077114903261521414,
+            "status": "completed",
+            "winner": "black"
+          },
+          {
+            "artifact": "games/game-000004.json",
+            "index": 4,
+            "move_count": 19,
+            "seed": 2174261244005380374,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000005.json",
+            "index": 5,
+            "move_count": 54,
+            "seed": 4454973460569990835,
+            "status": "completed",
+            "winner": "black"
+          },
+          {
+            "artifact": "games/game-000006.json",
+            "index": 6,
+            "move_count": 31,
+            "seed": 13583283666727228355,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000007.json",
+            "index": 7,
+            "move_count": 17,
+            "seed": 12961245202462246773,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000008.json",
+            "index": 8,
+            "move_count": 21,
+            "seed": 7645971441598547265,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000009.json",
+            "index": 9,
+            "move_count": 39,
+            "seed": 4679004010692277565,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000010.json",
+            "index": 10,
+            "move_count": 22,
+            "seed": 248783786948540020,
+            "status": "completed",
+            "winner": "black"
+          },
+          {
+            "artifact": "games/game-000011.json",
+            "index": 11,
+            "move_count": 27,
+            "seed": 15207319750592969347,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000012.json",
+            "index": 12,
+            "move_count": 34,
+            "seed": 2860632775099110643,
+            "status": "completed",
+            "winner": "black"
+          },
+          {
+            "artifact": "games/game-000013.json",
+            "index": 13,
+            "move_count": 23,
+            "seed": 12882382885778355662,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000014.json",
+            "index": 14,
+            "move_count": 94,
+            "seed": 10077371216667019927,
+            "status": "completed",
+            "winner": null
+          },
+          {
+            "artifact": "games/game-000015.json",
+            "index": 15,
+            "move_count": 23,
+            "seed": 1493665055869558119,
+            "status": "completed",
+            "winner": "red"
+          }
+        ],
+        "version": 1
+      },
+      "config": {
+        "exploration": 0.7,
+        "inference_batch_size": 8,
+        "inference_max_wait_seconds": 0.002,
+        "progressive_widening_constant": 3.0,
+        "progressive_widening_exponent": 0.5,
+        "rollout_limit": 4,
+        "simulations": 64,
+        "workers": 8
+      },
+      "games": 16,
+      "games_per_hour": 2725.684763706835,
+      "inference": {
+        "average_queue_wait_seconds": 0.0009651898341879499,
+        "batch_size_distribution": {
+          "1": 3992,
+          "2": 161,
+          "3": 122,
+          "4": 84,
+          "5": 388,
+          "6": 171,
+          "7": 362,
+          "8": 2553
+        },
+        "batches": 7833,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 2553,
+          "latency": 5280
+        },
+        "inference_seconds": 6.306808091932908,
+        "maximum_batch_size": 8,
+        "positions_per_second": 4905.809650300858,
+        "requests": 30940,
+        "total_queue_wait_seconds": 29.86297346977517
+      },
+      "runtime_seconds": 21.132304354105145,
+      "seed": 1184000,
+      "targets": {
+        "entropy_mean_nats": 2.241436409142334,
+        "max_probability_mean": 0.3992984693877551,
+        "positions": 490,
+        "support_max": 24,
+        "support_mean": 23.206122448979592,
+        "support_median": 24.0,
+        "support_min": 1
+      }
+    },
+    {
+      "batch_summary": {
+        "aggregate": {
+          "completed": 16,
+          "failed": 0,
+          "total_moves": 375,
+          "wins": {
+            "black": 0,
+            "draw": 1,
+            "red": 15
+          }
+        },
+        "config": {
+          "agents": {
+            "black": "teacher",
+            "red": "teacher"
+          },
+          "board": {
+            "height": 10,
+            "width": 10
+          },
+          "games": 16,
+          "seed": 1184001,
+          "worker_mode": "thread",
+          "workers": 8
+        },
+        "format": "twixt-ai-selfplay-batch",
+        "games": [
+          {
+            "artifact": "games/game-000000.json",
+            "index": 0,
+            "move_count": 15,
+            "seed": 11908720932079798138,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000001.json",
+            "index": 1,
+            "move_count": 21,
+            "seed": 2994379669701550368,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000002.json",
+            "index": 2,
+            "move_count": 15,
+            "seed": 12570143724727212754,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000003.json",
+            "index": 3,
+            "move_count": 21,
+            "seed": 10217360224721484834,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000004.json",
+            "index": 4,
+            "move_count": 15,
+            "seed": 7942503974639816640,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000005.json",
+            "index": 5,
+            "move_count": 23,
+            "seed": 8743911435522026250,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000006.json",
+            "index": 6,
+            "move_count": 13,
+            "seed": 4828416274996459133,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000007.json",
+            "index": 7,
+            "move_count": 15,
+            "seed": 5174475286234100565,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000008.json",
+            "index": 8,
+            "move_count": 13,
+            "seed": 8634983704914933708,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000009.json",
+            "index": 9,
+            "move_count": 19,
+            "seed": 2839023805539025457,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000010.json",
+            "index": 10,
+            "move_count": 37,
+            "seed": 7029997244247954560,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000011.json",
+            "index": 11,
+            "move_count": 15,
+            "seed": 12524288062782573469,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000012.json",
+            "index": 12,
+            "move_count": 23,
+            "seed": 9340586142470769801,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000013.json",
+            "index": 13,
+            "move_count": 96,
+            "seed": 16753454507287378251,
+            "status": "completed",
+            "winner": null
+          },
+          {
+            "artifact": "games/game-000014.json",
+            "index": 14,
+            "move_count": 13,
+            "seed": 4929984231252990934,
+            "status": "completed",
+            "winner": "red"
+          },
+          {
+            "artifact": "games/game-000015.json",
+            "index": 15,
+            "move_count": 21,
+            "seed": 16033210941458353258,
+            "status": "completed",
+            "winner": "red"
+          }
+        ],
+        "version": 1
+      },
+      "config": {
+        "exploration": 0.7,
+        "inference_batch_size": 8,
+        "inference_max_wait_seconds": 0.002,
+        "progressive_widening_constant": 12.0,
+        "progressive_widening_exponent": 0.5,
+        "rollout_limit": 4,
+        "simulations": 64,
+        "workers": 8
+      },
+      "games": 16,
+      "games_per_hour": 2832.9102817216403,
+      "inference": {
+        "average_queue_wait_seconds": 0.0011276563321257732,
+        "batch_size_distribution": {
+          "1": 3972,
+          "2": 516,
+          "3": 382,
+          "4": 263,
+          "5": 8,
+          "6": 262,
+          "7": 273,
+          "8": 1662
+        },
+        "batches": 7338,
+        "flushes": {
+          "forced": 0,
+          "full_batch": 1662,
+          "latency": 5676
+        },
+        "inference_seconds": 5.581168030155823,
+        "maximum_batch_size": 8,
+        "positions_per_second": 4303.937790478842,
+        "requests": 24021,
+        "total_queue_wait_seconds": 27.0874327539932
+      },
+      "runtime_seconds": 20.332447649911046,
+      "seed": 1184001,
+      "targets": {
+        "entropy_mean_nats": 3.878302830686642,
+        "max_probability_mean": 0.05025,
+        "positions": 375,
+        "support_max": 64,
+        "support_mean": 56.256,
+        "support_median": 64,
+        "support_min": 1
+      }
+    }
+  ]
+}

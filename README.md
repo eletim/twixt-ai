@@ -59,6 +59,16 @@ policy-only and value-only ablations, is documented in
 The repeatable self-play, windowed training, paired evaluation, and explicit
 checkpoint-promotion loop is documented in
 [`docs/mini-training-generations.md`](docs/mini-training-generations.md).
+The generation-2 matched search-mode bottleneck screen and its retained
+negative settings are documented in
+[`docs/issue-118-strength-scaling.md`](docs/issue-118-strength-scaling.md).
+The follow-on fixed-teacher data-volume protocol is defined in
+[`docs/issue-128-strength-scaling-contract.md`](docs/issue-128-strength-scaling-contract.md).
+The widened-head architecture-v2 bootstrap outcome and retained negative
+strength/value evidence are summarized in
+[`experiments/issue-143/README.md`](experiments/issue-143/README.md).
+The controlled 1,000-game architecture-v2 scaling stage is recorded in
+[`experiments/issue-151/README.md`](experiments/issue-151/README.md).
 Summarize one of those runs, including checkpoint lineage, promotion-driven
 champion changes, and fixed-position policy/value probes, with
 `twixt-ai-mini-report RUN`.

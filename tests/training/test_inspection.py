@@ -32,6 +32,25 @@ def _checkpoint(path: Path) -> dict[str, object]:
     }
 
 
+def _attest_retention(retention: dict[str, object]) -> None:
+    inventory_payload = {
+        "categories": retention["categories"],
+        "files": retention["files"],
+        "bytes": retention["bytes"],
+    }
+    inventory_sha256 = hashlib.sha256(json.dumps(
+        inventory_payload, sort_keys=True, separators=(",", ":")
+    ).encode()).hexdigest()
+    retention["inventory_sha256"] = inventory_sha256
+    retention["storage_attestation"] = {
+        "verified": True,
+        "external_uri": retention["external_uri"],
+        "inventory_sha256": inventory_sha256,
+        "verified_at": "2026-09-13T12:00:00Z",
+        "verifier": "fixture-storage-audit",
+    }
+
+
 def _run(tmp_path: Path) -> Path:
     initial = _checkpoint(tmp_path / "initial.pt")
     candidate = _checkpoint(tmp_path / "candidate.pt")
@@ -75,6 +94,7 @@ def _run(tmp_path: Path) -> Path:
             "generation": 1,
             "status": "completed",
             "decision": "promoted",
+            "champion_before": initial,
             "runtime_seconds": 3.0,
             "resolved_config": {
                 "selfplay_simulations": 100,
@@ -83,24 +103,145 @@ def _run(tmp_path: Path) -> Path:
             },
             "selfplay": {
                 "runtime_seconds": 2.0,
+                "summary_sha256": "1" * 64,
                 "summary": {"aggregate": {
                     "completed": 2, "failed": 0, "total_moves": 40
                 }},
             },
             "dataset": {
+                "runtime_seconds": 0.25,
                 "source_generations": [1],
-                "manifest": {"source_games": 2, "examples": 40},
+                "manifest": {
+                    "source_games": 2,
+                    "examples": 40,
+                    "splits": {
+                        "train": {"shards": [{
+                            "path": "train/shard-00000.jsonl",
+                            "examples": 36,
+                            "sha256": "4" * 64,
+                        }]},
+                        "validation": {"shards": [{
+                            "path": "validation/shard-00000.jsonl",
+                            "examples": 4,
+                            "sha256": "5" * 64,
+                        }]},
+                    },
+                },
+                "manifest_sha256": "2" * 64,
+                "target_distributions": {
+                    "policy": {
+                        "examples": 40,
+                        "support": {"mean": 4.5, "minimum": 1, "maximum": 9},
+                        "entropy_mean_nats": 1.25,
+                        "maximum_probability_mean": 0.45,
+                    },
+                    "value": {
+                        "examples": 40,
+                        "counts": {"-1": 18, "0": 4, "1": 18},
+                        "fractions": {"-1": 0.45, "0": 0.1, "1": 0.45},
+                    },
+                },
             },
-            "training": {"summary": {"history": history}, "candidate": candidate},
+            "training": {
+                "runtime_seconds": 0.5,
+                "summary": {
+                    "best_epoch": 2,
+                    "best_loss": 0.6,
+                    "config": {"selection_metric": "value"},
+                    "history": history,
+                    "performance": {"examples_per_second": 1600.0},
+                },
+                "candidate": candidate,
+            },
             "evaluation": {"promotion": {
                 "candidate_wins": 3,
                 "games": 4,
                 "win_rate": 0.75,
                 "required_win_rate": 0.55,
                 "promoted": True,
-            }},
+            }, "runtime_seconds": 0.25},
+            "evaluation_artifacts": [
+                {"opponent": "starting champion", "path": "start.json", "sha256": "6" * 64, "bytes": 256},
+                {"opponent": "previous stage", "path": "previous.json", "sha256": "7" * 64, "bytes": 256},
+                {"opponent": "matched non-neural MCTS", "path": "mcts.json", "sha256": "8" * 64, "bytes": 256},
+                {"opponent": "heuristic search", "path": "heuristic.json", "sha256": "9" * 64, "bytes": 256},
+            ],
+            "fixed_opponent_evaluations": [
+                {
+                    "candidate_draws": 4,
+                    "candidate_losses": 4,
+                    "candidate_win_rate": 0.8,
+                    "candidate_wins": 32,
+                    "games": 40,
+                    "opponent": "matched non-neural MCTS",
+                    "paired_role_swaps": True,
+                    "seed": 1_289_000,
+                },
+                {
+                    "candidate_draws": 0,
+                    "candidate_losses": 34,
+                    "candidate_win_rate": 0.15,
+                    "candidate_wins": 6,
+                    "games": 40,
+                    "opponent": "heuristic search",
+                    "paired_role_swaps": True,
+                    "seed": 1_289_000,
+                },
+            ],
+            "artifact_storage": {"files": 8, "bytes": 4096},
+            "retention_manifest": {
+                "format": "twixt-ai-artifact-retention-manifest",
+                "version": 1,
+                "external_uri": "s3://twixt-ai/issue-128/matched-1k",
+                "inventory_complete": True,
+                "inventory_sha256": "pending",
+                "storage_attestation": None,
+                "files": 7,
+                "bytes": 2560 + candidate["bytes"],
+                "categories": {
+                    "selfplay": {
+                        "files": 1,
+                        "bytes": 1024,
+                        "objects": [{
+                            "path": "selfplay/games/game-000000.json",
+                            "sha256": "a" * 64,
+                            "bytes": 1024,
+                        }],
+                    },
+                    "dataset": {
+                        "files": 1,
+                        "bytes": 512,
+                        "objects": [{
+                            "path": "dataset/train/shard-00000.jsonl",
+                            "sha256": "4" * 64,
+                            "bytes": 512,
+                        }],
+                    },
+                    "training": {
+                        "files": 1,
+                        "bytes": candidate["bytes"],
+                        "objects": [{
+                            "path": "candidate/best.pt",
+                            "sha256": candidate["sha256"],
+                            "bytes": candidate["bytes"],
+                        }],
+                    },
+                    "evaluation": {
+                        "files": 4,
+                        "bytes": 1024,
+                        "objects": [
+                            {"path": "start.json", "sha256": "6" * 64, "bytes": 256},
+                            {"path": "previous.json", "sha256": "7" * 64, "bytes": 256},
+                            {"path": "mcts.json", "sha256": "8" * 64, "bytes": 256},
+                            {"path": "heuristic.json", "sha256": "9" * 64, "bytes": 256},
+                        ],
+                    },
+                },
+            },
         }],
     }
+    retention = report["generations"][0]["retention_manifest"]
+    _attest_retention(retention)
     (run / "report.json").write_text(json.dumps(report), encoding="utf-8")
     return run
 
@@ -120,10 +261,50 @@ def test_builds_summary_and_fixed_checkpoint_probes(tmp_path: Path) -> None:
     generation = report["generations"][0]
     assert generation["selfplay"]["games_per_hour"] == pytest.approx(3600)
     assert generation["dataset"]["examples"] == 40
+    assert generation["dataset"]["manifest_sha256"] == "2" * 64
+    assert [item["sha256"] for item in generation["dataset"]["shards"]] == [
+        "4" * 64, "5" * 64
+    ]
+    assert generation["dataset"]["target_distributions"]["value"]["counts"] == {
+        "-1": 18, "0": 4, "1": 18
+    }
+    assert generation["timing_seconds"] == {
+        "total": 3.0,
+        "selfplay": 2.0,
+        "dataset": 0.25,
+        "training": 0.5,
+        "evaluation": 0.25,
+    }
+    assert generation["throughput"]["training_examples_per_second"] == 1600
+    candidate_sha = report["checkpoints"][1]["sha256"]
+    assert generation["hashes"]["candidate_checkpoint_sha256"] == candidate_sha
+    assert generation["hashes"]["teacher"]["sha256"] == report["checkpoints"][0][
+        "sha256"
+    ]
+    assert len(generation["hashes"]["evaluation_artifacts"]) == 4
+    assert generation["artifact_storage"] == {"files": 8, "bytes": 4096}
+    assert generation["retention_manifest"]["external_uri"] == (
+        "s3://twixt-ai/issue-128/matched-1k"
+    )
+    assert generation["retention_manifest"]["status"] == {
+        "inventory_complete": True,
+        "storage_attested": True,
+        "pruning_ready": True,
+    }
     assert generation["losses"]["first"]["train_loss"] == 5.0
     assert generation["losses"]["last"]["validation_loss"] == 4.3
     assert generation["evaluation"]["win_rate"] == 0.75
     assert generation["evaluation"]["comparison"] == "candidate vs parent champion"
+    assert generation["fixed_opponent_evaluations"][0] == {
+        "candidate_draws": 4,
+        "candidate_losses": 4,
+        "candidate_win_rate": 0.8,
+        "candidate_wins": 32,
+        "games": 40,
+        "opponent": "matched non-neural MCTS",
+        "paired_role_swaps": True,
+        "seed": 1_289_000,
+    }
     assert generation["champion_change"] == "updated to candidate"
     assert "strength_change" not in generation
 
@@ -137,12 +318,42 @@ def test_render_and_cli_include_exact_inputs(tmp_path: Path) -> None:
     assert structured["source"]["sha256"] in rendered
     assert structured["checkpoints"][0]["sha256"] in rendered
     assert "75.0%" in rendered
+    assert "## Fixed-opponent evaluation results" in rendered
+    assert "| 1 | matched non-neural MCTS | 32-4-4 | 80.0% | 40 | yes | 1289000 |" in rendered
+    assert "| 1 | heuristic search | 6-34-0 | 15.0% | 40 | yes | 1289000 |" in rendered
+    assert "## Scaling evidence" in rendered
+    assert "Selected checkpoint epoch/loss (metric)" in rendered
+    assert "2 / 0.600000 (value)" in rendered
+    assert "## Training target distributions" in rendered
+    assert "18 / 4 / 18" in rendered
+    assert "## Artifact identities" in rendered
+    assert (
+        f"| 1 | teacher | `{structured['generations'][0]['hashes']['teacher']['path']}` | "
+        f"`{structured['generations'][0]['hashes']['teacher']['sha256']}` |"
+    ) in rendered
+    assert "dataset/train/shard-00000.jsonl" in rendered
+    assert "`" + "4" * 64 + "`" in rendered
+    assert "`" + "5" * 64 + "`" in rendered
+    assert "evaluation: heuristic search" in rendered
+    for character in "6789":
+        assert "`" + character * 64 + "`" in rendered
+    assert "s3://twixt-ai/issue-128/matched-1k" in rendered
+    assert (
+        "| 1 | `s3://twixt-ai/issue-128/matched-1k` | yes | yes | yes | "
+        "selfplay | 1 | 1024 |"
+        in rendered
+    )
+    assert "selfplay/games/game-000000.json" in rendered
+    assert "`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`" in rendered
     assert "contested-midgame" in rendered
 
     output = tmp_path / "reports" / "inspection.md"
     assert inspection_cli.main([str(run), "--output", str(output)]) == 0
     assert output.read_text(encoding="utf-8").startswith(
         "# Mini Twixt training inspection"
+    )
+    assert "## Fixed-opponent evaluation results" in output.read_text(
+        encoding="utf-8"
     )
 
 
@@ -158,6 +369,107 @@ def test_hash_mismatch_is_flagged_without_running_probes(tmp_path: Path) -> None
     assert initial["verification"] == "sha256 mismatch"
     assert initial["mismatched_candidates"][0]["path"] == str(tmp_path / "initial.pt")
     assert initial["probes"] == []
+
+
+def test_preserves_legacy_single_evaluation_artifact(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    generation = source["generations"][0]
+    generation["evaluation_artifact"] = generation.pop("evaluation_artifacts")[0]
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    assert report["generations"][0]["hashes"]["evaluation_artifacts"] == [
+        generation["evaluation_artifact"]
+    ]
+
+
+def test_external_uri_without_storage_attestation_is_not_pruning_ready(
+    tmp_path: Path,
+) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["generations"][0]["retention_manifest"]["storage_attestation"] = None
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    assert report["generations"][0]["retention_manifest"]["status"] == {
+        "inventory_complete": True,
+        "storage_attested": False,
+        "pruning_ready": False,
+    }
+
+
+def test_storage_attestation_must_match_inventory_digest(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["generations"][0]["retention_manifest"]["storage_attestation"][
+        "inventory_sha256"
+    ] = "0" * 64
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    status = report["generations"][0]["retention_manifest"]["status"]
+    assert status["inventory_complete"] is True
+    assert status["storage_attested"] is False
+    assert status["pruning_ready"] is False
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "empty-categories",
+        "missing-category",
+        "missing-object-field",
+        "invalid-path",
+        "invalid-sha256",
+        "category-file-rollup",
+        "category-byte-rollup",
+        "global-file-rollup",
+        "global-byte-rollup",
+    ),
+)
+def test_malformed_inventory_cannot_be_pruning_ready(
+    tmp_path: Path, mutation: str
+) -> None:
+    run = _run(tmp_path)
+    source_path = run / "report.json"
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    retention = source["generations"][0]["retention_manifest"]
+    categories = retention["categories"]
+    first_object = categories["selfplay"]["objects"][0]
+    if mutation == "empty-categories":
+        retention["categories"] = {}
+    elif mutation == "missing-category":
+        categories.pop("evaluation")
+    elif mutation == "missing-object-field":
+        first_object.pop("sha256")
+    elif mutation == "invalid-path":
+        first_object["path"] = "../outside.json"
+    elif mutation == "invalid-sha256":
+        first_object["sha256"] = "not-a-sha256"
+    elif mutation == "category-file-rollup":
+        categories["selfplay"]["files"] += 1
+    elif mutation == "category-byte-rollup":
+        categories["selfplay"]["bytes"] += 1
+    elif mutation == "global-file-rollup":
+        retention["files"] += 1
+    else:
+        retention["bytes"] += 1
+    _attest_retention(retention)
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    report = build_mini_inspection_report(run)
+
+    status = report["generations"][0]["retention_manifest"]["status"]
+    assert status["inventory_complete"] is False
+    assert status["pruning_ready"] is False
 
 
 def test_resolves_by_hash_after_stale_working_directory_candidate(

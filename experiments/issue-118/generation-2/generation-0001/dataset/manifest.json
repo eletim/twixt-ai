@@ -1,0 +1,77 @@
+{
+  "board": {
+    "height": 10,
+    "width": 10
+  },
+  "config": {
+    "metadata": {
+      "champion_sha256": "b79f3a0b6745518d815b5873c65c2ded4102915b3dc50b01cb8ab1e6e8365b38",
+      "generation": 1,
+      "mcts": {
+        "exploration": 0.7,
+        "guidance": "policy-value",
+        "progressive_widening_constant": 3.0,
+        "progressive_widening_exponent": 0.5,
+        "rollout_limit": 4,
+        "simulations": 64
+      },
+      "window_generations": [
+        1
+      ],
+      "workflow": "twixt-ai-mini-training-generations"
+    },
+    "shard_size": 5000,
+    "split_seed": "issue-59-1187000-1",
+    "validation_fraction": 0.1
+  },
+  "example_format": {
+    "format": "twixt-ai-training-example",
+    "version": 1
+  },
+  "examples": 27469,
+  "format": "twixt-ai-training-dataset",
+  "source_games": 1000,
+  "splits": {
+    "train": {
+      "examples": 23843,
+      "shards": [
+        {
+          "examples": 5000,
+          "path": "train/shard-00000.jsonl",
+          "sha256": "28413bc8ccd66e81cdae1269acc683f2e4a7536196a4306f4db10ecee2f624b4"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00001.jsonl",
+          "sha256": "aa295064523f9fbb4f154122edbe03652cec71ce8d67917bcb3170dcdc83aa08"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00002.jsonl",
+          "sha256": "d1613a2eac0b65163de3876532776e8abf8dbd0c2433125781bae4e124bf5bd6"
+        },
+        {
+          "examples": 5000,
+          "path": "train/shard-00003.jsonl",
+          "sha256": "041973838e2ef2b2a949c45f799d52751e6a72a827e253c12cfa054a37ddcdb3"
+        },
+        {
+          "examples": 3843,
+          "path": "train/shard-00004.jsonl",
+          "sha256": "08f507b8b3e4813a667df349d72a306edbed8fd30f0de24ee14a8c16662b2d77"
+        }
+      ]
+    },
+    "validation": {
+      "examples": 3626,
+      "shards": [
+        {
+          "examples": 3626,
+          "path": "validation/shard-00000.jsonl",
+          "sha256": "d60f2893bbceb2ebd2c0dc6f81a5ad4f76d66e1524a91f237f57cba45a2859d3"
+        }
+      ]
+    }
+  },
+  "version": 1
+}

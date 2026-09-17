@@ -12,6 +12,7 @@ from concurrent.futures import (
 )
 from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
 from random import Random, SystemRandom
@@ -49,11 +50,14 @@ class BatchConfig:
     red_agent: str = "red"
     black_agent: str = "black"
     worker_mode: str = "process"
+    random_opening_moves: int = 0
 
     def __post_init__(self) -> None:
         _positive_integer(self.games, "games")
         _positive_integer(self.workers, "workers")
         _require_seed(self.seed)
+        if isinstance(self.random_opening_moves, bool) or not isinstance(self.random_opening_moves, int) or self.random_opening_moves < 0:
+            raise ValueError("random_opening_moves must be a non-negative integer")
         if not isinstance(self.board, BoardDimensions):
             raise TypeError("board must be BoardDimensions")
         for name in ("red_agent", "black_agent"):
@@ -74,6 +78,7 @@ class BatchConfig:
                 Player.BLACK.value: self.black_agent,
             },
             "worker_mode": self.worker_mode,
+            "random_opening_moves": self.random_opening_moves,
         }
 
 
@@ -89,6 +94,8 @@ class GameReport:
     move_count: int | None = None
     error_type: str | None = None
     error: str | None = None
+    opening_length: int = 0
+    training_positions: int = 0
 
     def __post_init__(self) -> None:
         if isinstance(self.index, bool) or not isinstance(self.index, int) or self.index < 0:
@@ -115,6 +122,8 @@ class GameReport:
             value.update(
                 winner=self.winner.value if self.winner is not None else None,
                 move_count=self.move_count,
+                opening_length=self.opening_length,
+                training_positions=self.training_positions,
             )
         else:
             value["error"] = {"type": self.error_type, "message": self.error}
@@ -164,6 +173,11 @@ class BatchSummary:
                 "failed": self.failed,
                 "wins": wins,
                 "total_moves": sum(report.move_count or 0 for report in self.games),
+                "average_opening_length": sum(report.opening_length for report in self.games) / self.completed if self.completed else 0,
+                "average_game_length": sum(report.move_count or 0 for report in self.games) / self.completed if self.completed else 0,
+                "draw_rate": wins["draw"] / self.completed if self.completed else 0,
+                "winner_distribution": wins,
+                "training_positions_per_game": sum(report.training_positions for report in self.games) / self.completed if self.completed else 0,
             },
             "games": [report.to_dict() for report in self.games],
         }
@@ -180,15 +194,36 @@ def _play_game(
     seed: int,
     red_name: str,
     black_name: str,
+    random_opening_moves: int = 0,
 ) -> dict[str, object]:
     """Process worker returning only pickle-friendly JSON data."""
 
+    opening_seed = int.from_bytes(hashlib.sha256(f"opening:{seed}".encode()).digest()[:8], "big")
     result = run_match(
         red_factory(),
         black_factory(),
         config=MatchConfig(board, seed, red_name, black_name),
+        random_opening_moves=random_opening_moves,
+        opening_seed=opening_seed,
     )
-    return result.to_dict()
+    payload = result.to_dict()
+    opening_length = min(random_opening_moves, len(result.moves))
+    payload["opening"] = {
+        "random_opening_moves": random_opening_moves,
+        "game_seed": seed,
+        "opening_seed": opening_seed,
+        "move_sequence": [
+            {"player": move.player.value, "coordinate": move.coordinate.to_dict()}
+            for move in result.moves[:opening_length]
+        ],
+        "mcts_start_ply": opening_length,
+        "total_move_count": len(result.moves),
+        "winner": result.winner.value if result.winner else None,
+        "draw": result.winner is None,
+        "positions_used_for_training": len(result.moves) - opening_length,
+        "random_opening_positions_excluded_count": opening_length,
+    }
+    return payload
 
 
 def _error_payload(index: int, seed: int, exc: BaseException) -> dict[str, object]:
@@ -257,6 +292,8 @@ def run_batch(
             status="completed",
             winner=Player(winner_value) if winner_value is not None else None,
             move_count=int(result["move_count"]),
+            opening_length=int(payload["opening"]["mcts_start_ply"]),
+            training_positions=int(payload["opening"]["positions_used_for_training"]),
         )
 
     def capture_failure(index: int, seed: int, exc: BaseException) -> None:
@@ -287,6 +324,7 @@ def run_batch(
                         seed,
                         config.red_agent,
                         config.black_agent,
+                        config.random_opening_moves,
                     ),
                 )
             except Exception as exc:  # one broken game must not stop the batch
@@ -303,6 +341,7 @@ def run_batch(
                     seed,
                     config.red_agent,
                     config.black_agent,
+                    config.random_opening_moves,
                 ): (index, seed)
                 for index, seed in enumerate(seeds)
             }
@@ -344,6 +383,7 @@ def run_batch(
                                 seed,
                                 config.red_agent,
                                 config.black_agent,
+                                config.random_opening_moves,
                             )
                         except BrokenProcessPool as exc:
                             # This game never entered the pool, so report the

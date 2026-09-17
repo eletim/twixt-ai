@@ -18,6 +18,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--games-per-generation", type=int, default=100)
     parser.add_argument("--dataset-window", type=int, default=5)
     parser.add_argument("--selfplay-simulations", type=int, default=100)
+    parser.add_argument("--random-opening-moves", type=int, default=0)
     parser.add_argument("--selfplay-exploration", type=float, default=2**0.5)
     parser.add_argument(
         "--selfplay-progressive-widening-constant", type=float, default=1.5

@@ -50,6 +50,7 @@ class MiniGenerationConfig:
     games_per_generation: int = 100
     dataset_window: int = 5
     selfplay_simulations: int = 100
+    random_opening_moves: int = 0
     selfplay_exploration: float = math.sqrt(2.0)
     selfplay_progressive_widening_constant: float = (
         DEFAULT_PROGRESSIVE_WIDENING_CONSTANT
@@ -92,6 +93,8 @@ class MiniGenerationConfig:
             "shard_size",
         ):
             _positive_integer(getattr(self, name), name)
+        if isinstance(self.random_opening_moves, bool) or not isinstance(self.random_opening_moves, int) or self.random_opening_moves < 0:
+            raise ValueError("random_opening_moves must be a non-negative integer")
         if self.evaluation_games % 2:
             raise ValueError("evaluation_games must be even for paired role swaps")
         if (
@@ -358,6 +361,7 @@ def run_generation_selfplay(
         red_agent="champion",
         black_agent="champion",
         worker_mode="thread" if device.resolved_device == "cuda" else "process",
+        random_opening_moves=config.random_opening_moves,
     )
     if device.resolved_device == "cpu":
         factory = partial(

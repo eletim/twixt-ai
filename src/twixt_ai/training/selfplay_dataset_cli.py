@@ -17,6 +17,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--games", type=int, default=defaults.games)
     parser.add_argument("--simulations", type=int, default=defaults.simulations)
+    parser.add_argument("--random-opening-moves", type=int, default=0)
     parser.add_argument("--exploration", type=float, default=defaults.exploration)
     parser.add_argument("--rollout-limit", type=int, default=defaults.rollout_limit)
     parser.add_argument(

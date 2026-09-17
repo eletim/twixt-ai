@@ -267,14 +267,25 @@ agent = HeuristicSearchAgent(depth=2, node_budget=20_000)
 
 ## Browser play
 
-Start the minimal local human-vs-agent UI after installing the project:
+From the ordinary repository checkout, start the Human vs AI UI and Viewer:
 
 ```bash
-twixt-ai-web
+./start.sh
 ```
 
-Open <http://127.0.0.1:8000>, choose a side and an available agent, then start a
-new game. The browser only renders state and submits human/agent turn requests;
+The script runs the repository's `src` backend at <http://127.0.0.1:8000>.
+If Tailscale is connected, it also configures tailnet-only Serve on the first
+available HTTPS port among 8765–8767 and prints the exact URL. Existing Serve
+routes are preserved; if those ports are occupied, the local UI remains available.
+Ctrl+C stops the server and
+removes the Serve route created by this invocation. Set `TWIXT_PORT` to change
+the local port. The Gen11 checkpoint must exist at the path below; startup
+fails with a clear error if it is missing.
+
+Open the local URL, choose Mini 10×10, Gen11, and your side, then press **Play**.
+Choosing Red gives the human the first turn. Choosing Black starts the AI's
+first turn after Play. Changing settings never starts a game. The browser only
+renders state and submits human/agent turn requests;
 the canonical Python engine owns validation, links, turns, results, and agent
 selection. Session revisions prevent delayed browser clicks from changing a
 newer position. Enable **AI inspection** to overlay candidate scores or
@@ -284,7 +295,7 @@ the browser.
 
 For a Gen11 champion game, place the checkpoint at
 `experiments/pv-long-run/generation-11/candidate/best.pt`, choose **Gen11** and
-the **Mini (10×10)** board, then choose Red or Black and start a new game. The
+the **Mini (10×10)** board, then choose Red or Black and press Play. The
 AI uses policy and value guided MCTS with 64 simulations per move. Enable
 **AI inspection** to see its selected move, root priors, visits, and Q values.
 Completed games are saved under `experiments/human-vs-ai/games/`; the **Replay

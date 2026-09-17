@@ -61,6 +61,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, .intersection:f
 }
 
 .setup { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.setup[hidden], .board-frame[hidden], .game-facts[hidden] { display: none; }
+.setup h2 { flex-basis: 100%; margin: 0; font-size: 1.2rem; }
+#start-game { align-self: end; background: #213c4e; color: white; min-width: 130px; }
+#start-game:hover { background: #315b75; }
+.game-facts { display: flex; flex-wrap: wrap; gap: 7px 16px; margin-bottom: 12px; font-size: .85rem; }
+.game-facts span { padding: 6px 10px; border-radius: 7px; background: #eee9df; }
 .setup label { display: grid; gap: 5px; color: #5c574f; font-size: .8rem; font-weight: 700; }
 .setup select { min-width: 150px; padding: 7px 30px 7px 11px; }
 .setup input { width: 110px; padding: 7px 11px; }

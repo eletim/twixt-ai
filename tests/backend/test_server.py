@@ -538,3 +538,19 @@ def test_gen11_requires_mini_board(tmp_path: Path) -> None:
     )
     assert status == "400 Bad Request"
     assert "Mini 10x10" in json.loads(body)["detail"]
+
+
+def test_session_reports_only_legal_human_moves_and_missing_gen11(tmp_path: Path) -> None:
+    application = GameApplication(ui_root=tmp_path, viewer=ViewerService(tmp_path))
+    status, _, body = request(application, "/api/session")
+    view = json.loads(body)
+    assert status == "200 OK"
+    assert view["gen11_available"] is False
+    assert {"x": 0, "y": 0} not in view["legal_moves"]
+
+    status, _, body = request(
+        application, "/api/session/reset", "POST",
+        {"human_side": "red", "agent": "gen11", "preset": "mini"},
+    )
+    assert status == "400 Bad Request"
+    assert GEN11_CHECKPOINT in json.loads(body)["detail"]

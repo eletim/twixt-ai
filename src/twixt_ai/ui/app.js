@@ -8,6 +8,9 @@ const inspectionElement = $("#inspection");
 const candidateTableWrap = $("#candidate-table-wrap");
 const candidateTable = $("#candidate-table");
 const resetButton = $("#reset");
+const startButton = $("#start-game");
+const gameFacts = $("#game-facts");
+const boardFrame = $("#board-frame");
 const sideSelect = $("#human-side");
 const agentSelect = $("#agent");
 const presetSelect = $("#board-preset");
@@ -40,6 +43,9 @@ let agentThinking = false;
 let replay = null;
 let replayIndex = 0;
 let playbackTimer = null;
+let gameStarted = false;
+let gen11Available = true;
+let gen11Checkpoint = "";
 
 function svgElement(name, attributes = {}) {
   const element = document.createElementNS(SVG_NS, name);
@@ -94,7 +100,7 @@ function decisionCandidates(decision) {
   return metadata.inspection?.candidates ?? [];
 }
 
-function renderBoard(game, { interactive = false, thinking = null, lastMove = null, overlayMode = "off" } = {}) {
+function renderBoard(game, { interactive = false, legalMoves = null, thinking = null, lastMove = null, overlayMode = "off" } = {}) {
   boardElement.replaceChildren();
   const margin = 18;
   const spacing = 28;
@@ -149,12 +155,13 @@ function renderBoard(game, { interactive = false, thinking = null, lastMove = nu
   }
 
   const pegsByCoordinate = new Map(game.pegs.map((peg) => [`${peg.coordinate.x},${peg.coordinate.y}`, peg.owner]));
+  const legalCoordinates = legalMoves && new Set(legalMoves.map((move) => `${move.x},${move.y}`));
   const points = svgElement("g", { class: "points" });
   for (let y = 0; y < game.board.height; y += 1) {
     for (let x = 0; x < game.board.width; x += 1) {
       const position = point({ x, y }, spacing, margin);
       const owner = pegsByCoordinate.get(`${x},${y}`);
-      const canPlay = interactive && !owner;
+      const canPlay = interactive && !owner && (!legalCoordinates || legalCoordinates.has(`${x},${y}`));
       const intersection = svgElement("circle", {
         class: owner ? `intersection peg ${owner}` : "intersection",
         cx: position.x, cy: position.y, r: owner ? 7 : 3, role: "gridcell",
@@ -216,10 +223,13 @@ function populateSetup(view) {
       return option;
     }));
   }
-  sideSelect.value = view.human_side;
-  agentSelect.value = view.agent;
-  presetSelect.value = view.preset;
-  for (const control of [resetButton, sideSelect, agentSelect, presetSelect, inspectionToggle]) control.disabled = requestPending;
+  if (gameStarted) {
+    sideSelect.value = view.human_side;
+    agentSelect.value = view.agent;
+    presetSelect.value = view.preset;
+  }
+  for (const control of [resetButton, startButton, sideSelect, agentSelect, presetSelect, inspectionToggle]) control.disabled = requestPending;
+  startButton.disabled = requestPending || (agentSelect.value === "gen11" && !gen11Available);
   boardElement.setAttribute("aria-busy", agentThinking ? "true" : "false");
 }
 
@@ -227,11 +237,33 @@ function renderHuman(view) {
   session = view;
   const game = view.state;
   populateSetup(view);
+  humanSetup.hidden = gameStarted;
+  boardFrame.hidden = !gameStarted;
+  gameFacts.hidden = !gameStarted;
+  resetButton.hidden = !gameStarted;
+  if (!gameStarted) {
+    statusElement.textContent = "Choose your settings, then press Play.";
+    statusElement.dataset.player = "complete";
+    inspectionElement.hidden = true;
+    candidateTableWrap.hidden = true;
+    savedReplay.hidden = true;
+    messageElement.textContent = agentSelect.value === "gen11" && !gen11Available
+      ? `Gen11 checkpoint is missing: ${gen11Checkpoint}` : "";
+    return;
+  }
   statusElement.textContent = describeHumanStatus(game);
   statusElement.dataset.player = game.result === "in_progress" ? game.side_to_move : "complete";
+  gameFacts.replaceChildren(
+    textNode("span", `Turn: ${game.result === "in_progress" ? title(game.side_to_move) : "Finished"}`),
+    textNode("span", `Human: ${title(view.human_side)}`),
+    textNode("span", `AI: ${title(view.human_side === "red" ? "black" : "red")}`),
+    textNode("span", `Moves: ${game.pegs.length}`),
+    textNode("span", `Result: ${title(game.result)}`),
+  );
   const showInspection = inspectionToggle.checked && view.thinking?.metadata?.inspection;
   renderBoard(game, {
     interactive: game.result === "in_progress" && game.side_to_move === view.human_side && !requestPending,
+    legalMoves: view.legal_moves,
     thinking: view.thinking, overlayMode: showInspection ? "visits" : "off",
   });
   inspectionElement.hidden = !showInspection;
@@ -264,7 +296,7 @@ async function request(path, options) {
 }
 
 async function playAgentIfNeeded() {
-  if (!session || session.state.result !== "in_progress" || session.state.side_to_move === session.human_side) return;
+  if (!gameStarted || !session || session.state.result !== "in_progress" || session.state.side_to_move === session.human_side) return;
   requestPending = true;
   agentThinking = true;
   messageElement.textContent = "";
@@ -288,7 +320,7 @@ async function playAgentIfNeeded() {
 }
 
 async function placePeg(x, y) {
-  if (requestPending || !session || session.state.result !== "in_progress" || session.state.side_to_move !== session.human_side) return;
+  if (!gameStarted || requestPending || !session || session.state.result !== "in_progress" || session.state.side_to_move !== session.human_side) return;
   requestPending = true;
   messageElement.textContent = "";
   renderHuman(session);
@@ -440,6 +472,7 @@ async function initializeViewer() {
   $("#mode-link").href = "/";
   resetButton.hidden = true;
   humanSetup.hidden = true;
+  gameFacts.hidden = true;
   viewerSetup.hidden = false;
   const config = await request("/api/viewer/config");
   const agentOptions = config.agent_modes.map((mode) => {
@@ -482,7 +515,13 @@ async function initializeViewer() {
   }
 }
 
-resetButton.addEventListener("click", async () => {
+resetButton.addEventListener("click", () => {
+  if (requestPending) return;
+  gameStarted = false;
+  messageElement.textContent = "";
+  renderHuman(session);
+});
+startButton.addEventListener("click", async () => {
   if (requestPending || !session) return;
   const reset = { human_side: sideSelect.value, agent: agentSelect.value };
   if (presetSelect.value !== "custom") reset.preset = presetSelect.value;
@@ -490,9 +529,11 @@ resetButton.addEventListener("click", async () => {
   messageElement.textContent = "";
   renderHuman(session);
   try {
-    session = await request("/api/session/reset", {
+    const next = await request("/api/session/reset", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reset),
     });
+    session = next;
+    gameStarted = true;
   } catch (error) {
     messageElement.textContent = `Could not start game: ${error.message}.`;
   } finally {
@@ -502,7 +543,10 @@ resetButton.addEventListener("click", async () => {
   await playAgentIfNeeded();
 });
 inspectionToggle.addEventListener("change", () => { if (session) renderHuman(session); });
-agentSelect.addEventListener("change", () => { if (agentSelect.value === "gen11") presetSelect.value = "mini"; });
+agentSelect.addEventListener("change", () => {
+  if (agentSelect.value === "gen11") presetSelect.value = "mini";
+  if (!gameStarted) renderHuman(session);
+});
 redAgentSelect.addEventListener("change", updateCheckpointAvailability);
 blackAgentSelect.addEventListener("change", updateCheckpointAvailability);
 generateButton.addEventListener("click", generateReplay);
@@ -525,8 +569,13 @@ try {
   if (viewerMode) await initializeViewer();
   else {
     session = await request("/api/session");
+    gen11Available = session.gen11_available;
+    gen11Checkpoint = session.gen11_checkpoint;
     renderHuman(session);
-    await playAgentIfNeeded();
+    sideSelect.value = "red";
+    agentSelect.value = "gen11";
+    presetSelect.value = "mini";
+    renderHuman(session);
   }
 } catch (error) {
   statusElement.textContent = "Game unavailable";

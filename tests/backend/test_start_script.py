@@ -1,140 +1,115 @@
-"""Integration tests for the checkout launcher and Tailscale setup."""
-
+"""Checkout launcher smoke tests with an isolated Tailscale command."""
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import signal
+import socket
 import subprocess
 import time
+import urllib.request
+
+ROOT = Path(__file__).parents[2]
 
 
-PROJECT_ROOT = Path(__file__).parents[2]
-START_SCRIPT = PROJECT_ROOT / "start.sh"
+def free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
-def _executable(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
-    path.chmod(0o755)
+def launch(tmp_path: Path, *, connected: bool, occupied: bool = False):
+    port = free_port()
+    fake = tmp_path / "tailscale"
+    fake.write_text("""#!/usr/bin/env python3
+import json, os, sys
+args = sys.argv[1:]
+with open(os.environ['TAILSCALE_LOG'], 'a') as log: log.write(' '.join(args) + '\\n')
+if args == ['status', '--json']:
+    print(json.dumps({'BackendState': 'Running' if os.environ['CONNECTED'] == '1' else 'NeedsLogin', 'Self': {'DNSName': 'test.example.ts.net.'}}))
+elif args == ['serve', 'status', '--json']:
+    print(json.dumps({'TCP': {'8765': {'HTTPS': True}}} if os.environ['OCCUPIED'] == '1' else {}))
+""", encoding="utf-8")
+    fake.chmod(0o755)
+    env = os.environ.copy()
+    env.update(PATH=f"{tmp_path}:{env['PATH']}", TWIXT_PORT=str(port),
+               TAILSCALE_LOG=str(tmp_path / "calls"), CONNECTED=str(int(connected)),
+               OCCUPIED=str(int(occupied)))
+    process = subprocess.Popen([str(ROOT / "start.sh")], cwd=tmp_path, env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    deadline = time.monotonic() + 12
+    while time.monotonic() < deadline and process.poll() is None:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/session", timeout=.2) as response:
+                assert json.load(response)["gen11_available"] is True
+            break
+        except OSError:
+            time.sleep(.1)
+    else:
+        process.terminate()
+        out, err = process.communicate(timeout=5)
+        raise AssertionError(f"launcher did not become ready: {out} {err}")
+    # The server becomes reachable just before the launcher prints addresses
+    # and configures Serve; let that short setup phase finish.
+    time.sleep(.6)
+    return process, port, tmp_path / "calls"
 
 
-def _run_launcher(
-    tmp_path: Path, tailscale: str, server: str | None = None
-) -> tuple[str, str, str, int, bool]:
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    stopped = tmp_path / "server-stopped"
-    serve_log = tmp_path / "tailscale-serve.log"
-    if server is None:
-        server = f"""#!/usr/bin/env bash
-cleanup() {{
-    kill "$HTTP_PID" 2>/dev/null || true
-    wait "$HTTP_PID" 2>/dev/null || true
-    touch {stopped!s}
-    exit 0
-}}
-trap cleanup TERM INT
-python3 -m http.server 8000 --bind 127.0.0.1 >/dev/null 2>&1 &
-HTTP_PID=$!
-wait "$HTTP_PID"
-"""
-    _executable(bin_dir / "twixt-ai-web", server)
-    _executable(bin_dir / "tailscale", tailscale)
-    environment = os.environ.copy()
-    environment["PATH"] = f"{bin_dir}:{environment['PATH']}"
-    environment["SERVE_LOG"] = str(serve_log)
-    process = subprocess.Popen(
-        [str(START_SCRIPT)],
-        cwd=tmp_path,
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+def stop(process: subprocess.Popen[str]):
+    process.send_signal(signal.SIGTERM)
+    return process.communicate(timeout=10)
+
+
+def test_local_launcher_without_tailscale_connection(tmp_path: Path) -> None:
+    process, port, calls = launch(tmp_path, connected=False)
     try:
-        deadline = time.monotonic() + 5
-        while (
-            time.monotonic() < deadline
-            and not serve_log.exists()
-            and process.poll() is None
-        ):
-            time.sleep(0.02)
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/viewer") as response:
+            assert b'id="board"' in response.read()
     finally:
-        if process.poll() is None:
-            process.send_signal(signal.SIGTERM)
-        stdout, stderr = process.communicate(timeout=5)
-
-    return (
-        stdout,
-        stderr,
-        serve_log.read_text(encoding="utf-8") if serve_log.exists() else "",
-        process.returncode,
-        stopped.exists(),
-    )
+        out, err = stop(process)
+    assert process.returncode == 143
+    assert f"http://127.0.0.1:{port}/" in out
+    assert "not connected" in err
+    assert "serve --bg" not in calls.read_text()
 
 
-def test_launcher_configures_one_tailnet_root_proxy_and_prints_routes(tmp_path: Path) -> None:
-    stdout, stderr, serve_call, returncode, stopped = _run_launcher(
-        tmp_path,
-        """#!/usr/bin/env bash
-if [[ "$1 $2" == "status --json" ]]; then
-    printf '%s\\n' '{"BackendState":"Running","Self":{"DNSName":"twixt.example.ts.net."}}'
-    exit 0
-fi
-printf '%s\\n' "$*" > "$SERVE_LOG"
-""",
-    )
-
-    assert returncode == 143
-    assert stopped
-    assert stderr == ""
-    assert "Local Twixt UI:     http://127.0.0.1:8000/" in stdout
-    assert "Local AI viewer:    http://127.0.0.1:8000/viewer" in stdout
-    assert "Tailnet Twixt UI:   https://twixt.example.ts.net/" in stdout
-    assert "Tailnet AI viewer:  https://twixt.example.ts.net/viewer" in stdout
-    assert serve_call == "serve --bg --yes --set-path=/ http://127.0.0.1:8000\n"
-    assert "funnel" not in serve_call
+def test_serve_is_scoped_and_cleaned_up(tmp_path: Path) -> None:
+    process, port, calls = launch(tmp_path, connected=True)
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as response:
+            assert b'Human vs AI' in response.read()
+    finally:
+        out, err = stop(process)
+    commands = calls.read_text()
+    assert process.returncode == 143
+    assert "https://test.example.ts.net:8765/" in out
+    assert "serve --bg --yes --https=8765" in commands
+    assert "serve --https=8765 off" in commands
+    assert "funnel" not in commands
+    assert "Warning:" not in err
 
 
-def test_launcher_keeps_local_server_when_tailscale_is_logged_out(tmp_path: Path) -> None:
-    stdout, stderr, serve_call, returncode, stopped = _run_launcher(
-        tmp_path,
-        """#!/usr/bin/env bash
-if [[ "$1 $2" == "status --json" ]]; then
-    printf '%s\\n' '{"BackendState":"NeedsLogin"}'
-    exit 1
-fi
-printf '%s\\n' "$*" > "$SERVE_LOG"
-""",
-    )
-
-    assert returncode == 143
-    assert stopped
-    assert "http://127.0.0.1:8000/" in stdout
-    assert "http://127.0.0.1:8000/viewer" in stdout
-    assert "Tailscale is not logged in and running" in stderr
-    assert serve_call == ""
+def test_existing_serve_port_is_preserved(tmp_path: Path) -> None:
+    process, _, calls = launch(tmp_path, connected=True, occupied=True)
+    out, err = stop(process)
+    assert "https://test.example.ts.net:8766/" in out
+    assert "serve --bg --yes --https=8766" in calls.read_text()
+    assert "serve --https=8766 off" in calls.read_text()
+    assert "serve --https=8765 off" not in calls.read_text()
 
 
-def test_launcher_does_not_configure_serve_when_server_fails(tmp_path: Path) -> None:
-    stdout, stderr, serve_call, returncode, stopped = _run_launcher(
-        tmp_path,
-        """#!/usr/bin/env bash
-if [[ "$1 $2" == "status --json" ]]; then
-    printf '%s\\n' '{"BackendState":"Running","Self":{"DNSName":"twixt.example.ts.net."}}'
-    exit 0
-fi
-printf '%s\\n' "$*" > "$SERVE_LOG"
-""",
-        server="""#!/usr/bin/env bash
-echo "address already in use" >&2
-exit 1
-""",
-    )
-
-    assert returncode == 1
-    assert not stopped
-    assert stdout == ""
-    assert "address already in use" in stderr
-    assert "twixt-ai-web failed to start" in stderr
-    assert serve_call == ""
+def test_repeated_start_reports_port_conflict(tmp_path: Path) -> None:
+    process, port, calls = launch(tmp_path, connected=False)
+    try:
+        env = os.environ.copy()
+        env.update(PATH=f"{tmp_path}:{env['PATH']}", TWIXT_PORT=str(port),
+                   TAILSCALE_LOG=str(calls), CONNECTED="0", OCCUPIED="0")
+        repeat = subprocess.run([str(ROOT / "start.sh")], env=env, cwd=tmp_path,
+                                capture_output=True, text=True, timeout=10)
+        assert repeat.returncode == 1
+        assert f"local port {port} is already in use" in repeat.stderr
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/viewer") as response:
+            assert response.status == 200
+    finally:
+        stop(process)

@@ -31,11 +31,12 @@ from twixt_ai.game import (
     apply_move,
     create_game,
     experiment_board,
+    legal_peg_placements,
     reset_game,
 )
 from twixt_ai.search import MCTSAgent, SearchAgent
 
-from .viewer import ViewerService
+from .viewer import GEN11_CHECKPOINT, ViewerService
 
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
@@ -165,6 +166,7 @@ class GameSession:
             },
             "thinking": dict(self._thinking if thinking is None else thinking),
             "artifact": self._artifact,
+            "legal_moves": [move.coordinate.to_dict() for move in legal_peg_placements(self._state)],
         }
 
     def view(self) -> dict[str, object]:
@@ -380,7 +382,10 @@ class GameApplication:
             state = self.session.snapshot().to_dict()
             return self._json(start_response, "200 OK", state)
         if method == "GET" and path == "/api/session":
-            return self._json(start_response, "200 OK", self.session.view())
+            view = self.session.view()
+            view["gen11_checkpoint"] = GEN11_CHECKPOINT
+            view["gen11_available"] = (self.viewer.workspace_root / GEN11_CHECKPOINT).is_file()
+            return self._json(start_response, "200 OK", view)
         if method == "GET" and path == "/api/viewer/config":
             return self._json(start_response, "200 OK", self.viewer.configuration())
         if method == "POST" and path in {
@@ -411,6 +416,9 @@ class GameApplication:
                     or not set(payload) <= allowed
                 ):
                     raise ValueError("reset must contain human_side and agent, with optional preset")
+                if (payload["agent"] == "gen11" and payload.get("preset") == "mini"
+                    and not (self.viewer.workspace_root / GEN11_CHECKPOINT).is_file()):
+                    raise ValueError(f"Gen11 checkpoint is missing: {GEN11_CHECKPOINT}")
                 view = self.session.configure(
                     payload["human_side"], payload["agent"], payload.get("preset")
                 )

@@ -20,6 +20,7 @@
       </header>
       <section class="game" aria-labelledby="status">
         <div id="human-setup" class="setup">
+          <h2>Game setup</h2>
           <label>Your side
             <select id="human-side" disabled>
               <option value="red">Red (first)</option>
@@ -36,6 +37,7 @@
             <input id="inspection-toggle" type="checkbox" disabled>
             AI inspection
           </label>
+          <button id="start-game" type="button" disabled>Play</button>
         </div>
         <div id="viewer-setup" class="viewer-setup" hidden>
           <div class="setup">
@@ -67,9 +69,10 @@
           </div>
         </div>
         <p id="status" role="status" aria-live="polite">Loading game…</p>
+        <div id="game-facts" class="game-facts" hidden></div>
         <a id="saved-replay" class="button-link" href="/viewer" hidden>Replay this game</a>
         <div id="replay-summary" class="replay-summary" hidden></div>
-        <div class="board-frame">
+        <div id="board-frame" class="board-frame">
           <svg id="board" role="grid" aria-label="Twixt board"></svg>
         </div>
         <div id="replay-controls" class="replay-controls" hidden>

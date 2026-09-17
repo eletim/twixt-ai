@@ -8,12 +8,22 @@ import json
 from pathlib import Path
 from threading import Lock
 from typing import Callable, Iterable, Mapping, Protocol
+from uuid import uuid4
 from wsgiref.simple_server import make_server
 
-from twixt_ai.agents import Agent, AgentContractError, RandomAgent, select_agent_move
+from twixt_ai.agents import (
+    Agent,
+    AgentContractError,
+    AgentRequest,
+    AgentResult,
+    RandomAgent,
+    select_agent_move,
+)
+from twixt_ai.evaluation.match import MatchConfig, MatchDecision, MatchResult
 from twixt_ai.game import (
     EXPERIMENT_PRESETS,
     Coordinate,
+    GameRecord,
     GameState,
     IllegalMoveError,
     PegPlacement,
@@ -48,6 +58,19 @@ class SessionConflictError(ValueError):
         super().__init__(detail)
 
 
+class Gen11Agent:
+    """Load the champion when the first live AI turn is requested."""
+
+    def __init__(self, viewer: ViewerService) -> None:
+        self.viewer = viewer
+        self.agent: Agent | None = None
+
+    def choose_move(self, request: AgentRequest) -> AgentResult:
+        if self.agent is None:
+            self.agent = self.viewer.human_agent()
+        return self.agent.choose_move(request)
+
+
 DEFAULT_UI_ROOT = resources.files("twixt_ai.ui")
 _STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -67,6 +90,7 @@ class GameSession:
         agents: Mapping[str, Agent] | None = None,
         agent_name: str | None = None,
         human_side: Player = Player.RED,
+        record_directory: Path | None = None,
     ) -> None:
         self._state = state or create_game()
         self._agents = (
@@ -90,6 +114,37 @@ class GameSession:
         self._revision = 0
         self._thinking: dict[str, object] = {}
         self._lock = Lock()
+        self._initial_state = self._state
+        self._decisions: list[MatchDecision] = []
+        self._record_directory = record_directory
+        self._artifact: str | None = None
+
+    def _finish_unlocked(self, state: GameState, decision: MatchDecision) -> None:
+        decisions = (*self._decisions, decision)
+        if (
+            state.is_terminal
+            and self._record_directory is not None
+            and self._agent_name == "gen11"
+        ):
+            match = MatchResult(
+                MatchConfig(
+                    board=self._initial_state.board,
+                    red_agent="human" if self._human_side is Player.RED else "gen11",
+                    black_agent="human" if self._human_side is Player.BLACK else "gen11",
+                ),
+                GameRecord(
+                    self._initial_state, tuple(item.move for item in decisions), state
+                ),
+                decisions,
+            )
+            self._record_directory.mkdir(parents=True, exist_ok=True)
+            path = self._record_directory / f"game-{uuid4().hex}.json"
+            path.write_text(match.to_json(indent=2) + "\n", encoding="utf-8")
+            self._artifact = path.relative_to(
+                self._record_directory.parents[2]
+            ).as_posix()
+        self._decisions = list(decisions)
+        self._state = state
 
     def _view_unlocked(
         self, thinking: Mapping[str, object] | None = None
@@ -109,6 +164,7 @@ class GameSession:
                 name: board.to_dict() for name, board in EXPERIMENT_PRESETS.items()
             },
             "thinking": dict(self._thinking if thinking is None else thinking),
+            "artifact": self._artifact,
         }
 
     def view(self) -> dict[str, object]:
@@ -133,6 +189,9 @@ class GameSession:
             self._state = apply_move(self._state, move)
             self._revision += 1
             self._thinking = {}
+            self._initial_state = self._state
+            self._decisions = []
+            self._artifact = None
             return self._state
 
     def reset(self) -> GameState:
@@ -140,6 +199,9 @@ class GameSession:
             self._state = reset_game(self._state)
             self._revision += 1
             self._thinking = {}
+            self._initial_state = self._state
+            self._decisions = []
+            self._artifact = None
             return self._state
 
     @staticmethod
@@ -173,12 +235,17 @@ class GameSession:
             board = experiment_board(preset)
         else:
             raise TypeError("experiment preset must be a string")
+        if agent_name == "gen11" and board != experiment_board("mini"):
+            raise ValueError("Gen11 requires the Mini 10x10 board")
         with self._lock:
             self._human_side = side
             self._agent_name = agent_name
             self._state = create_game(board)
             self._revision += 1
             self._thinking = {}
+            self._initial_state = self._state
+            self._decisions = []
+            self._artifact = None
             return self._view_unlocked()
 
     def place_human(self, x: object, y: object, revision: object) -> dict[str, object]:
@@ -193,7 +260,8 @@ class GameSession:
             if self._state.side_to_move is not self._human_side:
                 raise SessionConflictError("out_of_turn", "it is the agent's turn")
             move = PegPlacement(self._human_side, Coordinate(x, y))
-            self._state = apply_move(self._state, move)
+            next_state = apply_move(self._state, move)
+            self._finish_unlocked(next_state, MatchDecision(move, None, {}))
             self._revision += 1
             self._thinking = {}
             return self._view_unlocked()
@@ -220,7 +288,10 @@ class GameSession:
                 },
                 "metadata": metadata,
             }
-            self._state = apply_move(self._state, result.move)
+            next_state = apply_move(self._state, result.move)
+            self._finish_unlocked(
+                next_state, MatchDecision(result.move, None, metadata)
+            )
             self._revision += 1
             return self._view_unlocked()
 
@@ -234,9 +305,19 @@ class GameApplication:
         ui_root: Path | ResourceRoot | None = None,
         viewer: ViewerService | None = None,
     ) -> None:
-        self.session = session or GameSession()
-        self.ui_root = ui_root if ui_root is not None else DEFAULT_UI_ROOT
         self.viewer = viewer or ViewerService()
+        self.session = session or GameSession(
+            agents={
+                "random": RandomAgent(),
+                "search": SearchAgent(),
+                "mcts": MCTSAgent(),
+                "gen11": Gen11Agent(self.viewer),
+            },
+            record_directory=(
+                self.viewer.workspace_root / "experiments" / "human-vs-ai" / "games"
+            ),
+        )
+        self.ui_root = ui_root if ui_root is not None else DEFAULT_UI_ROOT
 
     @staticmethod
     def _json(

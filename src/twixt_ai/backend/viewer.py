@@ -54,8 +54,8 @@ class ViewerService:
     def _artifact_map(self) -> dict[str, Path]:
         paths = self._paths("**/games/game-*.json")
         # Keep the selector useful across experiments instead of letting one
-        # large 5k run consume every slot. Sample the tail of every games/
-        # collection, where interrupted/resumed experiment output also lands.
+        # large 5k run consume every slot. Sample recent files from each games/
+        # collection; human games use UUID filenames rather than sequence numbers.
         collections: dict[Path, list[Path]] = {}
         for path in paths:
             collections.setdefault(path.parent, []).append(path)
@@ -63,7 +63,7 @@ class ViewerService:
         selected = sorted(
             path
             for collection in collections.values()
-            for path in collection[-quota:]
+            for path in sorted(collection, key=lambda item: (item.stat().st_mtime_ns, item))[-quota:]
         )[-MAX_LISTED_ARTIFACTS:]
         return {
             path.relative_to(self.workspace_root).as_posix(): path
@@ -271,8 +271,16 @@ class ViewerService:
         artifact_id = payload["artifact"]
         if not isinstance(artifact_id, str):
             raise ValueError("artifact must be a string")
-        path = self._artifact_map().get(artifact_id)
-        if path is None:
+        experiments = (self.workspace_root / "experiments").resolve()
+        path = (self.workspace_root / artifact_id).resolve()
+        if (
+            not artifact_id.startswith("experiments/")
+            or path.parent.name != "games"
+            or not path.name.startswith("game-")
+            or path.suffix != ".json"
+            or not path.is_relative_to(experiments)
+            or not path.is_file()
+        ):
             raise ValueError("unknown artifact")
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, Mapping):

@@ -415,14 +415,14 @@ async function generateReplay() {
   }
 }
 
-async function loadReplayArtifact() {
-  if (requestPending || !artifactSelect.value) return;
+async function loadReplayArtifact(artifactId = artifactSelect.value) {
+  if (requestPending || !artifactId) return;
   stopPlayback();
   setViewerPending(true);
   messageElement.textContent = "Loading saved game…";
   try {
     replay = await request("/api/viewer/artifacts", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artifact: artifactSelect.value }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artifact: artifactId }),
     });
     replayIndex = 0;
     messageElement.textContent = `Loaded ${replay.source.path}.`;
@@ -476,9 +476,9 @@ async function initializeViewer() {
   statusElement.dataset.player = "complete";
   renderBoard({ board: config.board, pegs: [], links: [], side_to_move: "red", result: "in_progress" });
   const savedArtifact = new URLSearchParams(window.location.search).get("artifact");
-  if (savedArtifact && [...artifactSelect.options].some((option) => option.value === savedArtifact)) {
+  if (savedArtifact) {
     artifactSelect.value = savedArtifact;
-    await loadReplayArtifact();
+    await loadReplayArtifact(savedArtifact);
   }
 }
 
@@ -506,7 +506,7 @@ agentSelect.addEventListener("change", () => { if (agentSelect.value === "gen11"
 redAgentSelect.addEventListener("change", updateCheckpointAvailability);
 blackAgentSelect.addEventListener("change", updateCheckpointAvailability);
 generateButton.addEventListener("click", generateReplay);
-loadArtifactButton.addEventListener("click", loadReplayArtifact);
+loadArtifactButton.addEventListener("click", () => loadReplayArtifact());
 firstButton.addEventListener("click", () => { stopPlayback(); setReplayIndex(0); });
 backButton.addEventListener("click", () => { stopPlayback(); setReplayIndex(replayIndex - 1); });
 nextButton.addEventListener("click", () => { stopPlayback(); setReplayIndex(replayIndex + 1); });

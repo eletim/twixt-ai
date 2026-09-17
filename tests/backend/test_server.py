@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -258,6 +259,45 @@ def test_viewer_loads_existing_match_artifact(tmp_path: Path) -> None:
     assert replay["source"]["type"] == "artifact"
     assert len(replay["frames"]) == replay["result"]["move_count"] + 1
     assert replay["frames"][1]["decision"]["metadata"]["root_moves"]
+
+
+def test_recent_human_game_is_listed_and_old_bookmark_still_replays(
+    tmp_path: Path,
+) -> None:
+    source = (
+        Path(__file__).parents[2]
+        / "experiments/issue-56/smoke/selfplay/games/game-000000.json"
+    )
+    games = tmp_path / "experiments/human-vs-ai/games"
+    games.mkdir(parents=True)
+    for index in range(1, 201):
+        path = games / f"game-{index:06d}.json"
+        path.write_bytes(source.read_bytes())
+        os.utime(path, (index, index))
+    newest = games / "game-000000.json"
+    newest.write_bytes(source.read_bytes())
+    os.utime(newest, (1000, 1000))
+    application = GameApplication(ui_root=tmp_path, viewer=ViewerService(tmp_path))
+
+    status, _, body = request(application, "/api/viewer/config")
+    artifact_ids = [item["id"] for item in json.loads(body)["artifacts"]]
+    assert status == "200 OK"
+    assert "experiments/human-vs-ai/games/game-000000.json" in artifact_ids
+    assert "experiments/human-vs-ai/games/game-000001.json" not in artifact_ids
+
+    status, _, body = request(
+        application, "/api/viewer/artifacts", "POST",
+        {"artifact": "experiments/human-vs-ai/games/game-000001.json"},
+    )
+    assert status == "200 OK"
+    assert json.loads(body)["source"]["type"] == "artifact"
+
+    status, _, body = request(
+        application, "/api/viewer/artifacts", "POST",
+        {"artifact": "experiments/human-vs-ai/games/../../outside/games/game-000001.json"},
+    )
+    assert status == "400 Bad Request"
+    assert json.loads(body)["detail"] == "unknown artifact"
 
 
 def test_session_selects_side_and_runs_registered_agent_through_contract(

@@ -25,6 +25,90 @@ _KNIGHT_OFFSETS = (
 )
 
 
+# Issue #158: 2 = endpoint, 1 = required empty cell, 0 = don't care.
+_EFFECTIVE_CONNECTION_PATTERNS = (
+    (
+        (0, 0, 1, 0, 0, 0),
+        (0, 2, 1, 1, 0, 0),
+        (1, 1, 1, 1, 1, 0),
+        (0, 1, 1, 1, 1, 1),
+        (0, 1, 1, 1, 2, 0),
+        (0, 0, 0, 1, 0, 0),
+    ),
+    (
+        (0, 0, 0, 1, 0, 0),
+        (0, 0, 1, 1, 2, 0),
+        (0, 1, 1, 1, 1, 1),
+        (1, 1, 1, 1, 1, 0),
+        (0, 2, 1, 1, 1, 0),
+        (0, 0, 1, 0, 0, 0),
+    ),
+    (
+        (0, 0, 0, 0, 0),
+        (0, 1, 2, 1, 0),
+        (0, 1, 1, 1, 0),
+        (0, 1, 1, 1, 0),
+        (0, 1, 1, 1, 0),
+        (0, 1, 2, 1, 0),
+        (0, 0, 0, 0, 0),
+    ),
+    (
+        (0, 0, 0, 0, 0, 0, 0),
+        (0, 1, 1, 1, 1, 1, 0),
+        (0, 2, 1, 1, 1, 2, 0),
+        (0, 1, 1, 1, 1, 1, 0),
+        (0, 0, 0, 0, 0, 0, 0),
+    ),
+)
+
+
+def _pattern_offsets(
+    pattern: tuple[tuple[int, ...], ...],
+) -> tuple[tuple[int, int], tuple[tuple[int, int], ...]]:
+    first, second = (
+        (x, y)
+        for y, row in enumerate(pattern)
+        for x, cell in enumerate(row)
+        if cell == 2
+    )
+    empty = tuple(
+        (x - first[0], y - first[1])
+        for y, row in enumerate(pattern)
+        for x, cell in enumerate(row)
+        if cell == 1
+    )
+    return (second[0] - first[0], second[1] - first[1]), empty
+
+
+_EFFECTIVE_CONNECTION_OFFSETS = tuple(
+    _pattern_offsets(pattern) for pattern in _EFFECTIVE_CONNECTION_PATTERNS
+)
+
+
+def _effective_connections(
+    state: GameState, owned: set[Coordinate]
+) -> Iterable[tuple[Coordinate, Coordinate]]:
+    """Match the four fixed patterns without constructing rule Links.
+
+    Required empty cells must exist on the board; don't-care cells need not.
+    """
+
+    occupied = {(peg.coordinate.x, peg.coordinate.y) for peg in state.pegs}
+    owned_points = {(point.x, point.y): point for point in owned}
+    for start in owned:
+        for (dx, dy), empty in _EFFECTIVE_CONNECTION_OFFSETS:
+            end = owned_points.get((start.x + dx, start.y + dy))
+            if end is None:
+                continue
+            if all(
+                0 <= start.x + ex < state.board.width
+                and 0 <= start.y + ey < state.board.height
+                and (start.x + ex, start.y + ey) not in occupied
+                for ex, ey in empty
+            ):
+                yield start, end
+
+
 @dataclass(frozen=True, slots=True)
 class HeuristicWeights:
     """Relative importance of each intentionally small feature family."""
@@ -50,9 +134,10 @@ DEFAULT_WEIGHTS = HeuristicWeights()
 class PositionFeatures:
     """Unweighted features measured for one player.
 
-    ``progress`` is the best connected component's normalized goal-axis span,
-    with a bonus for touching either goal edge. ``connectivity`` rewards links
-    and pegs joined into non-singleton components. ``threats`` counts open
+    ``progress`` is the best component's normalized goal-axis span using real
+    links and the four fixed effective-connection patterns from Issue #158,
+    with a bonus for touching either goal edge. ``connectivity`` rewards real links
+    and pegs joined into non-singleton real-link components. ``threats`` counts open
     links that could be made by one placement; ``blocked`` counts such links
     prevented specifically by an opponent link. Opportunity counts are divided
     by eight to keep their scale comparable with the other features.
@@ -80,13 +165,20 @@ class EvaluationBreakdown:
         )
 
 
-def _components(state: GameState, player: Player) -> tuple[frozenset[Coordinate], ...]:
+def _components(
+    state: GameState, player: Player, *, effective: bool = False
+) -> tuple[frozenset[Coordinate], ...]:
     owned = {peg.coordinate for peg in state.pegs if peg.owner is player}
     adjacency = {coordinate: set() for coordinate in owned}
     for link in state.links:
         if link.owner is player:
             adjacency[link.start].add(link.end)
             adjacency[link.end].add(link.start)
+
+    if effective:
+        for start, end in _effective_connections(state, owned):
+            adjacency[start].add(end)
+            adjacency[end].add(start)
 
     remaining = set(owned)
     components: list[frozenset[Coordinate]] = []
@@ -208,7 +300,7 @@ def _position_features(
     joined_pegs = sum(max(0, len(component) - 1) for component in components)
     threats, blocked = _opportunities(state, player, link_buckets)
     return PositionFeatures(
-        progress=_progress(state, player, components),
+        progress=_progress(state, player, _components(state, player, effective=True)),
         connectivity=float(links + joined_pegs),
         threats=threats,
         blocked=blocked,

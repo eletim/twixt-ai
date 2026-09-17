@@ -5,3 +5,5 @@ __pycache__/
 .venv/
 build/
 dist/
+experiments/human-vs-ai/games/
+/experiments/pv-long-run/generation-11/candidate/

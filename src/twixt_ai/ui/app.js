@@ -32,6 +32,7 @@ const nextButton = $("#replay-next");
 const lastButton = $("#replay-last");
 const moveCounter = $("#move-counter");
 const overlayModeSelect = $("#overlay-mode");
+const savedReplay = $("#saved-replay");
 
 let session = null;
 let requestPending = false;
@@ -234,15 +235,20 @@ function renderHuman(view) {
     thinking: view.thinking, overlayMode: showInspection ? "visits" : "off",
   });
   inspectionElement.hidden = !showInspection;
+  candidateTableWrap.hidden = true;
   inspectionElement.replaceChildren();
   if (showInspection) {
     const metadata = view.thinking.metadata;
+    const selected = view.thinking.move.coordinate;
     inspectionElement.append(
-      textNode("strong", "Last AI decision"),
-      textNode("span", `Value: ${formatNumber(metadata.inspection.value)}`),
+      textNode("strong", `AI selected (${selected.x + 1}, ${selected.y + 1})`),
+      textNode("span", `Selected Q: ${formatNumber(metadata.inspection.value)}`),
       textNode("span", Object.entries(metadata.inspection.statistics ?? {}).map(([key, item]) => `${title(key)}: ${formatNumber(item)}`).join(" · ")),
     );
+    renderCandidates(view.thinking);
   }
+  savedReplay.hidden = !view.artifact;
+  if (view.artifact) savedReplay.href = `/viewer?artifact=${encodeURIComponent(view.artifact)}`;
 }
 
 async function request(path, options) {
@@ -409,14 +415,14 @@ async function generateReplay() {
   }
 }
 
-async function loadReplayArtifact() {
-  if (requestPending || !artifactSelect.value) return;
+async function loadReplayArtifact(artifactId = artifactSelect.value) {
+  if (requestPending || !artifactId) return;
   stopPlayback();
   setViewerPending(true);
   messageElement.textContent = "Loading saved game…";
   try {
     replay = await request("/api/viewer/artifacts", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artifact: artifactSelect.value }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artifact: artifactId }),
     });
     replayIndex = 0;
     messageElement.textContent = `Loaded ${replay.source.path}.`;
@@ -469,6 +475,11 @@ async function initializeViewer() {
   statusElement.textContent = "Configure both agents, then generate a game.";
   statusElement.dataset.player = "complete";
   renderBoard({ board: config.board, pegs: [], links: [], side_to_move: "red", result: "in_progress" });
+  const savedArtifact = new URLSearchParams(window.location.search).get("artifact");
+  if (savedArtifact) {
+    artifactSelect.value = savedArtifact;
+    await loadReplayArtifact(savedArtifact);
+  }
 }
 
 resetButton.addEventListener("click", async () => {
@@ -491,10 +502,11 @@ resetButton.addEventListener("click", async () => {
   await playAgentIfNeeded();
 });
 inspectionToggle.addEventListener("change", () => { if (session) renderHuman(session); });
+agentSelect.addEventListener("change", () => { if (agentSelect.value === "gen11") presetSelect.value = "mini"; });
 redAgentSelect.addEventListener("change", updateCheckpointAvailability);
 blackAgentSelect.addEventListener("change", updateCheckpointAvailability);
 generateButton.addEventListener("click", generateReplay);
-loadArtifactButton.addEventListener("click", loadReplayArtifact);
+loadArtifactButton.addEventListener("click", () => loadReplayArtifact());
 firstButton.addEventListener("click", () => { stopPlayback(); setReplayIndex(0); });
 backButton.addEventListener("click", () => { stopPlayback(); setReplayIndex(replayIndex - 1); });
 nextButton.addEventListener("click", () => { stopPlayback(); setReplayIndex(replayIndex + 1); });

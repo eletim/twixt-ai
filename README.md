@@ -282,6 +282,15 @@ probabilities and the selected move, plus the agent-provided value estimate and
 search statistics. The overlay is off by default and does not evaluate moves in
 the browser.
 
+For a Gen11 champion game, place the checkpoint at
+`experiments/pv-long-run/generation-11/candidate/best.pt`, choose **Gen11** and
+the **Mini (10×10)** board, then choose Red or Black and start a new game. The
+AI uses policy and value guided MCTS with 64 simulations per move. Enable
+**AI inspection** to see its selected move, root priors, visits, and Q values.
+Completed games are saved under `experiments/human-vs-ai/games/`; the **Replay
+this game** link opens the saved match in the existing viewer. These local game
+logs are ignored by Git.
+
 Open <http://127.0.0.1:8000/viewer> for the developer AI-vs-AI Mini viewer.
 Choose independent Red and Black guidance modes/checkpoints, generate a complete
 game, and use the first/previous/play/next/last controls to replay it. Each frame

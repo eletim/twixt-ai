@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 from twixt_ai.agents import AgentRequest, AgentResult
 from twixt_ai.backend import GameApplication, GameSession, ViewerService
+from twixt_ai.backend.viewer import GEN11_CHECKPOINT, HUMAN_AI_SIMULATIONS
 from twixt_ai.game import (
     BoardDimensions,
     Coordinate,
@@ -259,6 +261,45 @@ def test_viewer_loads_existing_match_artifact(tmp_path: Path) -> None:
     assert replay["frames"][1]["decision"]["metadata"]["root_moves"]
 
 
+def test_recent_human_game_is_listed_and_old_bookmark_still_replays(
+    tmp_path: Path,
+) -> None:
+    source = (
+        Path(__file__).parents[2]
+        / "experiments/issue-56/smoke/selfplay/games/game-000000.json"
+    )
+    games = tmp_path / "experiments/human-vs-ai/games"
+    games.mkdir(parents=True)
+    for index in range(1, 201):
+        path = games / f"game-{index:06d}.json"
+        path.write_bytes(source.read_bytes())
+        os.utime(path, (index, index))
+    newest = games / "game-000000.json"
+    newest.write_bytes(source.read_bytes())
+    os.utime(newest, (1000, 1000))
+    application = GameApplication(ui_root=tmp_path, viewer=ViewerService(tmp_path))
+
+    status, _, body = request(application, "/api/viewer/config")
+    artifact_ids = [item["id"] for item in json.loads(body)["artifacts"]]
+    assert status == "200 OK"
+    assert "experiments/human-vs-ai/games/game-000000.json" in artifact_ids
+    assert "experiments/human-vs-ai/games/game-000001.json" not in artifact_ids
+
+    status, _, body = request(
+        application, "/api/viewer/artifacts", "POST",
+        {"artifact": "experiments/human-vs-ai/games/game-000001.json"},
+    )
+    assert status == "200 OK"
+    assert json.loads(body)["source"]["type"] == "artifact"
+
+    status, _, body = request(
+        application, "/api/viewer/artifacts", "POST",
+        {"artifact": "experiments/human-vs-ai/games/../../outside/games/game-000001.json"},
+    )
+    assert status == "400 Bad Request"
+    assert json.loads(body)["detail"] == "unknown artifact"
+
+
 def test_session_selects_side_and_runs_registered_agent_through_contract(
     tmp_path: Path,
 ) -> None:
@@ -433,3 +474,67 @@ def test_human_can_complete_match_against_default_agents_via_session_api(
         assert status == "200 OK"
 
     assert session.snapshot().result.is_terminal
+
+
+def test_gen11_session_saves_terminal_match_for_viewer(tmp_path: Path) -> None:
+    games = tmp_path / "experiments" / "human-vs-ai" / "games"
+    session = GameSession(
+        GameState.initial(BoardDimensions(4, 4)),
+        agents={"gen11": RecordingAgent()},
+        record_directory=games,
+    )
+    application = GameApplication(session, tmp_path, ViewerService(tmp_path))
+
+    while session.snapshot().result is GameResult.IN_PROGRESS:
+        view = session.view()
+        if session.snapshot().side_to_move is Player.RED:
+            move = legal_peg_placements(session.snapshot())[0]
+            path = "/api/session/human-moves"
+            payload = {"x": move.coordinate.x, "y": move.coordinate.y, "revision": view["revision"]}
+        else:
+            path = "/api/session/agent-moves"
+            payload = {"revision": view["revision"]}
+        status, _, body = request(application, path, "POST", payload)
+        assert status == "200 OK"
+        view = json.loads(body)
+
+    artifact = view["artifact"]
+    assert artifact.startswith("experiments/human-vs-ai/games/game-")
+    saved = json.loads((tmp_path / artifact).read_text(encoding="utf-8"))
+    assert saved["format"] == "twixt-ai-match"
+    assert saved["result"]["status"] == session.snapshot().result.value
+    assert saved["config"]["agents"] == {"red": "human", "black": "gen11"}
+    assert len(saved["decisions"]) == len(session.snapshot().pegs)
+    assert saved["decisions"][1]["metadata"] == {"depth": 2}
+
+    status, _, body = request(application, "/api/viewer/artifacts", "POST", {"artifact": artifact})
+    replay = json.loads(body)
+    assert status == "200 OK"
+    assert replay["result"]["status"] == saved["result"]["status"]
+    assert len(replay["frames"]) == len(saved["decisions"]) + 1
+
+
+def test_human_agent_uses_gen11_policy_value_and_64_simulations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    viewer = ViewerService(tmp_path)
+    selected: list[tuple[str, object, int | None]] = []
+    agent = RecordingAgent()
+
+    def build(mode: str, checkpoint: object, *, simulations: int | None = None) -> RecordingAgent:
+        selected.append((mode, checkpoint, simulations))
+        return agent
+
+    monkeypatch.setattr(viewer, "_agent", build)
+    assert viewer.human_agent() is agent
+    assert selected == [("learned-policy-value", GEN11_CHECKPOINT, HUMAN_AI_SIMULATIONS)]
+
+
+def test_gen11_requires_mini_board(tmp_path: Path) -> None:
+    application = GameApplication(ui_root=tmp_path)
+    status, _, body = request(
+        application, "/api/session/reset", "POST",
+        {"human_side": "red", "agent": "gen11", "preset": "standard"},
+    )
+    assert status == "400 Bad Request"
+    assert "Mini 10x10" in json.loads(body)["detail"]

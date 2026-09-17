@@ -273,13 +273,15 @@ From the ordinary repository checkout, start the Human vs AI UI and Viewer:
 ./start.sh
 ```
 
-The script runs the repository's `src` backend at <http://127.0.0.1:8000>.
+The script runs the repository's `src` backend at <http://127.0.0.1:8000> when
+that port is free. Otherwise it uses the first free port through 8003 and
+prints the selected URL.
 If Tailscale is connected, it also configures tailnet-only Serve on the first
 available HTTPS port among 8765–8767 and prints the exact URL. Existing Serve
 routes are preserved; if those ports are occupied, the local UI remains available.
-Ctrl+C stops the server and
-removes the Serve route created by this invocation. Set `TWIXT_PORT` to change
-the local port. The Gen11 checkpoint must exist at the path below; startup
+Ctrl+C stops the server and removes the Serve route created by this invocation.
+Set `TWIXT_PORT` to require a specific local port. The Gen11 checkpoint must
+exist at the path below; startup
 fails with a clear error if it is missing.
 
 Open the local URL, choose Mini 10×10, Gen11, and your side, then press **Play**.

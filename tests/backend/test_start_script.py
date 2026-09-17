@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import socket
 import subprocess
 import time
@@ -113,3 +114,13 @@ def test_repeated_start_reports_port_conflict(tmp_path: Path) -> None:
             assert response.status == 200
     finally:
         stop(process)
+
+
+def test_missing_checkpoint_fails_with_path(tmp_path: Path) -> None:
+    script = tmp_path / "start.sh"
+    shutil.copy2(ROOT / "start.sh", script)
+    result = subprocess.run([str(script)], cwd=tmp_path, capture_output=True,
+                            text=True, timeout=5)
+    assert result.returncode == 1
+    assert "Gen11 checkpoint is missing" in result.stderr
+    assert "generation-11/candidate/best.pt" in result.stderr

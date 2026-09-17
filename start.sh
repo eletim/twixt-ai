@@ -3,7 +3,6 @@ set -u
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PORT=${TWIXT_PORT:-8000}
-LOCAL_URL="http://127.0.0.1:$PORT"
 CHECKPOINT="$SCRIPT_DIR/experiments/pv-long-run/generation-11/candidate/best.pt"
 SERVER_PID=""
 SERVE_OWNED=0
@@ -36,10 +35,19 @@ if ! python3 -c 'import twixt_ai.backend.server; import torch' >/dev/null 2>&1; 
     echo "Error: Python backend dependencies are unavailable. Run: python3 -m pip install -e \".[models]\"" >&2
     exit 1
 fi
+if [[ -z "${TWIXT_PORT:-}" ]]; then
+    for candidate in 8000 8001 8002 8003; do
+        if python3 -c 'import socket,sys; s=socket.socket(); s.bind(("127.0.0.1",int(sys.argv[1]))); s.close()' "$candidate" 2>/dev/null; then
+            PORT=$candidate
+            break
+        fi
+    done
+fi
 if ! python3 -c 'import socket,sys; s=socket.socket(); s.bind(("127.0.0.1",int(sys.argv[1]))); s.close()' "$PORT" 2>/dev/null; then
-    echo "Error: local port $PORT is already in use." >&2
+    echo "Error: local port $PORT is already in use; set TWIXT_PORT to a free port." >&2
     exit 1
 fi
+LOCAL_URL="http://127.0.0.1:$PORT"
 
 python3 -m twixt_ai.backend --host 127.0.0.1 --port "$PORT" &
 SERVER_PID=$!

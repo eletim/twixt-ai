@@ -123,4 +123,4 @@ def test_missing_checkpoint_fails_with_path(tmp_path: Path) -> None:
                             text=True, timeout=5)
     assert result.returncode == 1
     assert "Gen11 checkpoint is missing" in result.stderr
-    assert "generation-11/candidate/best.pt" in result.stderr
+    assert "models/frozen/gen11/best.pt" in result.stderr

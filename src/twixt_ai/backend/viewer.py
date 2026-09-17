@@ -20,7 +20,7 @@ VIEWER_AGENT_MODES = (
     "learned-policy-value",
 )
 DEFAULT_VIEWER_SIMULATIONS = 20
-GEN11_CHECKPOINT = "experiments/pv-long-run/generation-11/candidate/best.pt"
+GEN11_CHECKPOINT = "models/frozen/gen11/best.pt"
 HUMAN_AI_SIMULATIONS = 64
 MAX_LISTED_ARTIFACTS = 200
 
@@ -46,10 +46,11 @@ class ViewerService:
         return sorted(path for path in experiments.glob(pattern) if path.is_file())
 
     def _checkpoint_map(self) -> dict[str, Path]:
-        return {
-            path.relative_to(self.workspace_root).as_posix(): path
-            for path in self._paths("**/best.pt")
-        }
+        paths = self._paths("**/best.pt")
+        frozen = self.workspace_root / GEN11_CHECKPOINT
+        if frozen.is_file():
+            paths.append(frozen)
+        return {path.relative_to(self.workspace_root).as_posix(): path for path in paths}
 
     def _artifact_map(self) -> dict[str, Path]:
         paths = self._paths("**/games/game-*.json")

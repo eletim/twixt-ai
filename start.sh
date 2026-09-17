@@ -3,7 +3,7 @@ set -u
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PORT=${TWIXT_PORT:-8000}
-CHECKPOINT="$SCRIPT_DIR/experiments/pv-long-run/generation-11/candidate/best.pt"
+CHECKPOINT="$SCRIPT_DIR/models/frozen/gen11/best.pt"
 SERVER_PID=""
 SERVE_OWNED=0
 SERVE_PORT=""

@@ -20,6 +20,8 @@ VIEWER_AGENT_MODES = (
     "learned-policy-value",
 )
 DEFAULT_VIEWER_SIMULATIONS = 20
+GEN11_CHECKPOINT = "experiments/pv-long-run/generation-11/candidate/best.pt"
+HUMAN_AI_SIMULATIONS = 64
 MAX_LISTED_ARTIFACTS = 200
 
 
@@ -52,8 +54,8 @@ class ViewerService:
     def _artifact_map(self) -> dict[str, Path]:
         paths = self._paths("**/games/game-*.json")
         # Keep the selector useful across experiments instead of letting one
-        # large 5k run consume every slot. Sample the tail of every games/
-        # collection, where interrupted/resumed experiment output also lands.
+        # large 5k run consume every slot. Sample recent files from each games/
+        # collection; human games use UUID filenames rather than sequence numbers.
         collections: dict[Path, list[Path]] = {}
         for path in paths:
             collections.setdefault(path.parent, []).append(path)
@@ -61,7 +63,7 @@ class ViewerService:
         selected = sorted(
             path
             for collection in collections.values()
-            for path in collection[-quota:]
+            for path in sorted(collection, key=lambda item: (item.stat().st_mtime_ns, item))[-quota:]
         )[-MAX_LISTED_ARTIFACTS:]
         return {
             path.relative_to(self.workspace_root).as_posix(): path
@@ -90,18 +92,22 @@ class ViewerService:
             },
         }
 
-    def _agent(self, mode: str, checkpoint_id: object) -> Agent:
+    def _agent(self, mode: str, checkpoint_id: object, *, simulations: int | None = None) -> Agent:
         if mode not in VIEWER_AGENT_MODES:
             raise ValueError("unknown viewer agent mode")
         if mode == "non-neural-mcts":
             return MCTSAgent(
-                simulations=self.simulations,
+                simulations=self.simulations if simulations is None else simulations,
                 rollout_limit=self.rollout_limit,
             )
         if not isinstance(checkpoint_id, str):
             raise ValueError("learned agents require a checkpoint")
-        checkpoint = self._checkpoint_map().get(checkpoint_id)
-        if checkpoint is None:
+        checkpoint = (
+            self.workspace_root / checkpoint_id
+            if checkpoint_id == GEN11_CHECKPOINT
+            else self._checkpoint_map().get(checkpoint_id)
+        )
+        if checkpoint is None or not checkpoint.is_file():
             raise ValueError("unknown checkpoint")
 
         # Keep heavyweight model dependencies and checkpoint loading out of the
@@ -128,9 +134,15 @@ class ViewerService:
                 self._neural_cache[checkpoint_id] = neural
         guidance_mode = mode.removeprefix("learned-")
         return MCTSAgent(
-            simulations=self.simulations,
+            simulations=self.simulations if simulations is None else simulations,
             rollout_limit=self.rollout_limit,
             policy_value=AblatedPolicyValue(neural, guidance_mode),  # type: ignore[arg-type]
+        )
+
+    def human_agent(self) -> Agent:
+        """Create a fresh Gen11 search tree for the live Mini game."""
+        return self._agent(
+            "learned-policy-value", GEN11_CHECKPOINT, simulations=HUMAN_AI_SIMULATIONS
         )
 
     @staticmethod
@@ -259,8 +271,16 @@ class ViewerService:
         artifact_id = payload["artifact"]
         if not isinstance(artifact_id, str):
             raise ValueError("artifact must be a string")
-        path = self._artifact_map().get(artifact_id)
-        if path is None:
+        experiments = (self.workspace_root / "experiments").resolve()
+        path = (self.workspace_root / artifact_id).resolve()
+        if (
+            not artifact_id.startswith("experiments/")
+            or path.parent.name != "games"
+            or not path.name.startswith("game-")
+            or path.suffix != ".json"
+            or not path.is_relative_to(experiments)
+            or not path.is_file()
+        ):
             raise ValueError("unknown artifact")
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, Mapping):

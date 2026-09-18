@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 from functools import partial
 import hashlib
+import json
 from pathlib import Path
 
 from twixt_ai import __version__
 from twixt_ai.evaluation import AgentConfig, BenchmarkConfig, run_benchmark
+from twixt_ai.evaluation.paired_opening import run_paired_openings
 from twixt_ai.game import experiment_board
 from twixt_ai.training.generations import _agent
 
@@ -23,8 +25,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--simulations", type=int, default=64)
     parser.add_argument("--seed", type=int, default=11_000)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument("--random-opening-moves", type=int, default=0)
+    parser.add_argument("--opening-seed", type=int)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
+    if args.random_opening_moves < 0:
+        parser.error("--random-opening-moves must be non-negative")
+    if args.random_opening_moves and args.opening_seed is None:
+        parser.error("--opening-seed is required when random opening moves are enabled")
+    if args.random_opening_moves and (args.games < 2 or args.games % 2):
+        parser.error("--games must be a positive even number")
     if not FROZEN_GEN11.is_file():
         parser.error(f"Frozen Gen11 checkpoint is missing: {FROZEN_GEN11}")
     if hashlib.sha256(FROZEN_GEN11.read_bytes()).hexdigest() != FROZEN_SHA256:
@@ -42,15 +52,23 @@ def main(argv: list[str] | None = None) -> int:
         board=experiment_board("mini"),
         seed=args.seed,
     )
-    result = run_benchmark(
-        {
+    factories = {
             "candidate": partial(_agent, str(args.candidate), args.simulations, 4, args.device),
             "frozen_gen11": partial(_agent, str(FROZEN_GEN11), args.simulations, 4, args.device),
-        },
-        config=config,
-    )
+        }
+    if args.random_opening_moves:
+        result = run_paired_openings(factories["candidate"](), factories["frozen_gen11"](),
+            board=config.board, pairs=args.games // 2,
+            random_opening_moves=args.random_opening_moves, opening_seed=args.opening_seed,
+            decision_seed=args.seed, output=args.output.with_suffix(".pairs.jsonl"))
+        result["config"].update({"candidate_sha256": candidate_sha,
+            "opponent_sha256": FROZEN_SHA256, "simulations": args.simulations,
+            "device": args.device})
+        serialized = json.dumps(result, indent=2, sort_keys=True)
+    else:
+        serialized = run_benchmark(factories, config=config).to_json(indent=2)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(result.to_json(indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(serialized + "\n", encoding="utf-8")
     print(args.output)
     return 0
 

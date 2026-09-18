@@ -51,7 +51,7 @@ def main() -> None:
         "candidate_sha256": hashlib.sha256(left.read_bytes()).hexdigest(),
         "opponent_sha256": hashlib.sha256(right.read_bytes()).hexdigest(),
         "device": args.device})
-    output.with_suffix(".json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    output.with_suffix(".json").write_text(json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n")
     print(json.dumps({"matchup": f"{args.left}-vs-{args.right}", **result["summary"]}))
 
 

@@ -1,0 +1,7 @@
+n*/generation/selfplay/games/
+n*/generation/dataset/train/
+n*/generation/dataset/validation/
+n*/training/*.pt
+*.log
+__pycache__/
+paired-4ply/*.pairs.jsonl

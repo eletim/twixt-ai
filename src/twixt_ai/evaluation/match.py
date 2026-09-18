@@ -19,6 +19,7 @@ from twixt_ai.game import (
     Player,
     apply_move,
     create_game,
+    legal_peg_placements,
 )
 
 
@@ -295,6 +296,8 @@ def run_match(
     config: MatchConfig | None = None,
     board: BoardDimensions | None = None,
     seed: int | None = None,
+    random_opening_moves: int = 0,
+    opening_seed: int | None = None,
 ) -> MatchResult:
     """Run both assigned agents until the canonical engine ends the game.
 
@@ -310,6 +313,11 @@ def run_match(
     if board is not None and not isinstance(board, BoardDimensions):
         raise TypeError("board must be BoardDimensions or None")
     _require_seed(seed)
+    _require_seed(opening_seed)
+    if isinstance(random_opening_moves, bool) or not isinstance(random_opening_moves, int) or random_opening_moves < 0:
+        raise ValueError("random_opening_moves must be a non-negative integer")
+    if random_opening_moves and opening_seed is None:
+        raise ValueError("opening_seed is required for random opening moves")
 
     match_config = config or MatchConfig(
         board=board or BoardDimensions(),
@@ -327,10 +335,15 @@ def run_match(
     state = initial_state
     decisions: list[MatchDecision] = []
     seed_source = Random(match_config.seed) if match_config.seed is not None else None
+    opening_source = Random(opening_seed)
 
     while not state.is_terminal:
         decision_seed = seed_source.randrange(2**64) if seed_source is not None else None
-        result = select_agent_move(agents[state.side_to_move], state, seed=decision_seed)
+        if len(decisions) < random_opening_moves:
+            legal = legal_peg_placements(state)
+            result = AgentResult(opening_source.choice(legal), {"phase": "random_opening"})
+        else:
+            result = select_agent_move(agents[state.side_to_move], state, seed=decision_seed)
         decisions.append(MatchDecision.from_agent_result(result, decision_seed))
         state = apply_move(state, result.move)
 

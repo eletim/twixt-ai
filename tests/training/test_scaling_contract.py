@@ -134,9 +134,10 @@ def test_documented_matched_1k_command_resolves_the_complete_contract(
 
     resolved = captured["config"]
     assert isinstance(resolved, MiniGenerationConfig)
-    assert set(fixed) | {"games_per_generation", "seed", "artifact_uri"} == set(
+    assert set(fixed) | {"games_per_generation", "seed", "artifact_uri", "random_opening_moves"} == set(
         MiniGenerationConfig.__dataclass_fields__
     )
+    assert resolved.random_opening_moves == 0
     for name, value in fixed.items():
         assert getattr(resolved, name) == value
     assert resolved.games_per_generation == stage["games"]

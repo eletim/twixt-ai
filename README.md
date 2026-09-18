@@ -45,6 +45,21 @@ twixt-ai-dataset --input mini-selfplay --output-dir mini-dataset
 twixt-ai-train --dataset mini-dataset --output-dir mini-training --seed 1234
 ```
 
+For policy and value self-play, `--random-opening-moves N` plays up to N legal
+plies uniformly at random before MCTS begins. The default `0` preserves the
+existing play sequence. Game artifacts record the opening seed and moves;
+dataset generation excludes those opening positions from training. For example:
+
+```bash
+PYTHONHASHSEED=0 twixt-ai-mini-selfplay-dataset \
+  --champion models/frozen/gen11/best.pt --output-dir mini-opening-dataset \
+  --games 100 --seed 1234 --random-opening-moves 4
+```
+
+`twixt-ai-mini-generations` accepts the same option for a complete training run.
+To evaluate a candidate against Frozen Gen11 with paired seeds and both colors,
+use `twixt-ai-frozen-gen11-evaluation --candidate candidate.pt --output evaluation.json`.
+
 The first measured 100-game Mini MCTS dataset and its exact reproduction command
 are documented in
 [`docs/mini-dataset-experiment.md`](docs/mini-dataset-experiment.md).
@@ -295,8 +310,8 @@ probabilities and the selected move, plus the agent-provided value estimate and
 search statistics. The overlay is off by default and does not evaluate moves in
 the browser.
 
-For a Gen11 champion game, place the checkpoint at
-`experiments/pv-long-run/generation-11/candidate/best.pt`, choose **Gen11** and
+For a Gen11 champion game, use the committed checkpoint at
+`models/frozen/gen11/best.pt`, choose **Gen11** and
 the **Mini (10×10)** board, then choose Red or Black and press Play. The
 AI uses policy and value guided MCTS with 64 simulations per move. Enable
 **AI inspection** to see its selected move, root priors, visits, and Q values.

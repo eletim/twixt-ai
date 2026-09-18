@@ -1,0 +1,494 @@
+{
+  "conditions": [
+    {
+      "n": 0,
+      "games": 5000,
+      "positions": 65233,
+      "training_positions": 65233,
+      "random_opening_excluded_positions": 0,
+      "training_positions_per_game": 13.0466,
+      "avg_move_count": 13.0466,
+      "median_move_count": 13.0,
+      "first_player_win_rate": 0.9994,
+      "draw_rate": 0.0004,
+      "winner_distribution": {
+        "black": 1,
+        "draw": 2,
+        "red": 4997
+      },
+      "games_per_hour": 12364.776511579483,
+      "simulations_per_second": 2867.880768639518,
+      "effective_batch": 7.9656319895259395,
+      "dataset_manifest_sha256": "7ecc95e400317edb102db44974fa20d2065f87c226683b5d1779a06f3e710bdc",
+      "initial_checkpoint_sha256": "31832286c6493e1bbff77c3357b6787fd17d60e52a5a572483b70d2077fee536",
+      "best_checkpoint_sha256": "4ed4944a0b0c4da1d34e15e0f1518aa73e29f0c993137386d12ec03f400cf8d5",
+      "policy_ce": 2.4699324985203917,
+      "policy_entropy": 2.463706100773048,
+      "policy_top1_probability": 0.4875669955678362,
+      "policy_top3_cumulative_probability": 0.6342915834901373,
+      "visit_top1_agreement": 0.9984634296250768,
+      "value_mse": 3.1859391194531075e-05,
+      "value_mae": 0.00024969585482592074,
+      "calibration_error": 0.00024969585482592074,
+      "decisive_sign_error": 0.0,
+      "vs_frozen": {
+        "wins": 20,
+        "draws": 0,
+        "losses": 20,
+        "games": 40,
+        "score_rate": 0.5,
+        "red_games": 20,
+        "black_games": 20,
+        "by_side": {
+          "red": {
+            "wins": 20,
+            "draws": 0,
+            "losses": 0
+          },
+          "black": {
+            "wins": 0,
+            "draws": 0,
+            "losses": 20
+          }
+        }
+      }
+    },
+    {
+      "n": 2,
+      "games": 5000,
+      "positions": 87177,
+      "training_positions": 77177,
+      "random_opening_excluded_positions": 10000,
+      "training_positions_per_game": 15.4354,
+      "avg_move_count": 17.4354,
+      "median_move_count": 15.0,
+      "first_player_win_rate": 0.7326,
+      "draw_rate": 0.0164,
+      "winner_distribution": {
+        "black": 1255,
+        "draw": 82,
+        "red": 3663
+      },
+      "games_per_hour": 9325.873872933427,
+      "simulations_per_second": 2559.0861080582513,
+      "effective_batch": 7.9651309022160195,
+      "dataset_manifest_sha256": "d68525d574aa9c752b07f14b32239d2020049a59742b86cfd1e61f336701f2f4",
+      "initial_checkpoint_sha256": "31832286c6493e1bbff77c3357b6787fd17d60e52a5a572483b70d2077fee536",
+      "best_checkpoint_sha256": "6a44af92544e86801f1cc4981dfca99947a679df1b68264c66f314b14ed71e59",
+      "policy_ce": 2.9661995959848433,
+      "policy_entropy": 2.855797228564691,
+      "policy_top1_probability": 0.3133126285297166,
+      "policy_top3_cumulative_probability": 0.4940647842049251,
+      "visit_top1_agreement": 0.566985959847789,
+      "value_mse": 0.43422429678282054,
+      "value_mae": 0.3974901068171113,
+      "calibration_error": 0.09410791415612034,
+      "decisive_sign_error": 0.15742106816169962,
+      "vs_frozen": {
+        "wins": 20,
+        "draws": 0,
+        "losses": 20,
+        "games": 40,
+        "score_rate": 0.5,
+        "red_games": 20,
+        "black_games": 20,
+        "by_side": {
+          "red": {
+            "wins": 20,
+            "draws": 0,
+            "losses": 0
+          },
+          "black": {
+            "wins": 0,
+            "draws": 0,
+            "losses": 20
+          }
+        }
+      }
+    },
+    {
+      "n": 4,
+      "games": 5000,
+      "positions": 92768,
+      "training_positions": 72768,
+      "random_opening_excluded_positions": 20000,
+      "training_positions_per_game": 14.5536,
+      "avg_move_count": 18.5536,
+      "median_move_count": 16.0,
+      "first_player_win_rate": 0.7002,
+      "draw_rate": 0.0184,
+      "winner_distribution": {
+        "black": 1407,
+        "draw": 92,
+        "red": 3501
+      },
+      "games_per_hour": 9824.713578723384,
+      "simulations_per_second": 2541.9546940321534,
+      "effective_batch": 7.946564312057549,
+      "dataset_manifest_sha256": "9dff2ff659606e80cb297124c0be0bdbeb803b610483f9183b4fc436c8577133",
+      "initial_checkpoint_sha256": "31832286c6493e1bbff77c3357b6787fd17d60e52a5a572483b70d2077fee536",
+      "best_checkpoint_sha256": "9cc5f2675d449e4ec925e2285894663953ebdc2e0301bbcacc4fab0d6d1ea86f",
+      "policy_ce": 3.0214443411372214,
+      "policy_entropy": 2.913215622028175,
+      "policy_top1_probability": 0.29420843065856733,
+      "policy_top3_cumulative_probability": 0.4724663109361596,
+      "visit_top1_agreement": 0.5211618257261411,
+      "value_mse": 0.3919336545564886,
+      "value_mae": 0.3772062500883182,
+      "calibration_error": 0.06429249831626432,
+      "decisive_sign_error": 0.15404120443740096,
+      "vs_frozen": {
+        "wins": 20,
+        "draws": 0,
+        "losses": 20,
+        "games": 40,
+        "score_rate": 0.5,
+        "red_games": 20,
+        "black_games": 20,
+        "by_side": {
+          "red": {
+            "wins": 20,
+            "draws": 0,
+            "losses": 0
+          },
+          "black": {
+            "wins": 0,
+            "draws": 0,
+            "losses": 20
+          }
+        }
+      }
+    },
+    {
+      "n": 6,
+      "games": 5000,
+      "positions": 99074,
+      "training_positions": 69074,
+      "random_opening_excluded_positions": 30000,
+      "training_positions_per_game": 13.8148,
+      "avg_move_count": 19.8148,
+      "median_move_count": 17.0,
+      "first_player_win_rate": 0.6934,
+      "draw_rate": 0.019,
+      "winner_distribution": {
+        "black": 1438,
+        "draw": 95,
+        "red": 3467
+      },
+      "games_per_hour": 10277.86055538834,
+      "simulations_per_second": 2524.20600889918,
+      "effective_batch": 7.953835117035332,
+      "dataset_manifest_sha256": "249a5b5bf503060254d7ab9c5d3645943947bb74296aae24891ad26085149cf3",
+      "initial_checkpoint_sha256": "31832286c6493e1bbff77c3357b6787fd17d60e52a5a572483b70d2077fee536",
+      "best_checkpoint_sha256": "08149bf57fcec31714779614d527f5f6fec7946db914c46a9d688d72252286ad",
+      "policy_ce": 3.009819434229009,
+      "policy_entropy": 2.929517358835494,
+      "policy_top1_probability": 0.2832961115766913,
+      "policy_top3_cumulative_probability": 0.4617179838693147,
+      "visit_top1_agreement": 0.5197058007216209,
+      "value_mse": 0.38185837321583177,
+      "value_mae": 0.3855782056188206,
+      "calibration_error": 0.043677412100849085,
+      "decisive_sign_error": 0.14963034394085503,
+      "vs_frozen": {
+        "wins": 20,
+        "draws": 0,
+        "losses": 20,
+        "games": 40,
+        "score_rate": 0.5,
+        "red_games": 20,
+        "black_games": 20,
+        "by_side": {
+          "red": {
+            "wins": 20,
+            "draws": 0,
+            "losses": 0
+          },
+          "black": {
+            "wins": 0,
+            "draws": 0,
+            "losses": 20
+          }
+        }
+      }
+    }
+  ],
+  "pairwise": {
+    "n0-vs-n2": {
+      "wins": 20,
+      "draws": 0,
+      "losses": 20,
+      "games": 40,
+      "score_rate": 0.5,
+      "red_games": 20,
+      "black_games": 20,
+      "by_side": {
+        "red": {
+          "wins": 20,
+          "draws": 0,
+          "losses": 0
+        },
+        "black": {
+          "wins": 0,
+          "draws": 0,
+          "losses": 20
+        }
+      }
+    },
+    "n0-vs-n4": {
+      "wins": 20,
+      "draws": 1,
+      "losses": 19,
+      "games": 40,
+      "score_rate": 0.5125,
+      "red_games": 20,
+      "black_games": 20,
+      "by_side": {
+        "red": {
+          "wins": 20,
+          "draws": 0,
+          "losses": 0
+        },
+        "black": {
+          "wins": 0,
+          "draws": 1,
+          "losses": 19
+        }
+      }
+    },
+    "n0-vs-n6": {
+      "wins": 20,
+      "draws": 0,
+      "losses": 20,
+      "games": 40,
+      "score_rate": 0.5,
+      "red_games": 20,
+      "black_games": 20,
+      "by_side": {
+        "red": {
+          "wins": 20,
+          "draws": 0,
+          "losses": 0
+        },
+        "black": {
+          "wins": 0,
+          "draws": 0,
+          "losses": 20
+        }
+      }
+    },
+    "n2-vs-n4": {
+      "wins": 20,
+      "draws": 0,
+      "losses": 20,
+      "games": 40,
+      "score_rate": 0.5,
+      "red_games": 20,
+      "black_games": 20,
+      "by_side": {
+        "red": {
+          "wins": 20,
+          "draws": 0,
+          "losses": 0
+        },
+        "black": {
+          "wins": 0,
+          "draws": 0,
+          "losses": 20
+        }
+      }
+    },
+    "n2-vs-n6": {
+      "wins": 20,
+      "draws": 0,
+      "losses": 20,
+      "games": 40,
+      "score_rate": 0.5,
+      "red_games": 20,
+      "black_games": 20,
+      "by_side": {
+        "red": {
+          "wins": 20,
+          "draws": 0,
+          "losses": 0
+        },
+        "black": {
+          "wins": 0,
+          "draws": 0,
+          "losses": 20
+        }
+      }
+    },
+    "n4-vs-n6": {
+      "wins": 20,
+      "draws": 0,
+      "losses": 20,
+      "games": 40,
+      "score_rate": 0.5,
+      "red_games": 20,
+      "black_games": 20,
+      "by_side": {
+        "red": {
+          "wins": 20,
+          "draws": 0,
+          "losses": 0
+        },
+        "black": {
+          "wins": 0,
+          "draws": 0,
+          "losses": 20
+        }
+      }
+    }
+  },
+  "cross_validation": {
+    "n0": {
+      "bootstrap": {
+        "positions": 6508,
+        "policy_ce": 2.4814241804303374,
+        "visit_top1_agreement": 0.9984634296250768,
+        "value_mse": 5.898002269076064e-05,
+        "decisive_sign_error": 0.0
+      },
+      "n0": {
+        "positions": 6508,
+        "policy_ce": 2.4699324985203917,
+        "visit_top1_agreement": 0.9984634296250768,
+        "value_mse": 3.1859391194531075e-05,
+        "decisive_sign_error": 0.0
+      },
+      "n2": {
+        "positions": 6508,
+        "policy_ce": 2.5322612824050146,
+        "visit_top1_agreement": 0.9981561155500922,
+        "value_mse": 0.011373375741127257,
+        "decisive_sign_error": 0.00030731407498463427
+      },
+      "n4": {
+        "positions": 6508,
+        "policy_ce": 2.544757170959897,
+        "visit_top1_agreement": 0.9211739397664414,
+        "value_mse": 0.009443550858030718,
+        "decisive_sign_error": 0.00015365703749231714
+      },
+      "n6": {
+        "positions": 6508,
+        "policy_ce": 2.536748474733254,
+        "visit_top1_agreement": 0.9217885679164106,
+        "value_mse": 0.008014551401619989,
+        "decisive_sign_error": 0.0
+      }
+    },
+    "n2": {
+      "bootstrap": {
+        "positions": 7621,
+        "policy_ce": 2.9861870378171043,
+        "visit_top1_agreement": 0.6008397848051437,
+        "value_mse": 0.6337329966556833,
+        "decisive_sign_error": 0.1932723517261729
+      },
+      "n0": {
+        "positions": 7621,
+        "policy_ce": 3.4463385421367803,
+        "visit_top1_agreement": 0.3960110221755675,
+        "value_mse": 0.7254829082596517,
+        "decisive_sign_error": 0.23989377397462378
+      },
+      "n2": {
+        "positions": 7621,
+        "policy_ce": 2.9661995959848433,
+        "visit_top1_agreement": 0.566985959847789,
+        "value_mse": 0.43422429678282054,
+        "decisive_sign_error": 0.15742106816169962
+      },
+      "n4": {
+        "positions": 7621,
+        "policy_ce": 2.997421359335202,
+        "visit_top1_agreement": 0.5415299829418712,
+        "value_mse": 0.4486118882398646,
+        "decisive_sign_error": 0.16907642372381235
+      },
+      "n6": {
+        "positions": 7621,
+        "policy_ce": 3.0001985991058198,
+        "visit_top1_agreement": 0.5416611993176749,
+        "value_mse": 0.44910913630860244,
+        "decisive_sign_error": 0.17084685748008263
+      }
+    },
+    "n4": {
+      "bootstrap": {
+        "positions": 7230,
+        "policy_ce": 3.001317194391827,
+        "visit_top1_agreement": 0.5876901798063624,
+        "value_mse": 0.5803422466151359,
+        "decisive_sign_error": 0.1820919175911252
+      },
+      "n0": {
+        "positions": 7230,
+        "policy_ce": 3.458011776273644,
+        "visit_top1_agreement": 0.37579529737206085,
+        "value_mse": 0.6737044383822302,
+        "decisive_sign_error": 0.23248811410459588
+      },
+      "n2": {
+        "positions": 7230,
+        "policy_ce": 3.0076868262711507,
+        "visit_top1_agreement": 0.5313969571230982,
+        "value_mse": 0.39489942626131613,
+        "decisive_sign_error": 0.15055467511885895
+      },
+      "n4": {
+        "positions": 7230,
+        "policy_ce": 3.0214443411372214,
+        "visit_top1_agreement": 0.5211618257261411,
+        "value_mse": 0.3919336545564886,
+        "decisive_sign_error": 0.15404120443740096
+      },
+      "n6": {
+        "positions": 7230,
+        "policy_ce": 3.0172969817365742,
+        "visit_top1_agreement": 0.5308437067773167,
+        "value_mse": 0.3828509478179632,
+        "decisive_sign_error": 0.1473851030110935
+      }
+    },
+    "n6": {
+      "bootstrap": {
+        "positions": 7206,
+        "policy_ce": 2.980202586608996,
+        "visit_top1_agreement": 0.6064390785456564,
+        "value_mse": 0.5897461532316699,
+        "decisive_sign_error": 0.1830601092896175
+      },
+      "n0": {
+        "positions": 7206,
+        "policy_ce": 3.4621747110015,
+        "visit_top1_agreement": 0.3688592839300583,
+        "value_mse": 0.7170754731155274,
+        "decisive_sign_error": 0.24686595949855353
+      },
+      "n2": {
+        "positions": 7206,
+        "policy_ce": 3.011165473367617,
+        "visit_top1_agreement": 0.5324729392173189,
+        "value_mse": 0.4225657973744204,
+        "decisive_sign_error": 0.1602378656380585
+      },
+      "n4": {
+        "positions": 7206,
+        "policy_ce": 3.019609112451241,
+        "visit_top1_agreement": 0.522203719122953,
+        "value_mse": 0.42035023413526257,
+        "decisive_sign_error": 0.15750562520090003
+      },
+      "n6": {
+        "positions": 7206,
+        "policy_ce": 3.009819434229009,
+        "visit_top1_agreement": 0.5197058007216209,
+        "value_mse": 0.38185837321583177,
+        "decisive_sign_error": 0.14963034394085503
+      }
+    }
+  }
+}

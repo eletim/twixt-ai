@@ -187,8 +187,20 @@ def _examples(
     value: dict[str, Any], path: Path
 ) -> tuple[str, BoardDimensions, list[dict[str, object]]]:
     trajectory = trajectory_from_match(value, path)
+    opening = value.get("opening")
+    excluded = 0
+    if opening is not None:
+        if not isinstance(opening, dict):
+            raise ValueError("opening diagnostics must be an object")
+        excluded = opening.get("mcts_start_ply")
+        if isinstance(excluded, bool) or not isinstance(excluded, int) or not 0 <= excluded <= len(trajectory.steps):
+            raise ValueError("invalid opening MCTS start ply")
+        if opening.get("random_opening_positions_excluded_count") != excluded:
+            raise ValueError("opening excluded count does not match MCTS start ply")
+        if any(step.metadata.get("phase") != "random_opening" for step in trajectory.steps[:excluded]):
+            raise ValueError("opening decisions do not match excluded positions")
     examples: list[dict[str, object]] = []
-    for step in trajectory.steps:
+    for step in trajectory.steps[excluded:]:
         source = {
             "game_id": trajectory.game_id,
             "ply": step.ply,

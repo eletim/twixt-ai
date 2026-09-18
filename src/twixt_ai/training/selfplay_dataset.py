@@ -14,7 +14,6 @@ from typing import Any
 import torch
 
 from twixt_ai.device import select_device
-from twixt_ai.models import MINI_POLICY_VALUE_CONFIG
 
 from .data import DatasetConfig, build_dataset
 from .generations import (
@@ -38,6 +37,7 @@ class MiniSelfplayDatasetConfig:
 
     games: int = _GENERATION_DEFAULTS.games_per_generation
     simulations: int = _GENERATION_DEFAULTS.selfplay_simulations
+    random_opening_moves: int = 0
     exploration: float = _GENERATION_DEFAULTS.selfplay_exploration
     rollout_limit: int = _GENERATION_DEFAULTS.rollout_limit
     progressive_widening_constant: float = (
@@ -80,6 +80,7 @@ class MiniSelfplayDatasetConfig:
             generations=1,
             games_per_generation=self.games,
             selfplay_simulations=self.simulations,
+            random_opening_moves=self.random_opening_moves,
             selfplay_exploration=self.exploration,
             selfplay_progressive_widening_constant=(
                 self.progressive_widening_constant
@@ -123,8 +124,9 @@ def run_mini_selfplay_dataset(
     device = select_device(config.device)
     champion = Path(champion_path)
     champion_record = checkpoint_record(champion)
-    if champion_record["model_config"] != MINI_POLICY_VALUE_CONFIG.to_dict():
-        raise ValueError("champion must use the Mini model configuration")
+    model_config = champion_record["model_config"]
+    if model_config["board_width"] != 10 or model_config["board_height"] != 10:
+        raise ValueError("champion must use the Mini 10x10 board")
 
     root.mkdir(parents=True, exist_ok=True)
 
@@ -139,6 +141,7 @@ def run_mini_selfplay_dataset(
     resolved_config = {
         "board": generation_config.to_dict()["board"],
         "games": config.games,
+        "random_opening_moves": config.random_opening_moves,
         "search": search,
         "execution": {
             "workers": config.workers,

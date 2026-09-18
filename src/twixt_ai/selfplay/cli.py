@@ -25,6 +25,7 @@ def _parser() -> argparse.ArgumentParser:
         help="worker isolation (thread mode permits a shared inference batcher)",
     )
     parser.add_argument("--seed", type=int, default=None, help="reproducible batch seed")
+    parser.add_argument("--random-opening-moves", type=int, default=0)
     parser.add_argument("--red", choices=("random", "search", "mcts"), default="random")
     parser.add_argument("--black", choices=("random", "search", "mcts"), default="random")
     parser.add_argument("--preset", "--board-preset", choices=EXPERIMENT_PRESETS, default="standard")
@@ -70,6 +71,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             red_agent=args.red,
             black_agent=args.black,
             worker_mode=args.worker_mode,
+            random_opening_moves=args.random_opening_moves,
         )
         red_factory = _agent_factory(
             args.red,

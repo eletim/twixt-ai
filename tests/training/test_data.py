@@ -91,6 +91,59 @@ def test_build_dataset_retains_targets_and_provenance(tmp_path: Path) -> None:
     assert summary.board == BoardDimensions(4, 4)
 
 
+@pytest.mark.parametrize("opening_moves", [0, 1, 2, 4, 100])
+def test_random_opening_excluded_from_policy_training(
+    tmp_path: Path, opening_moves: int
+) -> None:
+    config = BatchConfig(
+        games=1, workers=1, seed=91, board=BoardDimensions(4, 4),
+        random_opening_moves=opening_moves,
+    )
+    first = run_batch(FirstWithPolicy, FirstWithPolicy, config=config, output_dir=tmp_path / "a")
+    second = run_batch(FirstWithPolicy, FirstWithPolicy, config=config, output_dir=tmp_path / "b")
+    artifact = json.loads((tmp_path / "a" / first.games[0].artifact).read_text())
+    repeated = json.loads((tmp_path / "b" / second.games[0].artifact).read_text())
+    assert artifact == repeated
+    opening = artifact["opening"]
+    excluded = opening["mcts_start_ply"]
+    assert excluded == min(opening_moves, artifact["result"]["move_count"])
+    assert opening["move_sequence"] == artifact["record"]["moves"][:excluded]
+    assert all(d["metadata"].get("phase") == "random_opening" for d in artifact["decisions"][:excluded])
+    assert all("root_moves" in d["metadata"] for d in artifact["decisions"][excluded:])
+    output = tmp_path / "dataset"
+    summary = build_dataset(tmp_path / "a", output, config=DatasetConfig(validation_fraction=0))
+    examples = _lines(output, summary, "train")
+    assert len(examples) == opening["positions_used_for_training"]
+    assert all(example["source"]["ply"] >= excluded for example in examples)
+    assert all("policy" in example for example in examples)
+    assert all(example["outcome"] == (
+        0 if artifact["result"]["winner"] is None else
+        1 if artifact["record"]["moves"][example["source"]["ply"]]["player"] == artifact["result"]["winner"] else -1
+    ) for example in examples)
+    if opening_moves == 0:
+        assert excluded == 0
+        assert len(examples) == artifact["result"]["move_count"]
+        legacy = run_match(
+            FirstWithPolicy(), FirstWithPolicy(),
+            config=MatchConfig(BoardDimensions(4, 4), first.games[0].seed, "red", "black"),
+        ).to_dict()
+        assert {key: value for key, value in artifact.items() if key != "opening"} == legacy
+
+
+def test_random_opening_handles_full_board_draw_without_legal_moves(tmp_path: Path) -> None:
+    config = BatchConfig(
+        games=1, workers=1, seed=12, board=BoardDimensions(2, 2),
+        random_opening_moves=4,
+    )
+    summary = run_batch(FirstWithPolicy, FirstWithPolicy, config=config, output_dir=tmp_path / "games")
+    artifact = json.loads((tmp_path / "games" / summary.games[0].artifact).read_text())
+    assert artifact["result"] == {"status": "draw", "winner": None, "move_count": 0}
+    assert artifact["opening"]["draw"] is True
+    assert artifact["opening"]["mcts_start_ply"] == 0
+    dataset = build_dataset(tmp_path / "games", tmp_path / "dataset")
+    assert dataset.examples == 0
+
+
 def test_shared_trajectory_exposes_canonical_training_targets() -> None:
     match = run_match(
         FirstWithPolicy(),
